@@ -226,7 +226,6 @@ T Communicator::allreduce(T val, enum mpi_op op) const
     }
     default: {
       throw std::runtime_error("Error: invalid MPI_Op given.");
-      break;
     }
   }
 
