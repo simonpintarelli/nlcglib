@@ -1,5 +1,5 @@
-add_library(nlcglib_internal STATIC la/cusolver.cpp)
-target_link_libraries(nlcglib_internal INTERFACE Kokkos::kokkoscore)
+add_library(nlcglib_internal STATIC la/cusolver.cpp gpu/acc.cpp)
+target_link_libraries(nlcglib_internal PUBLIC Kokkos::kokkoscore)
 target_link_libraries(nlcglib_internal INTERFACE "${LAPACK_LIBRARIES}")
 target_link_libraries(nlcglib_internal INTERFACE MPI::MPI_CXX)
 target_link_libraries(nlcglib_internal INTERFACE my_lapack)
