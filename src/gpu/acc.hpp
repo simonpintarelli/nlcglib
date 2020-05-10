@@ -2,9 +2,12 @@
 
 namespace nlcglib {
 
-int num_devices();
 
-template<typename T>
-void copy(T* target, const T* src, size_t n);
+namespace acc {
 
+template <typename T>
+void
+copy(T* target, const T* src, size_t n);
+
+}  // acc
 }  // nlcglib

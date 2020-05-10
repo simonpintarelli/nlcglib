@@ -15,6 +15,7 @@ namespace nlcglib {
     }                                                        \
   }
 
+namespace acc {
 
 template <class T>
 void
@@ -33,4 +34,5 @@ template <>
 void
 copy(Kokkos::complex<double>*, const Kokkos::complex<double>*, size_t);
 
+}  // acc
 }  // namespace nlcglib
