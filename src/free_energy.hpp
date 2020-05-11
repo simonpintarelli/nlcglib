@@ -7,7 +7,7 @@
 
 namespace nlcglib {
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE=MEMSPACE>
 class FreeEnergy
 {
 public:
@@ -43,8 +43,8 @@ private:
 };
 
 
-template <class MEMSPACE>
-FreeEnergy<MEMSPACE>::FreeEnergy(double T, EnergyBase& energy, smearing_type smear)
+template <class MEMSPACE, class XMEMSPACE>
+FreeEnergy<MEMSPACE, XMEMSPACE>::FreeEnergy(double T, EnergyBase& energy, smearing_type smear)
     : T(T)
     , energy(energy)
     , smearing(
@@ -54,10 +54,10 @@ FreeEnergy<MEMSPACE>::FreeEnergy(double T, EnergyBase& energy, smearing_type sme
 }
 
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 template <class tF, class tX>
 void
-FreeEnergy<MEMSPACE>::compute(const mvector<tX>& X, const mvector<tF>& fn)
+FreeEnergy<MEMSPACE, XMEMSPACE>::compute(const mvector<tX>& X, const mvector<tF>& fn)
 {
   // convert fn to std::vector
   auto map_fn = tapply(
@@ -92,9 +92,9 @@ FreeEnergy<MEMSPACE>::compute(const mvector<tX>& X, const mvector<tF>& fn)
 }
 
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 void
-FreeEnergy<MEMSPACE>::compute()
+FreeEnergy<MEMSPACE, XMEMSPACE>::compute()
 {
   energy.compute();
   double etot = energy.get_total_energy();
@@ -105,68 +105,68 @@ FreeEnergy<MEMSPACE>::compute()
 }
 
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 auto
-FreeEnergy<MEMSPACE>::get_X()
+FreeEnergy<MEMSPACE, XMEMSPACE>::get_X()
 {
   // memory type none -> take what sirius has as default
-  return make_mmatrix<MEMSPACE>(this->energy.get_C(memory_type::none));
+  return make_mmatrix<MEMSPACE, XMEMSPACE>(this->energy.get_C(memory_type::none));
 }
 
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 auto
-FreeEnergy<MEMSPACE>::get_HX()
+FreeEnergy<MEMSPACE, XMEMSPACE>::get_HX()
 {
-  return make_mmatrix<MEMSPACE>(this->energy.get_hphi());
+  return make_mmatrix<MEMSPACE, XMEMSPACE>(this->energy.get_hphi());
 }
 
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 auto
-FreeEnergy<MEMSPACE>::get_SX()
+FreeEnergy<MEMSPACE, XMEMSPACE>::get_SX()
 {
-  return make_mmatrix<MEMSPACE>(this->energy.get_sphi());
+  return make_mmatrix<MEMSPACE, XMEMSPACE>(this->energy.get_sphi());
 }
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 auto
-FreeEnergy<MEMSPACE>::get_fn()
+FreeEnergy<MEMSPACE, XMEMSPACE>::get_fn()
 {
-  return make_mmvector<MEMSPACE>(this->energy.get_fn());
+  return make_mmvector<XMEMSPACE>(this->energy.get_fn());
 }
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 auto
-FreeEnergy<MEMSPACE>::get_ek()
+FreeEnergy<MEMSPACE, XMEMSPACE>::get_ek()
 {
-  return make_mmvector<MEMSPACE>(this->energy.get_ek());
+  return make_mmvector<XMEMSPACE>(this->energy.get_ek());
 }
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 auto
-FreeEnergy<MEMSPACE>::get_wk()
+FreeEnergy<MEMSPACE, XMEMSPACE>::get_wk()
 {
   return make_mmscalar(this->energy.get_kpoint_weights());
 }
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 auto
-FreeEnergy<MEMSPACE>::get_gkvec_ekin()
+FreeEnergy<MEMSPACE, XMEMSPACE>::get_gkvec_ekin()
 {
   return this->energy.get_gkvec_ekin();
 }
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 double
-FreeEnergy<MEMSPACE>::occupancy()
+FreeEnergy<MEMSPACE, XMEMSPACE>::occupancy()
 {
   return this->energy.occupancy();
 }
 
-template <class MEMSPACE>
+template <class MEMSPACE, class XMEMSPACE>
 double
-FreeEnergy<MEMSPACE>::ks_energy()
+FreeEnergy<MEMSPACE, XMEMSPACE>::ks_energy()
 {
   return this->energy.get_total_energy();
 }

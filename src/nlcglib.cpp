@@ -22,10 +22,10 @@ typedef std::complex<double> complex_double;
 
 namespace nlcglib {
 
-template <class memspace>
+template <class memspace, class xspace=memspace>
 void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
 {
-  FreeEnergy<memspace> free_energy(T, energy_base, smear);
+  FreeEnergy<memspace, xspace> free_energy(T, energy_base, smear);
   std::map<smearing_type, std::string> smear_name{{smearing_type::FERMI_DIRAC, "Fermi-Dirac"}, {smearing_type::GAUSSIAN_SPLINE, "Gaussian-spline"}};
 
   free_energy.compute();
@@ -64,7 +64,7 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
   auto Hx = free_energy.get_HX();
   auto X = copy(free_energy.get_X());
 
-  PreconditionerTeter<memspace> Prec(free_energy.get_gkvec_ekin());
+  PreconditionerTeter<xspace> Prec(free_energy.get_gkvec_ekin());
   GradEta grad_eta(T, kappa);
 
   auto eta = eval_threaded(tapply(make_diag(), ek));
@@ -293,7 +293,7 @@ nlcg_check_gradient_cuda(EnergyBase& energy)
 
 
 void
-nlcg_mvp2(EnergyBase& energy_base, smearing_type smearing, double temp, double tol, double kappa, double tau, int maxiter, int restart)
+nlcg_mvp2_cpu(EnergyBase& energy_base, smearing_type smearing, double temp, double tol, double kappa, double tau, int maxiter, int restart)
 {
   Kokkos::initialize();
   nlcg<Kokkos::HostSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
@@ -301,10 +301,47 @@ nlcg_mvp2(EnergyBase& energy_base, smearing_type smearing, double temp, double t
 }
 
 void
-nlcg_mvp2_cuda(EnergyBase& energy_base, smearing_type smearing, double temp, double tol, double kappa, double tau, int maxiter, int restart)
+nlcg_mvp2_device(EnergyBase& energy_base, smearing_type smearing, double temp, double tol, double kappa, double tau, int maxiter, int restart)
 {
   Kokkos::initialize();
   nlcg<Kokkos::CudaSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
+  Kokkos::finalize();
+}
+
+/**
+ * obtain |psi> and H |psi> on device, but execute on host
+ */
+void
+nlcg_mvp2_device_cpu(EnergyBase& energy_base,
+                      smearing_type smearing,
+                      double temp,
+                      double tol,
+                      double kappa,
+                      double tau,
+                      int maxiter,
+                      int restart)
+{
+  Kokkos::initialize();
+  nlcg<Kokkos::CudaSpace, Kokkos::HostSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
+  Kokkos::finalize();
+}
+
+/**
+ * obtain |psi> and H |psi> on host, but execute on device
+ */
+void
+nlcg_mvp2_cpu_device(EnergyBase& energy_base,
+                      smearing_type smearing,
+                      double temp,
+                      double tol,
+                      double kappa,
+                      double tau,
+                      int maxiter,
+                      int restart)
+{
+  Kokkos::initialize();
+  nlcg<Kokkos::HostSpace, Kokkos::CudaSpace>(
+      energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
   Kokkos::finalize();
 }
 

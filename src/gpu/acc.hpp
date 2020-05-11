@@ -5,9 +5,9 @@ namespace nlcglib {
 
 namespace acc {
 
-template <typename T>
+template <class T, class U=T>
 void
-copy(T* target, const T* src, size_t n);
+copy(T* target, const U* src, size_t n);
 
 }  // acc
 }  // nlcglib

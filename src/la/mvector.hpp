@@ -369,8 +369,9 @@ template <class mspc, class xspc>
 struct make_mmatrix_return_type<mspc, xspc, std::enable_if_t<!std::is_same<mspc, xspc>::value>>
 {
   using type = KokkosDVector<Kokkos::complex<double>**,
-                               SlabLayoutV,
-                               xspc>;
+                             SlabLayoutV,
+                             Kokkos::LayoutLeft,
+                             xspc>;
   using view_type = KokkosDVector<Kokkos::complex<double>**,
                                   SlabLayoutV,
                                   Kokkos::LayoutStride,
@@ -382,10 +383,11 @@ struct make_mmatrix_return_type<mspc, xspc, std::enable_if_t<!std::is_same<mspc,
 /// @brief create an mvector from SIRIUS adaptor
 /// @tparam T Kokkos memory space
 /// @tparam execution memory space
-template<class T>
-mvector<typename make_mmatrix_return_type<T, T>::type>
-make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base)
+template <class T, class X=T>
+mvector<typename make_mmatrix_return_type<T, X>::type>
+make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<std::is_same<T, X>::value>* _ = nullptr)
 {
+  static_assert(std::is_same<T,X>::value, "invalid template parameters");
   using memspace = T;
   typedef typename make_mmatrix_return_type<T>::type matrix_t;
   mvector<matrix_t> mvector(Communicator(matrix_base->mpicomm()));
@@ -414,14 +416,14 @@ make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base)
 }
 
 
-// /// copy implementation
+/// copy implementation
 template<class T, class X>
-typename make_mmatrix_return_type<T, X>::type
+mvector<typename make_mmatrix_return_type<T, X>::type>
 make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<!std::is_same<T, X>::value>* _ =nullptr)
 {
+  static_assert(!std::is_same<T, X>::value, "invalid template parameters");
   using memspace = T;
-  typedef typename make_mmatrix_return_type<T>::type matrix_t;
-  typedef typename make_mmatrix_return_type<T>::view_type view_t;
+  typedef typename make_mmatrix_return_type<T, X>::type matrix_t;
   mvector<matrix_t> mvector(Communicator(matrix_base->mpicomm()));
   // kokkosDvector
   int num_vec = matrix_base->size();
@@ -440,14 +442,13 @@ make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<!std::is
       if (buffer.memtype != memory_type::host)
         throw std::runtime_error("expected host memory");
     }
-    view_t(Map<>(comm, SlabLayoutV({{0, 0, buffer.size[0], buffer.size[1]}})), buffer);
     // copy view T, using cuda memcpy ...
     matrix_t mat(Map<>(comm, SlabLayoutV({{0, 0, buffer.size[0], buffer.size[1]}})));
+    // issue memcpy
     acc::copy(mat.array().data(), buffer.data, buffer.size[0]*buffer.size[1]);
     mvector[kindex] = mat;
   }
   return mvector;
-
 }
 
 
