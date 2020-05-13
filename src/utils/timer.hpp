@@ -34,7 +34,6 @@ public:
   typedef std::chrono::milliseconds type_t;
 
 public:
-  Timer();
   void start();
 
   double stop();
