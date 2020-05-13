@@ -1,7 +1,7 @@
 #pragma once
 
 #include "exceptions.hpp"
-#include "logger.hpp"
+#include "utils/logger.hpp"
 #include <iomanip>
 
 namespace nlcglib {

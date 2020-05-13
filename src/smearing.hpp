@@ -7,7 +7,7 @@
 #include "constants.hpp"
 #include "la/mvector.hpp"
 #include "la/utils.hpp"
-#include "logger.hpp"
+#include "utils/logger.hpp"
 #include "interface.hpp"
 
 namespace nlcglib {

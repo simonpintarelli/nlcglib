@@ -13,7 +13,8 @@
 #include "free_energy.hpp"
 #include "exec_space.hpp"
 #include "geodesic.hpp"
-#include "logger.hpp"
+#include "utils/logger.hpp"
+#include "utils/timer.hpp"
 #include <complex>
 #include "mvp2.hpp"
 #include "linesearch/linesearch.hpp"
