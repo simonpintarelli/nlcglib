@@ -338,7 +338,7 @@ zheevd<Kokkos::complex<double>>::call(cusolverEigMode_t jobz,
   return ret_cusolver;
 }
 
-template <typename T>
+template <class T>
 struct gemm
 { };
 
@@ -429,6 +429,49 @@ struct gemm<double>
     cublasDgemm_v2(cublas::cublasHandle::get(), transa, transb, m, n, k, &alpha, A, lda, B, ldb, &beta, C, ldc);
   }
 };
+
+
+template <class T>
+struct geam
+{ };
+
+template <>
+struct geam<Kokkos::complex<double>>
+{
+  static const cublasOperation_t H = cublasOperation_t::CUBLAS_OP_HERMITAN;
+  static const cublasOperation_t N = cublasOperation_t::CUBLAS_OP_N;
+
+  inline static void call(cublasOperation_t transa,
+                          cublasOperation_t transb,
+                          int m,
+                          int n,
+                          Kokkos::complex<double> alpha,
+                          const Kokkos::complex<double>* A,
+                          int lda,
+                          Kokkos::complex<double> beta,
+                          const Kokkos::complex<double>* B,
+                          int ldb,
+                          Kokkos::complex<double>* C,
+                          int ldc)
+  {
+    cublasZgeam(cublas::cublasHandle::get(),
+                transa,
+                transb,
+                m,
+                n,
+                reinterpret_cast<const cuDoubleComplex*>(&alpha),
+                reinterpret_cast<const cuDoubleComplex*>(A),
+                lda,
+                reinterpret_cast<const cuDoubleComplex*>(&beta),
+                reinterpret_cast<const cuDoubleComplex*>(B),
+                ldb,
+                reinterpret_cast<cuDoubleComplex*>(C),
+                ldc);
+  }
+};
+
+
+
 
 }  // namespace cuda
 }  // namespace nlcglib

@@ -3,6 +3,7 @@
 #ifdef __USE_MKL
 #include <mkl_cblas.h>
 #include <mkl_lapacke.h>
+#include <mkl.h>
 #else
 #include <cblas.h>
 #include <lapacke.h>
@@ -261,6 +262,65 @@ struct gemm<double> : blas_base
   }
 };
 
+
+template<class T>
+struct geam {};
+
+
+template<>
+struct geam<Kokkos::complex<double>> : blas_base
+{
+  inline static void call(const CBLAS_ORDER Order,
+                          const CBLAS_TRANSPOSE TransA,
+                          const CBLAS_TRANSPOSE TransB,
+                          const int M,
+                          const int N,
+                          Kokkos::complex<double> alpha,
+                          const Kokkos::complex<double> *A,
+                          const int lda,
+                          const Kokkos::complex<double> beta,
+                          const Kokkos::complex<double>* B,
+                          const int ldb,
+                          Kokkos::complex<double> *C,
+                          const int ldc)
+  {
+#ifdef __USE_MKL
+    mkl_zomatadd(Order,
+                 TransA,
+                 TransB,
+                 m,
+                 n,
+                 alpha,
+                 A,
+                 lda,
+                 beta,
+                 B,
+                 ldb,
+                 C,
+                 ldc);
+#else
+    auto cA = reinterpret_cast<const std::complex<double>*>(A);
+    auto cB = reinterpret_cast<const std::complex<double>*>(B);
+    auto cC = reinterpret_cast<std::complex<double>*>(C);
+
+    std::complex<double> alpha_{alpha.real(), alpha.imag()};
+    std::complex<double> beta_{beta.real(), beta.imag()};
+
+    if (TransA == CBLAS_TRANSPOSE::CblasNoTrans && TransB == CBLAS_TRANSPOSE::CblasNoTrans && Order == CblasColMajor) {
+#pragma omp parallel for
+      for (auto j = 0ul; j < N; ++j) {
+        for (auto i = 0ul; i < M; ++i) {
+          cC[i + ldc * j] = alpha_ * (cA[i + lda * j]) + beta_ * cB[i + M * j];
+        }
+      }
+    } else {
+      throw std::runtime_error("cblas::geam: transpose args not implemented");
+    }
+
+#endif
+  }
+
+};
 
 }  // namespace cblas
 }  // namespace nlcglib

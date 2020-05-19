@@ -236,7 +236,7 @@ scale_alloc(const M1& src,
 /// dst <- ϐ * dst  + α * src
 template <class T1, class M2, class LAYOUT0, class... KOKKOS0>
 void
-add(KokkosDVector<T1**, LAYOUT0, KOKKOS0...>& dst,
+_add(KokkosDVector<T1**, LAYOUT0, KOKKOS0...>& dst,
     M2& src,
     const identity_t<T1>& alpha,
     const identity_t<T1>& beta = T1{1.0})
@@ -260,7 +260,6 @@ add(KokkosDVector<T1**, LAYOUT0, KOKKOS0...>& dst,
         });
 
   } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
-    // TODO: use Kokkos::OpenMP or something appropriate
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<memspace>> mdrange_policy;
     Kokkos::parallel_for(
         "add", mdrange_policy({0, 0}, {m, n}), KOKKOS_LAMBDA(int i, int j) {

@@ -283,4 +283,45 @@ transform(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
   }
 }
 
+
+/// add
+template <class M0, class M1>
+std::enable_if_t<std::is_same<typename M0::storage_t::memory_space, Kokkos::HostSpace>::value, void>
+add(M0& C,
+    const M1& A,
+    typename M0::numeric_t alpha,
+    typename M0::numeric_t beta = typename M0::numeric_t{1.0})
+{
+  typedef M0 vector0_t;
+  typedef M1 vector1_t;
+  typedef typename vector1_t::storage_t::value_type numeric_t;
+
+  static_assert(std::is_same<typename vector0_t::storage_t::memory_space,
+                             typename vector1_t::storage_t::memory_space>::value,
+                "c,a not on same memory");
+
+  if (A.map().is_local() && C.map().is_local()) {
+    /* single rank */
+    int m = A.map().nrows();
+    int n = C.map().ncols();
+    numeric_t* A_ptr = A.array().data();
+    numeric_t* C_ptr = C.array().data();
+
+    if (A.array().stride(0) != 1 || C.array().stride(0) != 1) {
+      throw std::runtime_error("expecting column major layout");
+    }
+    // assume there are no strides
+    int lda = A.array().stride(1);
+    int ldc = C.array().stride(1);
+
+    using geam = cblas::geam<numeric_t>;
+    geam::call(
+        CblasColMajor, geam::N, geam::N, m, n, alpha, A_ptr, lda, beta, C_ptr, ldc, C_ptr, ldc);
+  } else {
+    throw std::runtime_error("not implemented.");
+  }
+}
+
+
+
 }  // namespace nlcglib
