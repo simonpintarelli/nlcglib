@@ -1,6 +1,7 @@
 #include <Kokkos_Complex.hpp>
 #include <cassert>
 #include <complex>
+#include <cuda.h>
 
 namespace nlcglib {
 
