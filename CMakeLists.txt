@@ -44,8 +44,10 @@ endif()
 
 add_subdirectory(src)
 set(nlcglib_internal_location $<TARGET_FILE:nlcglib_internal>)
-# add_subdirectory(unit_tests)
-add_subdirectory(test)
+
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()
 
 include(CMakePackageConfigHelpers)
 install(EXPORT nlcglib_targets
