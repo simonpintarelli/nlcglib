@@ -53,8 +53,7 @@ include(CMakePackageConfigHelpers)
 install(EXPORT nlcglib_targets
   FILE nlcglib-targets.cmake
   NAMESPACE nlcglib::
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/cmake/nlcglib")
-
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/nlcglib")
 
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/cmake/nlcglib/nlcglibConfigVersion.cmake"
@@ -65,14 +64,18 @@ write_basic_package_version_file(
 configure_package_config_file(
   cmake/nlcglib-config.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/nlcglib-config.cmake
-  INSTALL_DESTINATION "${CMAKE_INSTALL_PREFIX}/cmake/nlcglib"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nlcglib
   )
 
-install(FILES
+install(
+  FILES
   ${CMAKE_CURRENT_BINARY_DIR}/nlcglib-config.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/nlcglib/nlcglibConfigVersion.cmake
   DESTINATION
-  ${CMAKE_INSTALL_PREFIX}/cmake/nlcglib)
-install(FILES ${PROJECT_SOURCE_DIR}/include/nlcglib.hpp
+  ${CMAKE_INSTALL_LIBDIR}/cmake/nlcglib)
+install(
+  FILES
+  ${PROJECT_SOURCE_DIR}/include/nlcglib.hpp
   ${PROJECT_SOURCE_DIR}/include/interface.hpp
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/include/nlcglib")
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/include/nlcglib"
+  )
