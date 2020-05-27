@@ -161,7 +161,7 @@ inverse_gaussian_spline(const Kokkos::View<double*, args...>& fn_input, double m
   std::valarray<double> fn(fn_host.data(), fn_host.size());
   fn /= mo;
 
-  auto ifu = fn > 0.5;
+  std::valarray<bool> ifu = fn > 0.5;
 
   std::valarray<double> xi(fn.size());
 
@@ -170,15 +170,15 @@ inverse_gaussian_spline(const Kokkos::View<double*, args...>& fn_input, double m
 
   double ub = 8.0;
   double lb = -5.0;
-  auto if0 = efermi_spline(ub) > fn;
-  auto if1 = efermi_spline(lb) < fn;
+  std::valarray<bool> if0 = efermi_spline(ub) > fn;
+  std::valarray<bool> if1 = efermi_spline(lb) < fn;
 
-  auto ifb = if0 || if1;
+  std::valarray<bool> ifb = if0 || if1;
 
-  auto iifu = ifu && !ifb;
+  std::valarray<bool> iifu = ifu && !ifb;
   std::valarray<double> fn_iifu = fn[iifu];
 
-  auto iifl = !ifu && !ifb;
+  std::valarray<bool> iifl = !ifu && !ifb;
   std::valarray<double> fn_iifl = fn[iifl];
 
   xi[iifu] = (1. - std::sqrt(1. - 2. * std::log(2. - 2. * fn_iifu))) / std::sqrt(2.);
