@@ -36,3 +36,6 @@ NLCGLIB_SETUP_TARGET(test_smearing)
 
 add_executable(test_nvcc test_nvcc.cpp)
 NLCGLIB_SETUP_TARGET(test_nvcc)
+
+add_executable(test_custom_kernels test_custom_kernels.cpp)
+NLCGLIB_SETUP_TARGET(test_custom_kernels)
