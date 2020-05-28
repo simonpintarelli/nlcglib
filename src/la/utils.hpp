@@ -98,7 +98,7 @@ template <class T, class... ARGS>
 auto
 _empty_like(const Kokkos::View<T*, ARGS...>& other)
 {
-  return Kokkos::View<T*, ARGS...>(Kokkos::ViewAllocateWithoutInitializing("todo"), other.size());
+  return Kokkos::View<T*, ARGS...>(Kokkos::ViewAllocateWithoutInitializing("tmp"), other.size());
 }
 
 
@@ -106,9 +106,8 @@ template <class T, class LAYOUT, class... ARGS>
 auto
 _empty_like(const KokkosDVector<T, LAYOUT, ARGS...>& other)
 {
-  // TODO: Kokkos::WithoutInitializing
   using return_type = to_layout_left_t<KokkosDVector<T, LAYOUT, ARGS...>>;
-  return return_type(other.map());
+  return return_type(other.map(), Kokkos::ViewAllocateWithoutInitializing("tmp"));
 }
 
 

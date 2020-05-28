@@ -48,7 +48,7 @@ struct precondgx
   {
     auto delta_x = empty_like()(x);
     // delta_x <- -hx
-    add(delta_x, hx, -1.0);
+    add(delta_x, hx, -1.0, 0.0);
     // delta_x <- += X @ ll
     add(delta_x, eval(xll), 1.0);
     prec.apply_in_place(delta_x);
