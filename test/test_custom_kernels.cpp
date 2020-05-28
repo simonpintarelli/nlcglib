@@ -20,7 +20,7 @@ template <enum Kokkos::Iterate iterate_t = Kokkos::Iterate::Default,
           class T2,
           class... KOKKOS2>
 M0&
-scale(M0& dst, const M1& src, const Kokkos::View<T2*, KOKKOS2...>& x, double alpha, double beta = 0)
+scale_(M0& dst, const M1& src, const Kokkos::View<T2*, KOKKOS2...>& x, double alpha, double beta = 0)
 {
   auto mDST = dst.array();
   auto mSRC = src.array();
@@ -30,7 +30,7 @@ scale(M0& dst, const M1& src, const Kokkos::View<T2*, KOKKOS2...>& x, double alp
   using vector_t = M0;
   using memspace = typename vector_t::storage_t::memory_space;
   if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2, iterate_t>, Kokkos::Cuda> mdrange_policy;
+    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2, iterate_t, Kokkos::Iterate::Right>, Kokkos::Cuda> mdrange_policy;
     if (src.array().stride(0) == 1) {
       Kokkos::parallel_for(
           "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
@@ -53,34 +53,53 @@ scale(M0& dst, const M1& src, const Kokkos::View<T2*, KOKKOS2...>& x, double alp
 }
 
 
-template<class SPACE=Kokkos::HostSpace, enum Kokkos::Iterate iterate_t>
+template <class SPACE = Kokkos::HostSpace, enum Kokkos::Iterate iterate_t>
 void
 run()
 {
+  Timer timer;
   int ncols = 800;
   int nrows = 20000;
-  KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, SPACE> X(
+  KokkosDVector<complex_double**, SlabLayoutV, Kokkos::LayoutLeft, SPACE> X(
       Map<>(Communicator(), SlabLayoutV({{0, 0, nrows, ncols}})));
 
   auto arr = X.array();
   auto host_view = Kokkos::create_mirror(arr);
-  for (auto i = 0ul; i < host_view.size(); ++i) {
-    *(host_view.data() + i) = unif01(gen);
+  // for (auto i = 0ul; i < host_view.size(); ++i) {
+  //   *(host_view.data() + i) = unif01(gen);
+  // }
+
+  timer.start();
+  Kokkos::deep_copy(arr, host_view);
+  {
+    Kokkos::fence();
+    double tlap = timer.stop();
+    std::cout << "Timing deep_copy: " << tlap << "\n";
   }
 
-  Kokkos::deep_copy(arr, host_view);
+  using matrix_t = KokkosDVector<complex_double**, SlabLayoutV, Kokkos::LayoutLeft, SPACE>;
 
-  using matrix_t = KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, SPACE>;
-  matrix_t H(
-      Map<>(Communicator(), SlabLayoutV({{0, 0, ncols, ncols}})));
+  timer.start();
+  matrix_t H(Map<>(Communicator(), SlabLayoutV({{0, 0, ncols, ncols}})));
+  {
+    Kokkos::fence();
+    double tlap = timer.stop();
+    std::cout << "Timing DVector constructor: " << tlap << "\n";
+  }
 
+  timer.start();
   auto Y = empty_like()(H);
+  {
+    Kokkos::fence();
+    double tlap = timer.stop();
+    std::cout << "Timing empty_like: " << tlap << "\n";
+  }
 
   auto fn = Kokkos::View<complex_double*, SPACE>("fn", ncols);
 
-  Timer timer;
   timer.start();
-  scale<iterate_t>(Y, H, fn, 1.0);
+  Kokkos::fence();
+  scale_<iterate_t>(Y, H, fn, 1.0);
   Kokkos::fence();
   double tlap = timer.stop();
 
@@ -88,8 +107,10 @@ run()
 }
 
 
-int main(int argc, char *argv[])
+int
+main(int argc, char* argv[])
 {
+  Timer timer;
   Kokkos::initialize();
   Communicator::init(argc, argv);
 
@@ -101,12 +122,49 @@ int main(int argc, char *argv[])
   }
   std::cout << "thread_count: " << threads_count;
 
-  std::cout << "run on HOST" << "\n";
+  std::cout << "run on HOST"
+            << "\n";
+  std::cout << "\tleft: "
+            << "\n";
+
+  timer.start();
   run<Kokkos::HostSpace, Kokkos::Iterate::Left>();
+  {
+    double tlap = timer.stop();
+    std::cout << "host left: " << tlap << "\n";
+  }
+
+  std::cout << "\tright: "
+            << "\n";
+  timer.start();
+  run<Kokkos::HostSpace, Kokkos::Iterate::Right>();
+  {
+    double tlap = timer.stop();
+    std::cout << "host right: " << tlap << "\n";
+  }
+
 
   std::cout << "run on DEVICE"
             << "\n";
+  std::cout << "\tleft: "
+            << "\n";
+  timer.start();
+  run<Kokkos::CudaSpace, Kokkos::Iterate::Left>();
+  {
+    double tlap = timer.stop();
+    std::cout << "cuda left: " << tlap << "\n";
+  }
+
+
+  std::cout << "\tright: "
+            << "\n";
+  timer.start();
   run<Kokkos::CudaSpace, Kokkos::Iterate::Right>();
+  {
+    double tlap = timer.stop();
+    std::cout << "cuda right: " << tlap << "\n";
+  }
+
 
   // std::cout << "run non GPU" << "\n";
   // run_unmanaged<Kokkos::CudaSpace>();
