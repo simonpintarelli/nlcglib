@@ -53,6 +53,12 @@ public:
   {
   }
 
+  KokkosDVector(const Map<layout_t>& map, Kokkos::ViewAllocateWithoutInitializing vaw)
+      : map_(map)
+      , kokkos_(vaw, map.nrows(), map.ncols())
+  {
+  }
+
   KokkosDVector(KokkosDVector&& other)
       : map_(std::move(other.map_))
       , kokkos_(std::move(other.kokkos_))
