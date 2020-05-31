@@ -356,7 +356,6 @@ Smearing::entropy(const mvector<X>& fn)
     case smearing_type::GAUSSIAN_SPLINE: {
       auto x = tapply([occ=occ] (auto fn) { return inverse_gaussian_spline(fn, occ); }, fn);
       return sum(wk * tapply([](auto x) { return gaussian_spline_entropy(x); }, x));
-      break;
     }
     default:
       throw std::runtime_error("invalid smearing type");
