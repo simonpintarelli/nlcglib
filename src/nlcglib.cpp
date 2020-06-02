@@ -1,4 +1,4 @@
-#include "nlcglib.hpp"
+#include <nlcglib.hpp>
 #include <iostream>
 #include <iomanip>
 #include "la/dvector.hpp"
@@ -15,7 +15,6 @@
 #include "geodesic.hpp"
 #include "utils/logger.hpp"
 #include "utils/timer.hpp"
-#include <complex>
 #include "mvp2.hpp"
 #include "linesearch/linesearch.hpp"
 
