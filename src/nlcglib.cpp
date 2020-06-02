@@ -25,6 +25,7 @@ namespace nlcglib {
 template <class memspace, class xspace=memspace>
 void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
 {
+  Timer timer;
   FreeEnergy<memspace, xspace> free_energy(T, energy_base, smear);
   std::map<smearing_type, std::string> smear_name{{smearing_type::FERMI_DIRAC, "Fermi-Dirac"}, {smearing_type::GAUSSIAN_SPLINE, "Gaussian-spline"}};
 
@@ -96,6 +97,7 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
 
   for (int i = 1; i < maxiter+1; ++i) {
     Logger() << "Iteration " << i << "\n";
+    timer.start();
 
     // check for convergence
     if (std::abs(slope) < tol) {
@@ -180,6 +182,8 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
              << std::setw(15) << std::left << std::scientific << std::setprecision(12) << free_energy.get_F() << "\t"
              << std::setw(15) << std::left << std::scientific << std::setprecision(12) << slope << "\n";
 
+    auto tlap = timer.stop();
+    Logger() << "cg iteration took " << tlap << " s\n";
   }
 }
 
