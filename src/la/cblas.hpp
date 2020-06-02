@@ -285,15 +285,45 @@ struct geam<Kokkos::complex<double>> : blas_base
                           const int ldc)
   {
 #ifdef __USE_MKL
-    mkl_zomatadd(Order,
-                 TransA,
-                 TransB,
+    char c_ordering;
+    char transa;
+    char transb;
+    if (Order == CBLAS_ORDER::CblasColMajor)
+      c_ordering = 'C';
+    else if(Order == CBLAS_ORDER::CblasRowMajor)
+      c_ordering = 'R';
+    else
+      assert(false);
+
+    if (TransA == CBLAS_TRANSPOSE::CblasNoTrans) {
+      transa = 'N';
+    } else if (TransA == CBLAS_TRANSPOSE::CblasTrans) {
+      transa = 'T';
+    } else if (TransA == CBLAS_TRANSPOSE::CblasConjTrans) {
+      transa = 'C';
+    } else {
+      assert(false);
+    }
+
+    if (TransB == CBLAS_TRANSPOSE::CblasNoTrans) {
+      transb = 'N';
+    } else if (TransB == CBLAS_TRANSPOSE::CblasTrans) {
+      transb = 'T';
+    } else if (TransB == CBLAS_TRANSPOSE::CblasConjTrans) {
+      transb = 'C';
+    } else {
+      assert(false);
+    }
+
+    mkl_zomatadd(c_ordering,
+                 transa,
+                 transb,
                  M,
                  N,
-                 reinterpret_cast<CPX&>(alpha),
+                 reinterpret_cast<CPX &>(alpha),
                  reinterpret_cast<const CPX *>(A),
                  lda,
-                 reinterpret_cast<CPX&>(beta),
+                 reinterpret_cast<CPX &>(beta),
                  reinterpret_cast<const CPX *>(B),
                  ldb,
                  reinterpret_cast<CPX *>(C),
