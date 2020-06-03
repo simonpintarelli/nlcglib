@@ -15,12 +15,22 @@ namespace nlcglib {
 class Logger : public CSingleton<Logger>
 {
 public:
-  Logger() { MPI_Comm_rank(MPI_COMM_WORLD, &pid_); }
+  Logger() {
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid_);
+  }
 
-  void attach_file(const std::string& prefix = "out")
+  void attach_file(const std::string& prefix = "out", const std::string& suffix = ".log")
   {
     MPI_Comm_rank(MPI_COMM_WORLD, &pid_);
-    stream_ptr_ = std::make_shared<std::ofstream>(prefix + std::to_string(pid_) + ".log");
+    stream_ptr_ = std::make_shared<std::ofstream>(prefix + std::to_string(pid_) + suffix);
+  }
+
+  /// only master rank writes
+  void attach_file_master(const std::string& fname = "nlcg.out")
+  {
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid_);
+    if (pid_ == 0)
+      stream_ptr_ = std::make_shared<std::ofstream>(fname);
   }
 
   template <typename T>
@@ -72,6 +82,8 @@ public:
   void detach_stdout() { detach_stdout_ = true; }
 
   void attach_stdout() { detach_stdout_ = false; }
+
+  bool is_detached() { return detach_stdout_ == true; }
 
 private:
   std::list<std::string> prefixes_;

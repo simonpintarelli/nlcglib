@@ -27,13 +27,19 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
 {
   Timer timer;
   FreeEnergy<memspace, xspace> free_energy(T, energy_base, smear);
-  std::map<smearing_type, std::string> smear_name{{smearing_type::FERMI_DIRAC, "Fermi-Dirac"}, {smearing_type::GAUSSIAN_SPLINE, "Gaussian-spline"}};
+  std::map<smearing_type, std::string> smear_name{
+      {smearing_type::FERMI_DIRAC, "Fermi-Dirac"},
+      {smearing_type::GAUSSIAN_SPLINE, "Gaussian-spline"}};
+
+  auto& logger = Logger::GetInstance();
+  logger.detach_stdout();
+  logger.attach_file_master("nlcg.out");
 
   free_energy.compute();
 
-  Logger() << "F (initial) =  " << std::setprecision(8) << free_energy.get_F() << "\n";
-  Logger() << "KS (initial) =  " << std::setprecision(8) << free_energy.ks_energy() << "\n";
-  Logger() << "nlcglib parameters\n"
+  logger << "F (initial) =  " << std::setprecision(8) << free_energy.get_F() << "\n";
+  logger << "KS (initial) =  " << std::setprecision(8) << free_energy.ks_energy() << "\n";
+  logger << "nlcglib parameters\n"
            << std::setw(10) << "T "
            << ": " << T << "\n"
            << std::setw(10) << "smearing "
@@ -50,8 +56,8 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
            << ": " << restart << "\n";
 
   int Ne = energy_base.nelectrons();
-  Logger() << "num electrons: " << Ne << "\n";
-  Logger() << "tol = " << tol << "\n";
+  logger << "num electrons: " << Ne << "\n";
+  logger << "tol = " << tol << "\n";
 
   auto ek = free_energy.get_ek();
   auto wk = free_energy.get_wk();
@@ -91,27 +97,23 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
   line_search ls;
   ls.t_trial = 0.2;
   ls.tau = tau;
-  Logger() << std::setw(15) << std::left << "Iteration"
+  logger << std::setw(15) << std::left << "Iteration"
            << std::setw(15) << std::left << "Free energy" << "\t"
            << std::setw(15) << std::left << "Residual" << "\n";
 
   for (int i = 1; i < maxiter+1; ++i) {
-    Logger() << "Iteration " << i << "\n";
+    logger << "Iteration " << i << "\n";
     timer.start();
 
     // check for convergence
     if (std::abs(slope) < tol) {
-      Logger() << std::setw(15) << std::left << i << std::setw(15) << std::left << std::scientific
-               << std::setprecision(12) << free_energy.get_F() << "\t" << std::setw(15) << std::left
-               << std::scientific << std::setprecision(12) << slope << "\n";
-      Logger() << "fn\n";
-      print(fn);
-      Logger() << "ek\n";
-      print(free_energy.get_ek());
+      logger << std::setw(15) << std::left << i << std::setw(15) << std::left << std::scientific
+             << std::setprecision(12) << free_energy.get_F() << "\t" << std::setw(15) << std::left
+             << std::scientific << std::setprecision(12) << slope << "\n";
 
-      Logger() << "kT * S: " << std::setprecision(10) << free_energy.get_entropy() << "\n";
-      Logger() << "F     : " << std::setprecision(10) << free_energy.get_F() << "\n";
-      Logger() << "NLCG SUCCESS\n";
+      logger << "kT * S: " << std::setprecision(10) << free_energy.get_entropy() << "\n";
+      logger << "F     : " << std::setprecision(10) << free_energy.get_F() << "\n";
+      logger << "NLCG SUCCESS\n";
       return;
     }
 
@@ -153,10 +155,10 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
     double gamma = fr_new / fr;
     fr = fr_new;
     if (!(i % restart == 0))
-      Logger() << "\t CG gamma = " << gamma << "\n";
+      logger << "\t CG gamma = " << gamma << "\n";
 
     if (i % restart == 0) {
-      Logger() << "CG restart\n";
+      logger << "CG restart\n";
       // overwrites Z_xp
       Z_x = copy(delta_x);
       // overwrite Z_etap
@@ -172,18 +174,18 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
 
     if (slope >= 0) {
       if (i % restart == 0) throw std::runtime_error("no descent direction could be found, abort!");
-      Logger() << ">> slope > 0, force restart.\n";
+      logger << ">> slope > 0, force restart.\n";
       Z_x = copy(delta_x);
       Z_eta = copy(delta_eta);
 
       slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
     }
-    Logger() << std::setw(15) << std::left << i
-             << std::setw(15) << std::left << std::scientific << std::setprecision(12) << free_energy.get_F() << "\t"
-             << std::setw(15) << std::left << std::scientific << std::setprecision(12) << slope << "\n";
+    logger << std::setw(15) << std::left << i
+           << std::setw(15) << std::left << std::scientific << std::setprecision(12) << free_energy.get_F() << "\t"
+           << std::setw(15) << std::left << std::scientific << std::setprecision(12) << slope << "\n";
 
     auto tlap = timer.stop();
-    Logger() << "cg iteration took " << tlap << " s\n";
+    logger << "cg iteration took " << tlap << " s\n";
   }
 }
 
@@ -193,7 +195,6 @@ void nlcg_check_gradient(EnergyBase& energy_base)
 {
   double T = 300;
   double kappa = 1;
-  Logger() << " --- nlcg ---" << "\n";
   FreeEnergy<memspace> free_energy(T, energy_base, smearing_type::FERMI_DIRAC);
 
   free_energy.compute();

@@ -19,13 +19,13 @@ public:
   template <class GEODESIC, class FREE_ENERGY>
   auto operator()(GEODESIC&& G_base, FREE_ENERGY&& FE, double slope)
   {
-    Logger() << "line search t_trial = " << std::scientific << t_trial << "\n";
+    Logger::GetInstance() << "line search t_trial = " << std::scientific << t_trial << "\n";
     double F0 = FE.get_F();
     try {
       return qline(G_base, FE, slope);
     } catch (StepError& step_error) {
-      Logger() << "\t"
-               << "quadratic line search failed -> backtracking search\n";
+      Logger::GetInstance() << "\t"
+                            << "quadratic line search failed -> backtracking search\n";
       return bt_search(G_base, FE, F0);
     }
   }
@@ -58,7 +58,7 @@ line_search::bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0)
       return ek_ul;
     }
     t *= tau;
-    Logger() << "\tbacktracking search tau = " << std::scientific << t << "\n";
+    Logger::GetInstance() << "\tbacktracking search tau = " << std::scientific << t << "\n";
   }
   // TODO: let logger print state
 
@@ -85,7 +85,7 @@ line_search::qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope)
   //   G(dt);
   //   double F1 = FE.get_F();
   //   double fd_slope = (F1-F0)/dt;
-  //   Logger() << "\t DEBUG qline slope = " << std::setprecision(6) << slope << ", fd_slope = " << fd_slope << "\n";
+  //   Logger::GetInstance() << "\t DEBUG qline slope = " << std::setprecision(6) << slope << ", fd_slope = " << fd_slope << "\n";
   // }
 
   // (END) DEBUG check slope
@@ -106,7 +106,7 @@ line_search::qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope)
 
     // check curvature, might need to increase trial point
     if (a < 0) {
-      Logger() << "\t in line-search increase t_trial by *5 \n";
+      Logger::GetInstance() << "\t in line-search increase t_trial by *5 \n";
       tsearch *= 5;
     } else {
       break;
@@ -118,7 +118,7 @@ line_search::qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope)
   // evaluate FE at predicted minimum
   auto ek_ul = G(t_min);
   double F_min = FE.get_F();
-  Logger() << "\t t_min = " << t_min <<  ", q line prediction error: " << std::scientific << std::setprecision(8) << (F_pred - F_min) <<  "\n";
+  Logger::GetInstance() << "\t t_min = " << t_min <<  ", q line prediction error: " << std::scientific << std::setprecision(8) << (F_pred - F_min) <<  "\n";
 
   if (F_min > F0) {
     throw StepError();
@@ -140,7 +140,7 @@ line_search::qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope)
 //   try {
 //     return qline(G_base, FE, slope, t_trial);
 //   } catch (StepError& step_error) {
-//     Logger() << "\t"
+//     Logger::GetInstance() << "\t"
 //              << "quadratic line search failed -> backtracking search\n";
 //     return bt_search(G_base, FE, F0, t_trial, 0.1);
 //   }
