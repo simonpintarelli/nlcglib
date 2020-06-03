@@ -8,6 +8,7 @@
 #include "la/mvector.hpp"
 #include "la/utils.hpp"
 #include "utils/logger.hpp"
+#include "utils/timer.hpp"
 #include "interface.hpp"
 
 namespace nlcglib {
@@ -24,7 +25,6 @@ find_chemical_potential(Fun&& fun, double mu0, double tol)
   int nmax{1000};
   int counter{0};
   while (std::abs(fun(mu)) > tol && counter < nmax) {
-    // std::cout << "find_chemical_potential:: mu: " << mu << "\n";
     sp = s;
     if ( fun (mu) > 0)
       s = 1;
@@ -37,6 +37,7 @@ find_chemical_potential(Fun&& fun, double mu0, double tol)
     mu += s * de;
     counter++;
   }
+
   if (!(std::abs(fun(mu)) < tol)) {
     throw std::runtime_error("couldn't find chemical potential f(mu) = " + std::to_string(fun(mu)) +
                              ", mu = " + std::to_string(mu));
@@ -46,19 +47,35 @@ find_chemical_potential(Fun&& fun, double mu0, double tol)
 }
 
 /// Fermi-Dirac smearing
-inline double
-fermi_dirac(double x)
+struct fermi_dirac
 {
-  if (x < -50) {
-    return 1;
-  }
+  inline static double compute(double x)
+  {
+    if (x < -50) {
+      return 1;
+    }
 
-  if (x > 40) {
-    return 0;
-  }
+    if (x > 40) {
+      return 0;
+    }
 
-  return 1. / (1. + std::exp(x));
-}
+    return 1. / (1. + std::exp(x));
+  }
+};
+
+/// Gaussian-spline smearing
+struct efermi_spline
+{
+  inline static double compute(double x)
+  {
+    double sq2 = std::sqrt(2);
+    if (x < 0) {
+      return 1 - 0.5 * std::exp(0.5 - std::pow(x - 1 / sq2, 2));
+    } else {
+      return 0.5 * std::exp(0.5 - std::pow(1 / sq2 + x, 2));
+    }
+  }
+};
 
 template <class... args>
 auto
@@ -141,18 +158,6 @@ gaussian_spline_entropy(const Kokkos::View<double*, args...>& xkokkos)
 }
 
 
-/// Gaussian-spline smearing
-inline double
-efermi_spline(double x)
-{
-  double sq2 = std::sqrt(2);
-  if (x < 0) {
-    return 1 - 0.5 * std::exp(0.5 - std::pow(x - 1 / sq2, 2));
-  } else {
-    return 0.5 * std::exp(0.5 - std::pow(1 / sq2 + x, 2));
-  }
-}
-
 template <class... args>
 Kokkos::View<double*, Kokkos::HostSpace>
 inverse_gaussian_spline(const Kokkos::View<double*, args...>& fn_input, double mo)
@@ -170,8 +175,8 @@ inverse_gaussian_spline(const Kokkos::View<double*, args...>& fn_input, double m
 
   double ub = 8.0;
   double lb = -5.0;
-  std::valarray<bool> if0 = efermi_spline(ub) > fn;
-  std::valarray<bool> if1 = efermi_spline(lb) < fn;
+  std::valarray<bool> if0 = efermi_spline::compute(ub) > fn;
+  std::valarray<bool> if1 = efermi_spline::compute(lb) < fn;
 
   std::valarray<bool> ifb = if0 || if1;
 
@@ -194,46 +199,81 @@ inverse_gaussian_spline(const Kokkos::View<double*, args...>& fn_input, double m
   return out;
 }
 
-template <class X, class scalar_vec_t, class FUN>
+template <class SMEARING, class X, class scalar_vec_t>
 auto
 get_occupation_numbers(
-    const mvector<X>& x, FUN&& f, double kT, double occ, int Ne, const scalar_vec_t& wk, double tol)
+    const mvector<X>& x, double kT, double occ, int Ne, const scalar_vec_t& wk, double tol)
 {
-  auto fd = [kT = kT, occ = occ, f = f](auto ek, double mu) {
+  // todo create xhost
+  auto x_host = eval_threaded(tapply(
+      [](auto x) {
+        auto x_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
+        return x_host;
+      },
+      x));
+
+  auto fd = [kT = kT, occ = occ](auto ek, auto fn_scratch, double mu) {
     using memspace = typename decltype(ek)::memory_space;
-    auto ek_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), ek);
-    int n = ek_host.size();
-    Kokkos::View<double*, Kokkos::HostSpace> out("fn", n);
-    Kokkos::parallel_for("FD fn", Kokkos::RangePolicy<Kokkos::Serial>(0, n), [=](int i) {
-      out(i) = occ * f((ek_host(i) - mu) / kT);
-    });
+    static_assert(std::is_same<memspace, Kokkos::HostSpace>::value, "must be host space");
+
+    // auto ek_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), ek);
+
+    int n = ek.size();
+    double sum = 0;
+    for (int i = 0; i < n; ++i) {
+      sum += occ * SMEARING::compute((ek(i) - mu) / kT);
+    }
+
     // copy back to original space
-    return Kokkos::create_mirror_view_and_copy(memspace(), out);
+    return sum;
+    // return Kokkos::create_mirror_view_and_copy(memspace(), out);
   };
 
-  auto x_all = x.allgather(wk.commk());
+  auto x_all = x_host.allgather(wk.commk());
   auto wk_all = wk.allgather();
 
+  auto fn_scratch = eval_threaded(tapply([](auto ek) {
+    int n = ek.size();
+    Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::ViewAllocateWithoutInitializing("fn"), n);
+    return out;
+  }, x_all));
+
   double mu = find_chemical_potential(
-      [x = x_all, wk = wk_all, Ne = Ne, fd](double mu) {
-        return Ne - sum(wk * sum(tapply([mu = mu, fd](auto xi) { return fd(xi, mu); }, x)));
+      [&x = x_all, &wk = wk_all, &Ne = Ne, &fn_scratch = fn_scratch, &fd](double mu) {
+        double fsum = 0;
+        for (auto& wki : wk) {
+          auto& key = wki.first;
+          fsum += wki.second * fd(x[key], fn_scratch[key], mu);
+        }
+        return Ne - fsum;
       },
       0, /* mu0 */
       tol /* tolerance */);
-  // call eval on x (x stores only the local k-points)
-  return eval_threaded(tapply(
-      [mu = mu, kT = kT, occ = occ, f = f](auto ek) {
+
+  // call eval on x_host (x_host stores only the local k-points)
+  auto fn_host = eval_threaded(tapply(
+      [mu = mu, kT = kT, occ = occ](auto ek) {
         using memspace = typename decltype(ek)::memory_space;
-        auto ek_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), ek);
+        static_assert(std::is_same<memspace, Kokkos::HostSpace>::value, "must be host space");
         int n = ek.size();
-        Kokkos::View<double*, Kokkos::HostSpace> out("fn", n);
-        Kokkos::parallel_for("FD fn", Kokkos::RangePolicy<Kokkos::Serial>(0, n), [=](int i) {
-          out(i) = occ * f((ek_host(i) - mu) / kT);
-        });
-        // copy back to original space
-        return Kokkos::create_mirror_view_and_copy(memspace(), out);
-      },
-      x));
+        Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::ViewAllocateWithoutInitializing("fn"), n);
+
+        for (int i = 0; i < n; ++i) {
+          out(i) = occ * SMEARING::compute((ek(i) - mu) / kT);
+        }
+        return out;
+        },
+      x_host));
+
+  using target_memspc = typename X::memory_space;
+  // copy back to target memory space
+  auto fn = eval_threaded(tapply([](auto fn_host) {
+                         auto fn = Kokkos::View<double*, target_memspc>(Kokkos::ViewAllocateWithoutInitializing("fn"), fn_host.size());
+                         Kokkos::deep_copy(fn, fn_host);
+                         return fn;
+                       }, fn_host));
+
+  return fn;
 }
 
 
@@ -287,22 +327,20 @@ Smearing::fn(const mvector<X>& x)
 {
   switch (smearing) {
     case smearing_type::FERMI_DIRAC: {
-      return get_occupation_numbers(x,
-                                    std::bind(fermi_dirac, std::placeholders::_1),
-                                    this->kT,
-                                    this->occ,
-                                    this->Ne,
-                                    this->wk,
-                                    this->tol);
+      return get_occupation_numbers<fermi_dirac>(x,
+                                                 this->kT,
+                                                 this->occ,
+                                                 this->Ne,
+                                                 this->wk,
+                                                 this->tol);
     }
     case smearing_type::GAUSSIAN_SPLINE: {
-      return get_occupation_numbers(x,
-                                    std::bind(efermi_spline, std::placeholders::_1),
-                                    this->kT,
-                                    this->occ,
-                                    this->Ne,
-                                    this->wk,
-                                    this->tol);
+      return get_occupation_numbers<efermi_spline>(x,
+                                                   this->kT,
+                                                   this->occ,
+                                                   this->Ne,
+                                                   this->wk,
+                                                   this->tol);
     }
     default:
       throw std::runtime_error("invalid smearing given");
