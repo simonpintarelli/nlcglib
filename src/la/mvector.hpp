@@ -524,7 +524,7 @@ auto sum(const Kokkos::View<numeric_t*, ARGS...>& x)
   static_assert(view_type::dimension::rank == 1,
                 "KokkosView");
 
-  auto host_mirror = Kokkos::create_mirror(x);
+  auto host_mirror = Kokkos::create_mirror_view(x);
   Kokkos::deep_copy(host_mirror, x);
 
   return std::accumulate(host_mirror.data(), host_mirror.data()+ host_mirror.size(), 0.0);
