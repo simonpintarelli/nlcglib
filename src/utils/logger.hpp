@@ -73,11 +73,11 @@ public:
 
   void flush()
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    // make sure to write intermediate changes
-    auto& out = *(stream_ptr_.get());
-    if(pid_ == 0)
+    if(stream_ptr_) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      auto& out = *(stream_ptr_.get());
       out.flush();
+    }
   }
 
   void detach_stdout() { detach_stdout_ = true; }
