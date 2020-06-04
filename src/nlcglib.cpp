@@ -17,6 +17,7 @@
 #include "utils/timer.hpp"
 #include "mvp2.hpp"
 #include "linesearch/linesearch.hpp"
+#include <cfenv>
 
 typedef std::complex<double> complex_double;
 
@@ -25,6 +26,8 @@ namespace nlcglib {
 template <class memspace, class xspace=memspace>
 void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
 {
+  std::feclearexcept(FE_ALL_EXCEPT);
+
   Timer timer;
   FreeEnergy<memspace, xspace> free_energy(T, energy_base, smear);
   std::map<smearing_type, std::string> smear_name{
@@ -98,8 +101,8 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
   ls.t_trial = 0.2;
   ls.tau = tau;
   logger << std::setw(15) << std::left << "Iteration"
-           << std::setw(15) << std::left << "Free energy" << "\t"
-           << std::setw(15) << std::left << "Residual" << "\n";
+         << std::setw(15) << std::left << "Free energy" << "\t"
+         << std::setw(15) << std::left << "Residual" << "\n";
 
   for (int i = 1; i < maxiter+1; ++i) {
     logger << "Iteration " << i << "\n";
