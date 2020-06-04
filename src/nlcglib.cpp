@@ -186,6 +186,7 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
 
     auto tlap = timer.stop();
     logger << "cg iteration took " << tlap << " s\n";
+    logger.flush();
   }
 }
 
