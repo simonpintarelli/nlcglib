@@ -207,7 +207,7 @@ Communicator::allgather(const std::vector<VAL>& values) const
 template <class T>
 T Communicator::allreduce(T val, enum mpi_op op) const
 {
-  T result;
+  T result{0};
   switch (op) {
     case mpi_op::sum: {
       CALL_MPI(MPI_Allreduce,
