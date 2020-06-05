@@ -452,7 +452,6 @@ make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<!std::is
 }
 
 
-// needs to know if is double or complex
 template<class T>
 auto make_mmvector(std::shared_ptr<VectorBaseZ> vector_base)
 {
