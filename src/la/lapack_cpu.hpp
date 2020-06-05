@@ -43,7 +43,16 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
                    reinterpret_cast<CPX*>(U.array().data()), /* Complex double */
                    lda,                                                    /* lda */
                    w.data()                                              /* eigenvalues */
+    lapack_int info = LAPACKE_zheevd(LAPACK_COL_MAJOR,                                     /* matrix layout */
+                                     'V',                                                  /* jobz */
+                                     'U',                                                  /* uplot */
+                                     n,                                                    /* matrix size */
+                                     reinterpret_cast<CPX*>(U.array().data()), /* Complex double */
+                                     lda,                                                    /* lda */
+                                     w.data()                                              /* eigenvalues */
     );
+    if (info != 0)
+      throw std::runtime_error("cblas zheevd failed");
   } else {
     throw std::runtime_error("not yet implemented");
   }
