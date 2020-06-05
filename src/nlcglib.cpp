@@ -26,7 +26,8 @@ namespace nlcglib {
 template <class memspace, class xspace=memspace>
 void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
 {
-  std::feclearexcept(FE_ALL_EXCEPT);
+  // std::feclearexcept(FE_ALL_EXCEPT);
+  feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
 
   Timer timer;
   FreeEnergy<memspace, xspace> free_energy(T, energy_base, smear);
