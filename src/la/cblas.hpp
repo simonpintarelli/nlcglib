@@ -340,7 +340,7 @@ struct geam<Kokkos::complex<double>> : blas_base
 #pragma omp parallel for
       for (auto j = 0ul; j < N; ++j) {
         for (auto i = 0ul; i < M; ++i) {
-          cC[i + ldc * j] = alpha_ * (cA[i + lda * j]) + beta_ * cB[i + M * j];
+          cC[i + ldc * j] = alpha_ * (cA[i + lda * j]) + beta_ * cB[i + ldb * j];
         }
       }
     } else {
