@@ -36,13 +36,6 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
   if (S.map().is_local()) {
     int n = S.map().ncols();
     Kokkos::deep_copy(U.array(), S.array());
-    LAPACKE_zheevd(LAPACK_COL_MAJOR,                                     /* matrix layout */
-                   'V',                                                  /* jobz */
-                   'U',                                                  /* uplot */
-                   n,                                                    /* matrix size */
-                   reinterpret_cast<CPX*>(U.array().data()), /* Complex double */
-                   lda,                                                    /* lda */
-                   w.data()                                              /* eigenvalues */
     lapack_int info = LAPACKE_zheevd(LAPACK_COL_MAJOR,                                     /* matrix layout */
                                      'V',                                                  /* jobz */
                                      'U',                                                  /* uplot */
