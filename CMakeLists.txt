@@ -47,6 +47,7 @@ set(nlcglib_internal_location $<TARGET_FILE:nlcglib_internal>)
 
 if(BUILD_TESTS)
   add_subdirectory(test)
+  add_subdirectory(unit_tests)
 endif()
 
 # preserve rpaths when installing and make the install folder relocatable

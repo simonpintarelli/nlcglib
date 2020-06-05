@@ -1,4 +1,4 @@
-find_package(GTest OPTIONAL)
+find_package(GTest REQUIRED)
 
 if(BUILD_TESTS AND NOT GTEST_FOUND)
   message(FATAL_ERROR "Could not find googletest.")
