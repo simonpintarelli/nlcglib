@@ -30,11 +30,11 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
 {
   static_assert(std::is_same<decltype(S.array().layout()), Kokkos::LayoutLeft>::value,
                 "must be col-major layout");
-  int lda = S.array().stride(1);
+  int lda = U.array().stride(1);
 
   // check number of MPI ranks in communicator
   if (S.map().is_local()) {
-    int n = S.map().ncols();
+    int n = U.map().ncols();
     Kokkos::deep_copy(U.array(), S.array());
     lapack_int info = LAPACKE_zheevd(LAPACK_COL_MAJOR,                                     /* matrix layout */
                                      'V',                                                  /* jobz */
