@@ -1,24 +1,20 @@
 #pragma once
 
 #ifdef __USE_MKL
-#define MKL_Complex16 std::complex<double>
-#define CPX std::complex<double>
-#endif
-
-#ifdef __USE_MKL
 #include <mkl_lapacke.h>
 #else
 #include <lapacke.h>
 #endif
 
-#ifndef __USE_MKL
-#define CPX _Complex double
-#endif
-
-
 #include <type_traits>
 #include "la/dvector.hpp"
 #include "la/cblas.hpp"
+
+#ifdef __USE_MKL
+#define CPX MKL_Complex16
+#else
+#define CPX _Complex double
+#endif
 
 
 namespace nlcglib {
@@ -50,18 +46,6 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
     );
     if (info != 0)
       throw std::runtime_error("cblas zheevd failed");
-    if (info < 0) {
-      // TODO print U
-      auto arr = S.array();
-      int n = arr.extent(0);
-      int m = arr.extent(1);
-      for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < m; ++j) {
-          std::cout << arr(i,j ) << " ";
-        }
-        std::cout << "\n";
-      }
-    }
   } else {
     throw std::runtime_error("not yet implemented");
   }
