@@ -1,23 +1,26 @@
 #pragma once
 
+#include <complex>
+#include <Kokkos_Core.hpp>
+
 #ifdef __USE_MKL
+#define MKL_Complex16 std::complex<double>
+#define CPX std::complex<double>
+#endif
+
+#ifdef __USE_MKL
+#include <mkl.h>
 #include <mkl_cblas.h>
 #include <mkl_lapacke.h>
-#include <mkl.h>
 #else
 #include <cblas.h>
 #include <lapacke.h>
 #endif
 
-#include <complex>
-#include <Kokkos_Core.hpp>
-
-
-#ifdef __USE_MKL
-#define CPX MKL_Complex16
-#else
+#ifndef __USE_MKL
 #define CPX _Complex double
 #endif
+
 
 namespace nlcglib {
 namespace cblas {
@@ -70,6 +73,7 @@ struct zheevd<Kokkos::complex<double>> : lapack_base
                          const int lda,
                          double *w)
   {
+    // static_assert(alignof(CPX) == alignof(Kokkos::complex<double>), "alignment does not match");
     return LAPACKE_zheevd(order, jobz, uplo, n, reinterpret_cast<CPX *>(a), lda, w);
   }
 };
