@@ -46,9 +46,9 @@ struct precondgx
   to_layout_left_t<std::remove_reference_t<x_t>>
   operator()(x_t&& x, hx_t&& hx, prec_t&& prec, ll_t&& xll)
   {
-    auto delta_x = empty_like()(x);
+    auto delta_x = zeros_like()(x);
     // delta_x <- -hx
-    add(delta_x, hx, -1.0, 0.0);
+    add(delta_x, hx, -1.0, 0);
     // delta_x <- += X @ ll
     add(delta_x, eval(xll), 1.0);
     prec.apply_in_place(delta_x);

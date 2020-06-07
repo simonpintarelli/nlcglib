@@ -40,7 +40,7 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
                                      'V',                                                  /* jobz */
                                      'U',                                                  /* uplot */
                                      n,                                                    /* matrix size */
-                                     reinterpret_cast<CPX*>(U.array().data()), /* Complex double */
+                                     reinterpret_cast<lapack_complex_double*>(U.array().data()), /* Complex double */
                                      lda,                                                    /* lda */
                                      w.data()                                              /* eigenvalues */
     );

@@ -2,7 +2,7 @@
 
 #include <functional>
 #include <utility>
-#include "la/map.hpp"
+#include <la/map.hpp>
 #include "lapack_cpu.hpp"
 #include "lapack_cuda.hpp"
 #include "mvector.hpp"
@@ -94,24 +94,20 @@ scale(M0& dst,
 
   using vector_t = M0;
   using memspace = typename vector_t::storage_t::memory_space;
-  if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::Cuda> mdrange_policy;
-    if (src.array().stride(0) == 1) {
+  typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<memspace>> mdrange_policy;
+  if (src.array().stride(0) == 1) {
+    if (beta == 0)
+      Kokkos::parallel_for(
+          "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
+            mDST(i, j) = alpha * x(j) * mSRC(i, j);
+          });
+    else
       Kokkos::parallel_for(
           "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
             mDST(i, j) = mDST(i, j) * beta + alpha * x(j) * mSRC(i, j);
           });
-    }
-  } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<memspace>> mdrange_policy;
-    if (src.array().stride(0) == 1) {
-      Kokkos::parallel_for(
-          "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
-            mDST(i, j) = mDST(i, j) * beta + alpha * x(j) * mSRC(i, j);
-          });
-    }
   } else {
-    throw std::runtime_error("no suitable ExecutionSpace found.");
+    throw std::runtime_error("invalid stride");
   }
 
   return dst;
@@ -139,22 +135,19 @@ scale(M1& dst,
 
   using vector_t = M1;
   using memspace = typename vector_t::storage_t::memory_space;
-  if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::Cuda> mdrange_policy;
-    if (src.array().stride(0) == 1) {
+  typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<memspace>> mdrange_policy;
+  if (src.array().stride(0) == 1) {
+    if (beta == 0)
+      Kokkos::parallel_for(
+          "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
+            mDST(i, j) =  alpha * mSRC(i, j);
+          });
+
+    else
       Kokkos::parallel_for(
           "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
             mDST(i, j) = mDST(i, j) * beta + alpha * mSRC(i, j);
           });
-    }
-  } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<memspace>> mdrange_policy;
-    if (src.array().stride(0) == 1) {
-      Kokkos::parallel_for(
-          "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
-            mDST(i, j) = mDST(i, j) * beta + alpha * mSRC(i, j);
-          });
-    }
   } else {
     throw std::runtime_error("no suitable ExecutionSpace found.");
   }
@@ -182,24 +175,14 @@ scale(M1& dst,
 
   using vector_t = M1;
   using memspace = typename vector_t::storage_t::memory_space;
-  if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::Cuda> mdrange_policy;
-    if (src.array().stride(0) == 1) {
-      Kokkos::parallel_for(
-          "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
-            mDST(i, j) = alpha * mSRC(i, j);
-          });
-    }
-  } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<memspace>> mdrange_policy;
-    if (src.array().stride(0) == 1) {
-      Kokkos::parallel_for(
-          "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
-            mDST(i, j) = alpha * mSRC(i, j);
-          });
-    }
+  typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<memspace>> mdrange_policy;
+  if (src.array().stride(0) == 1) {
+    Kokkos::parallel_for(
+        "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
+          mDST(i, j) = alpha * mSRC(i, j);
+        });
   } else {
-    throw std::runtime_error("no suitable ExecutionSpace found.");
+    throw std::runtime_error("invalid strides.");
   }
   return dst;
 }
@@ -252,20 +235,17 @@ _add(KokkosDVector<T1**, LAYOUT0, KOKKOS0...>& dst,
   int n = mSRC.extent(1);
   assert(mSRC.extent(0) == mDST.extent(0));
   assert(mSRC.extent(1) == mDST.extent(1));
-  if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::Cuda> mdrange_policy;
+  typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<memspace>> mdrange_policy;
+  if (beta == T1{0})
+    Kokkos::parallel_for(
+        "add", mdrange_policy({0, 0}, {m, n}), KOKKOS_LAMBDA(int i, int j) {
+          mDST(i, j) = alpha * mSRC(i, j);
+        });
+  else
     Kokkos::parallel_for(
         "add", mdrange_policy({0, 0}, {m, n}), KOKKOS_LAMBDA(int i, int j) {
           mDST(i, j) = mDST(i, j) * beta + alpha * mSRC(i, j);
         });
-
-  } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
-    typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<memspace>> mdrange_policy;
-    Kokkos::parallel_for(
-        "add", mdrange_policy({0, 0}, {m, n}), KOKKOS_LAMBDA(int i, int j) {
-          mDST(i, j) = mDST(i, j) * beta + alpha * mSRC(i, j);
-        });
-    }
 }
 
 struct inner_ {
@@ -369,7 +349,7 @@ loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
   using memspace = typename matrix_t::storage_t::memory_space;
 
   auto S = inner_()(X, X);
-  Kokkos::View<double*, memspace> w("eigvals, loewdin", X.map().ncols());
+  Kokkos::View<double*, memspace> w("eigvals, loewdin", X.array().extent(1));
   auto U = empty_like()(S);
   eigh(U, w, S);
 
@@ -386,14 +366,14 @@ loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
           w(i) = 1.0 / sqrt(w(i));
         });
   }
-
+  // Kokkos::fence();
   // S <- U / sqrt(eigvals)
   scale(S, U, w, 1, 0);
-  auto R = empty_like()(U);
+  auto R = zeros_like()(U);
   // R <- S @ U.H
   outer(R, S, U);
 
-  auto Y = empty_like()(X);
+  auto Y = zeros_like()(X);
   transform(Y, Kokkos::complex<double>{0.0}, Kokkos::complex<double>{1.0}, X, R);
 
   return Y;

@@ -140,7 +140,7 @@ KokkosDVector<T, LAYOUT, KOKKOS_ARGS...> KokkosDVector<T, LAYOUT, KOKKOS_ARGS...
 {
   static_assert(!std::is_same<typename storage_t::memory_traits, Kokkos::MemoryUnmanaged>::value, "not yet implemented");
 
-  KokkosDVector Result(this->map_, label);
+  KokkosDVector Result(this->map_, Kokkos::ViewAllocateWithoutInitializing(label));
 
   Kokkos::deep_copy(Result.array(), this->array());
   return Result;

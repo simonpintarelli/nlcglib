@@ -4,8 +4,9 @@
 #include <functional>
 #include <future>
 #include <vector>
-#include "la/dvector.hpp"
-#include "traits.hpp"
+#include <la/dvector.hpp>
+#include <exec_space.hpp>
+#include <traits.hpp>
 
 namespace nlcglib {
 
@@ -60,7 +61,8 @@ template <class T, class LAYOUT, class... KOKKOS_ARGS>
 auto
 _zeros_like(const KokkosDVector<T**, LAYOUT, KOKKOS_ARGS...>& input)
 {
-  KokkosDVector<T**, LAYOUT, KOKKOS_ARGS...> zeros(input.map());
+  using mat_t = to_layout_left_t<KokkosDVector<T**, LAYOUT, KOKKOS_ARGS...>>;
+  mat_t zeros(input.map());
   return zeros;
 }
 
@@ -95,19 +97,43 @@ struct zeros_like
 
 
 template <class T, class... ARGS>
-auto
+Kokkos::View<T*, ARGS...>
 _empty_like(const Kokkos::View<T*, ARGS...>& other)
 {
-  return Kokkos::View<T*, ARGS...>(Kokkos::ViewAllocateWithoutInitializing("tmp"), other.size());
+  // return Kokkos::View<T*, ARGS...>("tmp", other.size());
+  auto ret = Kokkos::View<T*, ARGS...>(Kokkos::ViewAllocateWithoutInitializing("tmp"), other.size());
+#ifdef DEBUG
+  // initialize with NAN to throw an error immediately if not overwritten
+  using memspc = typename Kokkos::View<T*, ARGS...>::memory_space;
+  Kokkos::parallel_for(Kokkos::RangePolicy<exec_t<memspc>>(0, other.size()), KOKKOS_LAMBDA(int i) {
+      ret(i) = NAN;
+      });
+#endif
+  return ret;
 }
 
 
 template <class T, class LAYOUT, class... ARGS>
-auto
+to_layout_left_t<KokkosDVector<T, LAYOUT, ARGS...>>
 _empty_like(const KokkosDVector<T, LAYOUT, ARGS...>& other)
 {
   using return_type = to_layout_left_t<KokkosDVector<T, LAYOUT, ARGS...>>;
-  return return_type(other.map(), Kokkos::ViewAllocateWithoutInitializing("tmp"));
+  using memspc = typename return_type::storage_t::memory_space;
+  auto ret = return_type(other.map(), Kokkos::ViewAllocateWithoutInitializing("tmp"));
+#ifdef DEBUG
+  // initialize with NAN to throw an error immediately if not overwritten
+  auto mDST = ret.array();
+  int m = mDST.extent(0);
+  int n = mDST.extent(1);
+  typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<memspc>> mdrange_policy;
+  Kokkos::parallel_for(
+      "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
+        mDST(i, j) = NAN;
+      });
+#endif
+  return ret;
+
+  // return return_type(other.map(), "tmp");
 }
 
 
