@@ -4,46 +4,92 @@
 using namespace nlcglib;
 
 
-void run(smearing_type smearing_t)
+void
+run(smearing_type smearing_t)
 {
   using cont = typename mvector<double>::container_t;
-  mvector<double> wk;
-  wk[std::make_pair<int, int>(0, 0)] = 1;
 
-  Smearing smearing(100., 3, 1, wk, smearing_t);
+  int nk = 2;
+  // int num_electrons = 100;
+  // int num_bands = 200;
+
+  int num_electrons = 30;
+  int num_bands = 1500;
+
+
+  Communicator comm(MPI_COMM_WORLD);
+
+  int nranks = comm.size();
+  int pid = comm.rank();
+
+  int nk_loc = nk / comm.size();
+
+  if (pid == nranks-1) {
+    nk_loc = nk - (nranks - 1) * nk_loc;
+  }
+
+
+  mvector<double> wk(comm);
+  {
+    double wk_ = 1. / nk;
+
+    for (int i = 0; i < nk_loc; ++i) {
+      wk[std::make_pair(pid * nk / nranks + i, 0)] = wk_;
+    }
+
+    double check = sum(wk, comm);
+    if (std::abs(check-1) > 1e-10)  {
+      std::cout << sum(wk,comm) << "\n";
+      throw std::runtime_error("wrong weights");
+    }
+  }
+
+  if(pid == nranks-1) {
+    print(wk);
+  }
+
+  std::cout << "before wk all gather"
+            << "\n";
+  auto wk_all = wk.allgather();
+  std::cout << "all weights"
+            << "\n";
+  print(wk_all);
+
+  Smearing smearing(50000., num_electrons, 1, wk, smearing_t);
 
   using vec_t = Kokkos::View<double *, Kokkos::HostSpace>;
 
+  mvector<vec_t> ek;
 
-  mvector<vec_t> fn;
+  for (int i = 0; i < nk_loc; ++i) {
 
-  vec_t fni("", 5);
-  fni(0) = 1;
-  fni(1) = 1;
-  fni(2) = 0.7;
-  fni(3) = 0.2;
-  fni(4) = 0.1;
-  fni(5) = 0;
+    auto key = std::make_pair(pid * nk / nranks + i, 0);
 
-  fn[std::make_pair<int, int>(0, 0)] = fni;
-  print(fn);
+    double lb = -10;
+    vec_t eki("ek" + std::to_string(i), num_bands);
+    eki(0) = lb;
+    for (int ib = 1; ib < num_bands; ++ib) {
+      eki(ib) = eki(ib-1) + std::exp(-0.05*ib);
+    }
+    ek[key] = eki;
+    if (i == 0)
+    print(ek);
+  }
 
-  auto ek = smearing.ek(fn);
-  std::cout << "ek"
-            << "\n";
-  print(ek);
-
-  // print(ek);
-  auto fn2 = smearing.fn(ek);
-  std::cout << "fn2"
-            << "\n";
-  print(fn2);
+  auto fn = smearing.fn(ek);
+  double S = smearing.entropy(fn);
+  double smax = comm.allreduce(S, mpi_op::max);
+  if ( S != smax) {
+    throw std::runtime_error("entropy differs");
+  }
+  std::cout << "entropy is " << S << "\n";
 }
 
 int main(int argc, char *argv[])
 {
   MPI_Init(&argc, &argv);
   Kokkos::initialize();
+  // run(smearing_type::GAUSSIAN_SPLINE);
   run(smearing_type::GAUSSIAN_SPLINE);
   Kokkos::finalize();
   MPI_Finalize();
