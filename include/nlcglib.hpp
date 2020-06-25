@@ -4,7 +4,7 @@
 
 namespace nlcglib {
 
-void
+nlcg_info
 nlcg_mvp2_cpu(EnergyBase& energy_base,
               smearing_type smearing,
               double temp,
@@ -14,7 +14,7 @@ nlcg_mvp2_cpu(EnergyBase& energy_base,
               int maxiter,
               int restart);
 
-void
+nlcg_info
 nlcg_mvp2_device(EnergyBase& energy_base,
                  smearing_type smearing,
                  double temp,
@@ -24,7 +24,7 @@ nlcg_mvp2_device(EnergyBase& energy_base,
                  int maxiter,
                  int restart);
 
-void
+nlcg_info
 nlcg_mvp2_cpu_device(EnergyBase& energy_base,
                       smearing_type smearing,
                       double temp,
@@ -34,7 +34,7 @@ nlcg_mvp2_cpu_device(EnergyBase& energy_base,
                       int maxiter,
                       int restart);
 
-void
+nlcg_info
 nlcg_mvp2_device_cpu(EnergyBase& energy_base,
                      smearing_type smearing,
                      double temp,

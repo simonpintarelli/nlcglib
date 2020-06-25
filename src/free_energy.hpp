@@ -31,6 +31,7 @@ public:
 
   double get_F() const { return free_energy; }
   double get_entropy() const { return entropy; }
+  const auto& ehandle() const { return energy; }
 
   Smearing& get_smearing() { return smearing; }
 
@@ -69,7 +70,9 @@ FreeEnergy<MEMSPACE, XMEMSPACE>::compute(const mvector<tX>& X, const mvector<tF>
         return vec_fi;
       }, fn);
   std::vector<std::vector<double>> vec_fn;
+  std::vector<std::pair<int, int>> key_fn;
   for (auto& fi : map_fn) vec_fn.push_back(eval(fi.second));
+  for (auto& fi : map_fn) key_fn.push_back(eval(fi.first));
 
   auto Xsirius = make_mmatrix<Kokkos::HostSpace>(this->energy.get_C(memory_type::host));
   execute(tapply(
@@ -81,7 +84,7 @@ FreeEnergy<MEMSPACE, XMEMSPACE>::compute(const mvector<tX>& X, const mvector<tF>
         Kokkos::deep_copy(x_sirius.array(), xh);
       }, Xsirius, X));
 
-  energy.set_fn(vec_fn);
+  energy.set_fn(key_fn, vec_fn);
   energy.compute();
 
   double etot = energy.get_total_energy();

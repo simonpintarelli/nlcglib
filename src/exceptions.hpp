@@ -17,4 +17,12 @@ public:
   const char* what() const noexcept { return "Step error"; }
 };
 
+
+class DescentError : public std::exception
+{
+public:
+  const char* what() const noexcept { return "CG failed try restart."; }
+};
+
+
 }  // nlcglib

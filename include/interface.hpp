@@ -27,6 +27,16 @@ enum class smearing_type
   GAUSSIAN_SPLINE
 };
 
+
+struct nlcg_info
+{
+  double tolerance;
+  double F;
+  double S;
+  int iter;
+};
+
+
 template <typename T, int d>
 struct buffer_protocol
 {
@@ -115,8 +125,6 @@ class EnergyBase
 public:
   EnergyBase() = default;
   virtual void compute() = 0;
-  virtual void set_occupation_numbers(const std::vector<std::vector<double>>& fn) = 0;
-  virtual void set_wfct(MatrixBaseZ& vector) = 0;
   /// return the number of electrons
   virtual int nelectrons() = 0;
   /// maximum number of electrons per orbital
@@ -126,10 +134,11 @@ public:
   virtual std::shared_ptr<MatrixBaseZ> get_sphi() = 0;
   virtual std::shared_ptr<MatrixBaseZ> get_C(memory_type) = 0;
   virtual std::shared_ptr<VectorBaseZ> get_fn() = 0;
-  virtual void set_fn(const std::vector<std::vector<double>>&) = 0;
+  virtual void set_fn(const std::vector<std::pair<int, int>>&, const std::vector<std::vector<double>>&) = 0;
   virtual std::shared_ptr<VectorBaseZ> get_ek() = 0;
   virtual std::shared_ptr<VectorBaseZ> get_gkvec_ekin() = 0;
   virtual std::shared_ptr<ScalarBaseZ> get_kpoint_weights() = 0;
+  virtual void print_info() const = 0;
 };
 
 

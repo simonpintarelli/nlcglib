@@ -23,11 +23,30 @@ typedef std::complex<double> complex_double;
 
 namespace nlcglib {
 
+auto print_info (double free_energy, double ks_energy, double entropy, double slope, int step)
+{
+    auto& logger = Logger::GetInstance();
+    logger << std::setw(15) << std::left << step << std::setw(15) << std::left << std::scientific
+           << std::setprecision(16) << free_energy << "\t" << std::setw(15) << std::left
+           << std::scientific << std::setprecision(10) << slope << "\n";
+    logger << "\t kT * S: " << std::setprecision(10) << entropy << "\n";
+
+    nlcg_info info;
+    info.F = free_energy;
+    info.S = entropy;
+    info.tolerance = slope;
+    info.iter = step;
+
+    return info;
+}
+
+
 template <class memspace, class xspace=memspace>
-void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
+nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
 {
   // std::feclearexcept(FE_ALL_EXCEPT);
   feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
+  nlcg_info info;
 
   Timer timer;
   FreeEnergy<memspace, xspace> free_energy(T, energy_base, smear);
@@ -105,27 +124,27 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
          << std::setw(15) << std::left << "Free energy" << "\t"
          << std::setw(15) << std::left << "Residual" << "\n";
 
+  bool force_restart = false;
   for (int i = 1; i < maxiter+1; ++i) {
     logger << "Iteration " << i << "\n";
     timer.start();
 
     // check for convergence
     if (std::abs(slope) < tol) {
-      logger << std::setw(15) << std::left << i << std::setw(15) << std::left << std::scientific
-             << std::setprecision(12) << free_energy.get_F() << "\t" << std::setw(15) << std::left
-             << std::scientific << std::setprecision(12) << slope << "\n";
+      info = print_info(
+          free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), slope, i);
 
       logger << "kT * S: " << std::setprecision(10) << free_energy.get_entropy() << "\n";
       logger << "F     : " << std::setprecision(10) << free_energy.get_F() << "\n";
       logger << "NLCG SUCCESS\n";
-      return;
+      return info;
     }
 
     // main loop
     auto ek_ul = ls(
         [&](auto& ef) { return [&](double t) { return geodesic(ef, X, eta, Z_x, Z_eta, t); }; },
         free_energy,
-        slope);
+        slope, force_restart);
 
     auto ek = std::get<0>(ek_ul);
     auto u = std::get<1>(ek_ul);
@@ -158,10 +177,9 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
     }
     double gamma = fr_new / fr;
     fr = fr_new;
-    if (!(i % restart == 0))
-      logger << "\t CG gamma = " << gamma << "\n";
+    if (!(i % restart == 0 && !force_restart)) logger << "\t CG gamma = " << gamma << "\n";
 
-    if (i % restart == 0) {
+    if (i % restart == 0 || force_restart) {
       logger << "CG restart\n";
       // overwrites Z_xp
       Z_x = copy(delta_x);
@@ -177,21 +195,23 @@ void nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, d
     slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
 
     if (slope >= 0) {
-      if (i % restart == 0) throw std::runtime_error("no descent direction could be found, abort!");
+      if (i % restart == 0 || force_restart) throw std::runtime_error("no descent direction could be found, abort!");
       logger << ">> slope > 0, force restart.\n";
       Z_x = copy(delta_x);
       Z_eta = copy(delta_eta);
 
       slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
     }
-    logger << std::setw(15) << std::left << i
-           << std::setw(15) << std::left << std::scientific << std::setprecision(12) << free_energy.get_F() << "\t"
-           << std::setw(15) << std::left << std::scientific << std::setprecision(12) << slope << "\n";
+
+    info = print_info(free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), slope, i);
+    free_energy.ehandle().print_info();
 
     auto tlap = timer.stop();
     logger << "cg iteration took " << tlap << " s\n";
     logger.flush();
   }
+
+  return info;
 }
 
 
@@ -203,7 +223,7 @@ void nlcg_check_gradient(EnergyBase& energy_base)
   FreeEnergy<memspace> free_energy(T, energy_base, smearing_type::FERMI_DIRAC);
 
   free_energy.compute();
-  Logger() << "F (initial) =  " << std::setprecision(8) << free_energy.get_F() << "\n";
+  Logger() << "F (initial) =  " << std::setprecision(12) << free_energy.get_F() << "\n";
   int Ne = energy_base.nelectrons();
   Logger() << "num electrons: " << Ne << "\n";
 
@@ -302,26 +322,29 @@ nlcg_check_gradient_cuda(EnergyBase& energy)
 }
 
 
-void
+nlcg_info
 nlcg_mvp2_cpu(EnergyBase& energy_base, smearing_type smearing, double temp, double tol, double kappa, double tau, int maxiter, int restart)
 {
   Kokkos::initialize();
-  nlcg<Kokkos::HostSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
+  auto info = nlcg<Kokkos::HostSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
   Kokkos::finalize();
+
+  return info;
 }
 
-void
+nlcg_info
 nlcg_mvp2_device(EnergyBase& energy_base, smearing_type smearing, double temp, double tol, double kappa, double tau, int maxiter, int restart)
 {
   Kokkos::initialize();
-  nlcg<Kokkos::CudaSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
+  auto info = nlcg<Kokkos::CudaSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
   Kokkos::finalize();
+  return info;
 }
 
 /**
  * obtain |psi> and H |psi> on device, but execute on host
  */
-void
+nlcg_info
 nlcg_mvp2_device_cpu(EnergyBase& energy_base,
                       smearing_type smearing,
                       double temp,
@@ -332,14 +355,15 @@ nlcg_mvp2_device_cpu(EnergyBase& energy_base,
                       int restart)
 {
   Kokkos::initialize();
-  nlcg<Kokkos::CudaSpace, Kokkos::HostSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
+  auto info = nlcg<Kokkos::CudaSpace, Kokkos::HostSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
   Kokkos::finalize();
+  return info;
 }
 
 /**
  * obtain |psi> and H |psi> on host, but execute on device
  */
-void
+nlcg_info
 nlcg_mvp2_cpu_device(EnergyBase& energy_base,
                       smearing_type smearing,
                       double temp,
@@ -350,9 +374,10 @@ nlcg_mvp2_cpu_device(EnergyBase& energy_base,
                       int restart)
 {
   Kokkos::initialize();
-  nlcg<Kokkos::HostSpace, Kokkos::CudaSpace>(
+  auto info = nlcg<Kokkos::HostSpace, Kokkos::CudaSpace>(
       energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
   Kokkos::finalize();
+  return info;
 }
 
 

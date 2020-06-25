@@ -27,7 +27,7 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
     int Info;
     zheevd_t::call(zheevd_t::VECTOR, zheevd_t::UPPER, n, U.array().data(), lda, w.data(), Info);
   } else {
-    throw std::runtime_error("not implemented");
+    throw std::runtime_error("distributed eigh not implemented");
   }
 }
 
@@ -48,7 +48,7 @@ cholesky(KokkosDVector<T, LAYOUT, KOKKOS...>& A)
     int info_potrf;
     potrf_t::call(uplo, n, ptr_A, lda, info_potrf);
   } else {
-    throw std::runtime_error("not implemented");
+    throw std::runtime_error("distributed cholesky not implemented");
   }
 }
 
@@ -78,7 +78,7 @@ solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A,
     typedef cuda::potrs<numeric_t> potrs_t;
     potrs_t::call(uplo, n, nrhs, ptr_A, lda, ptr_B, ldb);
   } else {
-    throw std::runtime_error("not implemented");
+    throw std::runtime_error("distributed solve_sym not implemented");
   }
 }
 
@@ -120,7 +120,7 @@ inner(M0& c,
     gemm::call(gemm::H, gemm::N, m, n, k, alpha, A_ptr, lda, B_ptr, ldb, beta, C_ptr, ldc);
 
   } else {
-    throw std::runtime_error("not implemented.");
+    throw std::runtime_error("distributed inner product not implemented.");
   }
 }
 
@@ -170,7 +170,7 @@ outer(M0& c,
     gemm::call(gemm::N, gemm::H, m, n, k, alpha, A_ptr, lda, B_ptr, ldb, beta, C_ptr, ldc);
 
   } else {
-    throw std::runtime_error("not implemented.");
+    throw std::runtime_error("distributed outer product not implemented.");
   }
 }
 
@@ -216,7 +216,7 @@ transform(M0& C,
     using gemm = cuda::gemm<numeric_t>;
     gemm::call(gemm::N, gemm::N, m, n, k, alpha, A_ptr, lda, B_ptr, ldb, beta, C_ptr, ldc);
   } else {
-    throw std::runtime_error("not implemented.");
+    throw std::runtime_error("distributed transform not implemented.");
   }
 }
 

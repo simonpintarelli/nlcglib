@@ -10,23 +10,23 @@ class line_search
 {
 private:
   template <class GEODESIC, class FREE_ENERGY>
-  auto qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope);
+  auto qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope, bool& force_restart);
 
   template <class GEODESIC, class FREE_ENERGY>
-  auto bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0);
+  auto bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0, bool& force_restart);
 
 public:
   template <class GEODESIC, class FREE_ENERGY>
-  auto operator()(GEODESIC&& G_base, FREE_ENERGY&& FE, double slope)
+  auto operator()(GEODESIC&& G_base, FREE_ENERGY&& FE, double slope, bool& force_restart)
   {
     Logger::GetInstance() << "line search t_trial = " << std::scientific << t_trial << "\n";
     double F0 = FE.get_F();
     try {
-      return qline(G_base, FE, slope);
+      return qline(G_base, FE, slope, force_restart);
     } catch (StepError& step_error) {
       Logger::GetInstance() << "\t"
                             << "quadratic line search failed -> backtracking search\n";
-      return bt_search(G_base, FE, F0);
+      return bt_search(G_base, FE, F0, force_restart);
     }
   }
 
@@ -42,7 +42,7 @@ public:
  */
 template <class GEODESIC, class FREE_ENERGY>
 auto
-line_search::bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0)
+line_search::bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0, bool& force_restart)
 {
   auto G = G_base(FE);
 
@@ -54,15 +54,24 @@ line_search::bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0)
   while (t > 1e-8) {
     auto ek_ul = G(t);
     double Fp = FE.get_F();
-    if (Fp <= F0) {
+    Logger::GetInstance() << "fd slope: " << std::scientific << (Fp - F0) / t << ", t: " << t
+                          << "\n";
+    if (Fp < F0) {
+      Logger::GetInstance() << "fd slope: " << std::scientific << (Fp - F0)/t << "\n";
+      force_restart = false;
       return ek_ul;
     }
     t *= tau;
     Logger::GetInstance() << "\tbacktracking search tau = " << std::scientific << t << "\n";
   }
   // TODO: let logger print state
-
-  throw std::runtime_error("bt_search could NOT find a new minimum");
+  Logger::GetInstance().flush();
+  if (force_restart)  {
+    throw DescentError();
+  } else {
+    force_restart = true;
+    return G(0);  // reset gradient
+  }
 }
 
 /**
@@ -72,7 +81,7 @@ line_search::bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0)
  */
 template <class GEODESIC, class FREE_ENERGY>
 auto
-line_search::qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope)
+line_search::qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope, bool& force_restart)
 {
   // G(t)
   auto G = G_base(FE);
@@ -124,8 +133,8 @@ line_search::qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope)
     throw StepError();
   }
 
-  // TODO: update t_trial by t_min
-
+  // reset force_restart
+  force_restart = false;
 
   return ek_ul;
 }
