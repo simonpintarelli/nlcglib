@@ -141,74 +141,81 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
     }
 
     // main loop
-    auto ek_ul = ls(
-        [&](auto& ef) { return [&](double t) { return geodesic(ef, X, eta, Z_x, Z_eta, t); }; },
-        free_energy,
-        slope, force_restart);
+    try {
+      auto ek_ul = ls(
+          [&](auto& ef) { return [&](double t) { return geodesic(ef, X, eta, Z_x, Z_eta, t); }; },
+          free_energy,
+          slope,
+          force_restart);
 
-    auto ek = std::get<0>(ek_ul);
-    auto u = std::get<1>(ek_ul);
+      auto ek = std::get<0>(ek_ul);
+      auto u = std::get<1>(ek_ul);
 
-    // obtain new H@x, compute g_X, g_eta, delta_x, delta_eta
-    Hx = free_energy.get_HX();
-    X = copy(free_energy.get_X());
-    // updated fn is missing!!
-    auto fni = free_energy.get_fn();
+      // obtain new H@x, compute g_X, g_eta, delta_x, delta_eta
+      Hx = free_energy.get_HX();
+      X = copy(free_energy.get_X());
+      // updated fn is missing!!
+      auto fni = free_energy.get_fn();
 
-    eta = eval_threaded(tapply(make_diag(), ek));
+      eta = eval_threaded(tapply(make_diag(), ek));
 
-    auto Hij = eval_threaded(tapply(inner_(), X, Hx, wk));
-    auto g_eta = grad_eta.g_eta(Hij, wk, ek, fni, free_energy.occupancy());
-    auto delta_eta = grad_eta.delta_eta(Hij, ek, wk);
+      auto Hij = eval_threaded(tapply(inner_(), X, Hx, wk));
+      auto g_eta = grad_eta.g_eta(Hij, wk, ek, fni, free_energy.occupancy());
+      auto delta_eta = grad_eta.delta_eta(Hij, ek, wk);
 
-    auto Xll = lagrange_multipliers(X, Hx, Prec);
-    auto g_X = gradX(X, Hx, fni, Xll, wk);
-    auto delta_x = precondGradX(X, Hx, Prec, Xll);
+      auto Xll = lagrange_multipliers(X, Hx, Prec);
+      auto g_X = gradX(X, Hx, fni, Xll, wk);
+      auto delta_x = precondGradX(X, Hx, Prec, Xll);
 
-    // rotate previous search direction ..
-    // TODO: only needed if not doing restart ...
-    auto Z_Xp = rotateX(Z_x, u);
-    auto Z_etap = rotateEta(Z_eta, u);
+      // rotate previous search direction ..
+      // TODO: only needed if not doing restart ...
+      auto Z_Xp = rotateX(Z_x, u);
+      auto Z_etap = rotateEta(Z_eta, u);
+      // conjugate directions
+      double fr_new = compute_slope(g_X, delta_x, g_eta, delta_eta, commk);
+      if (fr_new > 0) {
+        throw std::runtime_error("Error: increasing slope !!!, <.,.> = " + std::to_string(fr_new));
+      }
+      double gamma = fr_new / fr;
+      fr = fr_new;
+      if (!(i % restart == 0 && !force_restart)) logger << "\t CG gamma = " << gamma << "\n";
 
-    // conjugate directions
-    double fr_new = compute_slope(g_X, delta_x, g_eta, delta_eta, commk);
-    if (fr_new > 0) {
-      throw std::runtime_error("Error: increasing slope !!!, <.,.> = "  + std::to_string(fr_new));
-    }
-    double gamma = fr_new / fr;
-    fr = fr_new;
-    if (!(i % restart == 0 && !force_restart)) logger << "\t CG gamma = " << gamma << "\n";
-
-    if (i % restart == 0 || force_restart) {
-      logger << "CG restart\n";
-      // overwrites Z_xp
-      Z_x = copy(delta_x);
-      // overwrite Z_etap
-      Z_eta = copy(delta_eta);
-    } else {
-      // overwrites Z_xp
-      Z_x = eval_threaded(conjugatex(delta_x, Z_Xp, X, gamma));
-      // overwrite Z_etap
-      Z_eta = eval_threaded(conjugateeta(delta_eta, Z_etap, gamma));
-    }
-
-    slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
-
-    if (slope >= 0) {
-      if (i % restart == 0 || force_restart) throw std::runtime_error("no descent direction could be found, abort!");
-      logger << ">> slope > 0, force restart.\n";
-      Z_x = copy(delta_x);
-      Z_eta = copy(delta_eta);
+      if (i % restart == 0 || force_restart) {
+        logger << "CG restart\n";
+        // overwrites Z_xp
+        Z_x = copy(delta_x);
+        // overwrite Z_etap
+        Z_eta = copy(delta_eta);
+      } else {
+        // overwrites Z_xp
+        Z_x = eval_threaded(conjugatex(delta_x, Z_Xp, X, gamma));
+        // overwrite Z_etap
+        Z_eta = eval_threaded(conjugateeta(delta_eta, Z_etap, gamma));
+      }
 
       slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+
+      if (slope >= 0) {
+        if (i % restart == 0 || force_restart)
+          throw std::runtime_error("no descent direction could be found, abort!");
+        logger << ">> slope > 0, force restart.\n";
+        Z_x = copy(delta_x);
+        Z_eta = copy(delta_eta);
+
+        slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+      }
+
+      info = print_info(
+          free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), slope, i);
+      free_energy.ehandle().print_info();
+
+      auto tlap = timer.stop();
+      logger << "cg iteration took " << tlap << " s\n";
+      logger.flush();
+    } catch (DescentError) {
+      logger << "WARNING: No descent direction found, nlcg didn't reach final tolerance\n";
+      return info;
     }
-
-    info = print_info(free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), slope, i);
-    free_energy.ehandle().print_info();
-
-    auto tlap = timer.stop();
-    logger << "cg iteration took " << tlap << " s\n";
-    logger.flush();
   }
 
   return info;
