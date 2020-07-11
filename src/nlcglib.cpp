@@ -1,23 +1,24 @@
-#include <nlcglib.hpp>
-#include <iostream>
+#include <cfenv>
 #include <iomanip>
+#include <iostream>
+#include <nlcglib.hpp>
+#include "exec_space.hpp"
+#include "free_energy.hpp"
+#include "geodesic.hpp"
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
 #include "la/layout.hpp"
 #include "la/map.hpp"
 #include "la/mvector.hpp"
+#include "linesearch/linesearch.hpp"
+#include "mvp2.hpp"
 #include "preconditioner.hpp"
+#include "pseudo_hamiltonian/grad_eta.hpp"
 #include "smearing.hpp"
 #include "traits.hpp"
-#include "pseudo_hamiltonian/grad_eta.hpp"
-#include "free_energy.hpp"
-#include "exec_space.hpp"
-#include "geodesic.hpp"
 #include "utils/logger.hpp"
 #include "utils/timer.hpp"
-#include "mvp2.hpp"
-#include "linesearch/linesearch.hpp"
-#include <cfenv>
+#include "utils/format.hpp"
 
 typedef std::complex<double> complex_double;
 
@@ -168,13 +169,12 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
       auto delta_x = precondGradX(X, Hx, Prec, Xll);
 
       // rotate previous search direction ..
-      // TODO: only needed if not doing restart ...
       auto Z_Xp = rotateX(Z_x, u);
       auto Z_etap = rotateEta(Z_eta, u);
       // conjugate directions
       double fr_new = compute_slope(g_X, delta_x, g_eta, delta_eta, commk);
       if (fr_new > 0) {
-        throw std::runtime_error("Error: increasing slope !!!, <.,.> = " + std::to_string(fr_new));
+        throw std::runtime_error("Error: increasing slope !!!, <.,.> = " + format("%.5g", fr_new));
       }
       double gamma = fr_new / fr;
       fr = fr_new;
