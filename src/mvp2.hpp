@@ -89,6 +89,26 @@ struct slope
   }
 };
 
+struct slope_eta
+{
+  template <class ge_t, class ze_t>
+  Kokkos::complex<double> operator()(ge_t&& geta, ze_t&& zeta)
+  {
+    auto slope_eta = innerh_tr()(eval(geta), eval(zeta));
+    return slope_eta;
+  }
+};
+
+struct slope_x
+{
+  template <class gx_t, class zx_t>
+  Kokkos::complex<double> operator()(gx_t&& gx, zx_t&& zx)
+  {
+    auto slope_x = 2*innerh_tr()(eval(gx), eval(zx));
+    return slope_x;
+  }
+};
+
 struct conjugatex
 {
   conjugatex(double gamma) : gamma(gamma) {}
@@ -173,6 +193,20 @@ double
 compute_slope(const gx_t& gx, const zx_t& zx, const ge_t& geta, ze_t& zeta, const Communicator& commk)
 {
   return sum(eval_threaded(tapply(local::slope(), gx, zx, geta, zeta)), commk) .real();
+}
+
+template <class ge_t, class ze_t>
+double
+slope_eta(const ge_t& geta, ze_t& zeta, const Communicator& commk)
+{
+  return sum(eval_threaded(tapply(local::slope_eta(), geta, zeta)), commk).real();
+}
+
+template <class gx_t, class zx_t>
+double
+slope_x(const gx_t& gx, zx_t& zx, const Communicator& commk)
+{
+  return sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk).real();
 }
 
 template <class dx_t, class zxp_t, class x_t>
