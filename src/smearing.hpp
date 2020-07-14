@@ -314,7 +314,7 @@ protected:
   double occ;
   /// kb * T
   double kT;
-  double tol{1e-10};
+  double tol{1e-11};
 
   mvector<double> wk;
   smearing_type smearing;
