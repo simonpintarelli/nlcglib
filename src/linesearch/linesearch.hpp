@@ -130,6 +130,9 @@ line_search::qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope, bool& force_
   Logger::GetInstance() << "\t t_min = " << t_min <<  ", q line prediction error: " << std::scientific << std::setprecision(8) << (F_pred - F_min) <<  "\n";
 
   if (F_min > F0) {
+    Logger::GetInstance() << std::scientific << std::setprecision(12)
+                          << "F_min: " << F_min << "\n"
+                          << "F0:    " << F0 << "\n";
     throw StepError();
   }
 
