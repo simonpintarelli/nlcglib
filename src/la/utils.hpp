@@ -118,9 +118,9 @@ to_layout_left_t<KokkosDVector<T, LAYOUT, ARGS...>>
 _empty_like(const KokkosDVector<T, LAYOUT, ARGS...>& other)
 {
   using return_type = to_layout_left_t<KokkosDVector<T, LAYOUT, ARGS...>>;
-  using memspc = typename return_type::storage_t::memory_space;
   auto ret = return_type(other.map(), Kokkos::ViewAllocateWithoutInitializing("tmp"));
 #ifdef DEBUG
+  using memspc = typename return_type::storage_t::memory_space;
   // initialize with NAN to throw an error immediately if not overwritten
   auto mDST = ret.array();
   int m = mDST.extent(0);
