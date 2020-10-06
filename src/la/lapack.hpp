@@ -42,7 +42,7 @@ namespace nlcglib {
 //   return d;
 // }
 
-
+#ifdef __CUDA
 /// diag (on CUDA-GPU)
 template <class T, class LAYOUT, class... KOKKOS>
 std::enable_if_t<
@@ -64,6 +64,7 @@ diag(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
 
   return d;
 }
+#endif
 
 /// diag (on HOST)
 template <class T, class LAYOUT, class... KOKKOS>
@@ -366,10 +367,11 @@ struct innerh_tr
   //   return sum;
   // }
 
+#ifdef __CUDA
   template <class M1, class M2>
   std::enable_if_t<
-      Kokkos::SpaceAccessibility<Kokkos::Cuda, typename M1::storage_t::memory_space>::accessible,
-      typename M1::numeric_t>
+    Kokkos::SpaceAccessibility<Kokkos::Cuda, typename M1::storage_t::memory_space>::accessible,
+    typename M1::numeric_t>
   operator()(const M1& X, const M2& Y)
   {
     int nrows = X.array().extent(0);
@@ -402,6 +404,7 @@ struct innerh_tr
         sum);
       return sum;
   }
+#endif
 
   template <class M1, class M2>
   std::enable_if_t<
@@ -460,7 +463,7 @@ double l2norm(const mvector<X>& x) {
   return Kokkos::real(z);
 }
 
-
+#ifdef __CUDA
 template<class memspace>
 std::enable_if_t<Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible>
 loewdin_aux(Kokkos::View<double*, memspace>& w)
@@ -471,6 +474,7 @@ loewdin_aux(Kokkos::View<double*, memspace>& w)
         w(i) = 1.0 / sqrt(w(i));
       });
 }
+#endif
 
 template <class memspace>
 std::enable_if_t<Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible>

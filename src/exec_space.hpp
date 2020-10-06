@@ -9,11 +9,13 @@ struct exec
 {
 };
 
+#ifdef __CUDA
 template <>
 struct exec<Kokkos::CudaSpace>
 {
   using type = Kokkos::Cuda;
 };
+#endif
 
 template <>
 struct exec<Kokkos::HostSpace>

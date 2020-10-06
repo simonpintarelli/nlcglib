@@ -397,12 +397,14 @@ make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<std::is_
     auto buffer = matrix_base->get(i);
     auto kindex = matrix_base->kpoint_index(i);
     Communicator comm(buffer.mpi_comm);
+#ifdef __CUDA
     if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
       // make sure is memory type device
       if (buffer.memtype != memory_type::device)
         throw std::runtime_error("expected device memory, but got " +
                                  memory_names.at(buffer.memtype));
     }
+#endif
     if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
       // make sure is memory type device
       if (buffer.memtype != memory_type::host)
@@ -431,12 +433,14 @@ make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<!std::is
     auto buffer = matrix_base->get(i);
     auto kindex = matrix_base->kpoint_index(i);
     Communicator comm(buffer.mpi_comm);
+#ifdef __CUDA
     if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
       // make sure is memory type device
       if (buffer.memtype != memory_type::device)
         throw std::runtime_error("expected device memory, but got " +
                                  memory_names.at(buffer.memtype));
     }
+#endif
     if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
       // make sure is memory type device
       if (buffer.memtype != memory_type::host)
@@ -463,11 +467,15 @@ auto make_mmvector(std::shared_ptr<VectorBaseZ> vector_base)
     // vector_t vector();
     auto buffer = vector_base->get(i);
     if (buffer.memtype == memory_type::device) {
+#ifdef __CUDA
       Kokkos::View<double*, Kokkos::CudaSpace, Kokkos::MemoryUnmanaged> src(buffer.data, buffer.size[0]);
       vector_t dst("vector", buffer.size[0]);
       Kokkos::deep_copy(dst, src);
       auto kindex = vector_base->kpoint_index(i);
       mvector[kindex] = dst;
+#else
+      throw std::runtime_error("recompile nlcglib with CUDA support");
+#endif
     } else if (buffer.memtype == memory_type::host) {
       Kokkos::View<double*, Kokkos::HostSpace, Kokkos::MemoryUnmanaged> src(buffer.data,
                                                                             buffer.size[0]);
