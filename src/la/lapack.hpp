@@ -12,9 +12,42 @@
 
 namespace nlcglib {
 
-/// extract the diagonal, returns a KokkosView
+// /// extract the diagonal, returns a KokkosView
+// template <class T, class LAYOUT, class... KOKKOS>
+// Kokkos::View < T*, typename KokkosDVector<T**, LAYOUT, KOKKOS...>::storage_t::memory_space>
+// diag(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
+// {
+//   using vector_t = KokkosDVector<T**, LAYOUT, KOKKOS...>;
+//   using memspace = typename vector_t::storage_t::memory_space;
+//   int n = std::min(X.array().extent(0), X.array().extent(1));
+//   Kokkos::View<T*, memspace> d("diag", n);
+
+//   if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
+//     typedef Kokkos::RangePolicy<Kokkos::Cuda> range_policy;
+//     auto Xm = X.array();
+//     Kokkos::parallel_for(
+//         "diag", range_policy(0, n), KOKKOS_LAMBDA(int i) { d(i) = Xm(i, i); });
+
+//   } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
+//     typedef Kokkos::RangePolicy<Kokkos::Serial> range_policy;
+//     auto Xm = X.array();
+//     Kokkos::parallel_for(
+//         "diag", range_policy(0, n), KOKKOS_LAMBDA(int i) { d(i) = Xm(i, i); });
+//   } else {
+//     // raise exception
+//     throw std::runtime_error("no suitable ExecutionSpace found.");
+//   }
+//   return d;
+// }
+
+
+/// diag (on CUDA-GPU)
 template <class T, class LAYOUT, class... KOKKOS>
-Kokkos::View < T*, typename KokkosDVector<T**, LAYOUT, KOKKOS...>::storage_t::memory_space>
+std::enable_if_t<
+    Kokkos::SpaceAccessibility<
+        Kokkos::Cuda,
+        typename KokkosDVector<T**, LAYOUT, KOKKOS...>::storage_t::memory_space>::accessible,
+    Kokkos::View<T*, typename KokkosDVector<T**, LAYOUT, KOKKOS...>::storage_t::memory_space>>
 diag(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
 {
   using vector_t = KokkosDVector<T**, LAYOUT, KOKKOS...>;
@@ -22,23 +55,35 @@ diag(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
   int n = std::min(X.array().extent(0), X.array().extent(1));
   Kokkos::View<T*, memspace> d("diag", n);
 
-  if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
-    typedef Kokkos::RangePolicy<Kokkos::Cuda> range_policy;
-    auto Xm = X.array();
-    Kokkos::parallel_for(
-        "diag", range_policy(0, n), KOKKOS_LAMBDA(int i) { d(i) = Xm(i, i); });
+  typedef Kokkos::RangePolicy<Kokkos::Cuda> range_policy;
+  auto Xm = X.array();
+  Kokkos::parallel_for(
+      "diag", range_policy(0, n), KOKKOS_LAMBDA(int i) { d(i) = Xm(i, i); });
 
-  } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
-    typedef Kokkos::RangePolicy<Kokkos::Serial> range_policy;
-    auto Xm = X.array();
-    Kokkos::parallel_for(
-        "diag", range_policy(0, n), KOKKOS_LAMBDA(int i) { d(i) = Xm(i, i); });
-  } else {
-    // raise exception
-    throw std::runtime_error("no suitable ExecutionSpace found.");
-  }
   return d;
 }
+
+/// diag (on HOST)
+template <class T, class LAYOUT, class... KOKKOS>
+std::enable_if_t<
+    Kokkos::SpaceAccessibility<
+        Kokkos::Serial,
+        typename KokkosDVector<T**, LAYOUT, KOKKOS...>::storage_t::memory_space>::accessible,
+    Kokkos::View<T*, typename KokkosDVector<T**, LAYOUT, KOKKOS...>::storage_t::memory_space>>
+diag(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
+{
+  using vector_t = KokkosDVector<T**, LAYOUT, KOKKOS...>;
+  using memspace = typename vector_t::storage_t::memory_space;
+  int n = std::min(X.array().extent(0), X.array().extent(1));
+  Kokkos::View<T*, memspace> d("diag", n);
+
+  typedef Kokkos::RangePolicy<Kokkos::Serial> range_policy;
+  auto Xm = X.array();
+  Kokkos::parallel_for(
+      "diag", range_policy(0, n), KOKKOS_LAMBDA(int i) { d(i) = Xm(i, i); });
+  return d;
+}
+
 
 /**
  * Make a diagonal matrix from the given diagonal entries.
@@ -269,9 +314,61 @@ struct inner_ {
 /// Hermitian inner product, summed
 struct innerh_tr
 {
-  template<class M1, class M2>
-  typename M1::numeric_t operator()(const M1& X,
-                                    const M2& Y)
+  // template<class M1, class M2>
+  // typename M1::numeric_t operator()(const M1& X,
+  //                                   const M2& Y)
+  // {
+  //   int nrows = X.array().extent(0);
+  //   int ncols = X.array().extent(1);
+
+  //   using matrix_t = M1;
+  //   using T = typename M1::numeric_t;
+
+  //   using memory_space = typename matrix_t::storage_t::memory_space;
+
+  //   Kokkos::View<T*, memory_space> tmp("", nrows);
+
+  //   auto x = X.array();
+  //   auto y = Y.array();
+
+  //   T sum{0};
+  //   if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memory_space>::accessible) {
+  //     // inner_reduce along rows
+  //     Kokkos::parallel_for(
+  //         "", Kokkos::RangePolicy<Kokkos::Cuda>(0, nrows), KOKKOS_LAMBDA(int i) {
+  //           for (int j = 0; j < ncols; ++j) {
+  //             tmp(i) += x(i, j) * Kokkos::conj(y(i, j));
+  //           }
+  //         });
+  //     // sum vector
+  //     Kokkos::parallel_reduce(
+  //         "",
+  //         Kokkos::RangePolicy<Kokkos::Cuda>(0, nrows),
+  //         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
+  //         sum);
+  //   } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memory_space>::accessible) {
+  //     // compute on host
+  //     Kokkos::parallel_for(
+  //         "", Kokkos::RangePolicy<exec_t<memory_space>>(0, nrows), KOKKOS_LAMBDA(int i) {
+  //           for (int j = 0; j < ncols; ++j) {
+  //             tmp(i) += x(i, j) * Kokkos::conj(y(i, j));
+  //           }
+  //         });
+  //     Kokkos::parallel_reduce(
+  //         "",
+  //         Kokkos::RangePolicy<Kokkos::Serial>(0, nrows),
+  //         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
+  //         sum);
+  //   }
+
+  //   return sum;
+  // }
+
+  template <class M1, class M2>
+  std::enable_if_t<
+      Kokkos::SpaceAccessibility<Kokkos::Cuda, typename M1::storage_t::memory_space>::accessible,
+      typename M1::numeric_t>
+  operator()(const M1& X, const M2& Y)
   {
     int nrows = X.array().extent(0);
     int ncols = X.array().extent(1);
@@ -287,34 +384,55 @@ struct innerh_tr
     auto y = Y.array();
 
     T sum{0};
-    if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memory_space>::accessible) {
-      // inner_reduce along rows
-      Kokkos::parallel_for(
-          "", Kokkos::RangePolicy<Kokkos::Cuda>(0, nrows), KOKKOS_LAMBDA(int i) {
-            for (int j = 0; j < ncols; ++j) {
-              tmp(i) += x(i, j) * Kokkos::conj(y(i, j));
-            }
-          });
-      // sum vector
-      Kokkos::parallel_reduce(
-          "",
-          Kokkos::RangePolicy<Kokkos::Cuda>(0, nrows),
-          KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
-          sum);
-    } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memory_space>::accessible) {
-      // compute on host
-      Kokkos::parallel_for(
-          "", Kokkos::RangePolicy<exec_t<memory_space>>(0, nrows), KOKKOS_LAMBDA(int i) {
-            for (int j = 0; j < ncols; ++j) {
-              tmp(i) += x(i, j) * Kokkos::conj(y(i, j));
-            }
-          });
-      Kokkos::parallel_reduce(
-          "",
-          Kokkos::RangePolicy<Kokkos::Serial>(0, nrows),
-          KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
-          sum);
-    }
+
+    // inner_reduce along rows
+    Kokkos::parallel_for(
+        "", Kokkos::RangePolicy<Kokkos::Cuda>(0, nrows), KOKKOS_LAMBDA(int i) {
+          for (int j = 0; j < ncols; ++j) {
+            tmp(i) += x(i, j) * Kokkos::conj(y(i, j));
+          }
+        });
+    // sum vector
+    Kokkos::parallel_reduce(
+        "",
+        Kokkos::RangePolicy<Kokkos::Cuda>(0, nrows),
+        KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
+        sum);
+      return sum;
+  }
+
+  template <class M1, class M2>
+  std::enable_if_t<
+      Kokkos::SpaceAccessibility<Kokkos::Serial, typename M1::storage_t::memory_space>::accessible,
+      typename M1::numeric_t>
+  operator()(const M1& X, const M2& Y)
+  {
+    int nrows = X.array().extent(0);
+    int ncols = X.array().extent(1);
+
+    using matrix_t = M1;
+    using T = typename M1::numeric_t;
+
+    using memory_space = typename matrix_t::storage_t::memory_space;
+
+    Kokkos::View<T*, memory_space> tmp("", nrows);
+
+    auto x = X.array();
+    auto y = Y.array();
+
+    T sum{0};
+    // compute on host
+    Kokkos::parallel_for(
+        "", Kokkos::RangePolicy<exec_t<memory_space>>(0, nrows), KOKKOS_LAMBDA(int i) {
+          for (int j = 0; j < ncols; ++j) {
+            tmp(i) += x(i, j) * Kokkos::conj(y(i, j));
+          }
+        });
+    Kokkos::parallel_reduce(
+        "",
+        Kokkos::RangePolicy<Kokkos::Serial>(0, nrows),
+        KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
+        sum);
 
     return sum;
   }
@@ -341,6 +459,28 @@ double l2norm(const mvector<X>& x) {
 }
 
 
+template<class memspace>
+std::enable_if_t<Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible>
+loewdin_aux(Kokkos::View<double*, memspace>& w)
+{
+  // compute on device
+  Kokkos::parallel_for(
+      "scale", Kokkos::RangePolicy<Kokkos::Cuda>(0, w.size()), KOKKOS_LAMBDA(int i) {
+        w(i) = 1.0 / sqrt(w(i));
+      });
+}
+
+template <class memspace>
+std::enable_if_t<Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible>
+loewdin_aux(Kokkos::View<double*, memspace>& w)
+{
+  Kokkos::parallel_for(
+      "scale", Kokkos::RangePolicy<Kokkos::Serial>(0, w.size()), KOKKOS_LAMBDA(int i) {
+        w(i) = 1.0 / sqrt(w(i));
+      });
+}
+
+
 template <class T, class LAYOUT, class... KOKKOS>
 to_layout_left_t<KokkosDVector<T**, LAYOUT, KOKKOS...>>
 loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
@@ -353,19 +493,20 @@ loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
   auto U = empty_like()(S);
   eigh(U, w, S);
 
-  // w <- 1 / sqrt(w)
-  if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
-    // compute on device
-    Kokkos::parallel_for("scale", Kokkos::RangePolicy<Kokkos::Cuda>(0, w.size()), KOKKOS_LAMBDA(int i) {
-        w(i) = 1.0 / sqrt(w(i));
-      });
-  } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
-    // compute on host
-    Kokkos::parallel_for(
-        "scale", Kokkos::RangePolicy<Kokkos::Serial>(0, w.size()), KOKKOS_LAMBDA(int i) {
-          w(i) = 1.0 / sqrt(w(i));
-        });
-  }
+  loewdin_aux(w);
+  // // w <- 1 / sqrt(w)
+  // if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
+  //   // compute on device
+  //   Kokkos::parallel_for("scale", Kokkos::RangePolicy<Kokkos::Cuda>(0, w.size()), KOKKOS_LAMBDA(int i) {
+  //       w(i) = 1.0 / sqrt(w(i));
+  //     });
+  // } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
+  //   // compute on host
+  //   Kokkos::parallel_for(
+  //       "scale", Kokkos::RangePolicy<Kokkos::Serial>(0, w.size()), KOKKOS_LAMBDA(int i) {
+  //         w(i) = 1.0 / sqrt(w(i));
+  //       });
+  // }
   // Kokkos::fence();
   // S <- U / sqrt(eigvals)
   scale(S, U, w, 1, 0);
@@ -378,6 +519,8 @@ loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
 
   return Y;
 }
+
+
 
 
 /// Inner product allocating the returned matrix
