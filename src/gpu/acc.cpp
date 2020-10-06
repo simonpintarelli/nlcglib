@@ -1,3 +1,4 @@
+#ifdef __CUDA
 #include <Kokkos_Complex.hpp>
 #include <cassert>
 #include <complex>
@@ -44,3 +45,4 @@ copy(Kokkos::complex<double>*, const std::complex<double>*, size_t);
 
 }  // namespace acc
 }  // namespace nlcglib
+#endif

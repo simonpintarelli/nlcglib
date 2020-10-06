@@ -52,7 +52,7 @@ run_unmanaged()
   eigh(H, eigvals, S);
 }
 
-
+#ifdef __CUDA
 void
 run_unmanaged_cuda()
 {
@@ -82,6 +82,7 @@ run_unmanaged_cuda()
   eigh(S, eigvals, H);
 
 }
+#endif
 
 
 void
@@ -116,7 +117,9 @@ int main(int argc, char *argv[])
 
   run();
 
+  #ifdef __CUDA
   run_unmanaged_cuda();
+  #endif
 
   Communicator::finalize();
   Kokkos::finalize();

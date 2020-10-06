@@ -1,3 +1,4 @@
+#ifdef __CUDA
 #include "cusolver.hpp"
 #include <iostream>
 
@@ -48,3 +49,5 @@ error_message(cusolverStatus_t status)
 }
 
 }  // namespace cusolver
+
+#endif

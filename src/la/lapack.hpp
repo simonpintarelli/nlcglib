@@ -4,7 +4,9 @@
 #include <utility>
 #include <la/map.hpp>
 #include "lapack_cpu.hpp"
+#ifdef __CUDA
 #include "lapack_cuda.hpp"
+#endif
 #include "mvector.hpp"
 #include "traits.hpp"
 #include "utils.hpp"

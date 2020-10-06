@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
-project(nlcglib LANGUAGES CXX CUDA VERSION 0.8)
+project(nlcglib LANGUAGES CXX VERSION 0.8)
 
 set(CMAKE_CXX_STANDARD 14)
 
 # user variables
 set(USE_OPENMP On CACHE BOOL "use OpenMP")
+set(USE_CUDA On CACHE BOOL "use cuda")
 
 set(BUILD_TESTS OFF CACHE BOOL "build tests")
 set(LAPACK_VENDOR "OpenBLAS" CACHE STRING "lapack vendor")
@@ -26,7 +27,10 @@ include(cmake/nlcglib_macros.cmake)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 find_package(Kokkos)
-find_package(CUDA REQUIRED)
+if(USE_CUDA)
+  find_package(CUDA REQUIRED)
+  enable_language(CUDA)
+endif()
 find_package(MPI REQUIRED)
 
 if(LAPACK_VENDOR MATCHES OpenBLAS)

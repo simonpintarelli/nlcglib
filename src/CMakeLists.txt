@@ -8,6 +8,7 @@ target_include_directories(nlcglib_internal PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(nlcglib_internal PUBLIC ${CUDA_INCLUDE_DIRS})
 set(nlcglib_internal_location $<TARGET_FILE:nlcglib_internal>)
 
+
 add_library(nlcglib SHARED nlcglib.cpp)
 target_include_directories(nlcglib
   PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
@@ -16,6 +17,7 @@ target_include_directories(nlcglib
 nlcglib_setup_target(nlcglib)
 set_target_properties(nlcglib PROPERTIES
   PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/nlcglib.hpp)
+target_compile_definitions(nlcglib PUBLIC $<$<BOOL:${USE_CUDA}>:__CUDA>)
 
 include(GNUInstallDirs)
 
