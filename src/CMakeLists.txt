@@ -6,6 +6,7 @@ target_link_libraries(nlcglib_internal INTERFACE my_lapack)
 target_include_directories(nlcglib_internal PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(nlcglib_internal PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(nlcglib_internal PUBLIC ${CUDA_INCLUDE_DIRS})
+target_compile_definitions(nlcglib_internal PUBLIC $<$<BOOL:${USE_CUDA}>:__CUDA>)
 set(nlcglib_internal_location $<TARGET_FILE:nlcglib_internal>)
 
 
