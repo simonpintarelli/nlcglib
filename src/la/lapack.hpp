@@ -4,7 +4,7 @@
 #include <utility>
 #include <la/map.hpp>
 #include "lapack_cpu.hpp"
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
 #include "lapack_cuda.hpp"
 #endif
 #include "mvector.hpp"
@@ -42,7 +42,7 @@ namespace nlcglib {
 //   return d;
 // }
 
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
 /// diag (on CUDA-GPU)
 template <class T, class LAYOUT, class... KOKKOS>
 std::enable_if_t<
@@ -367,7 +367,7 @@ struct innerh_tr
   //   return sum;
   // }
 
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
   template <class M1, class M2>
   std::enable_if_t<
     Kokkos::SpaceAccessibility<Kokkos::Cuda, typename M1::storage_t::memory_space>::accessible,
@@ -463,7 +463,7 @@ double l2norm(const mvector<X>& x) {
   return Kokkos::real(z);
 }
 
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
 template<class memspace>
 std::enable_if_t<Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible>
 loewdin_aux(Kokkos::View<double*, memspace>& w)

@@ -397,7 +397,7 @@ make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<std::is_
     auto buffer = matrix_base->get(i);
     auto kindex = matrix_base->kpoint_index(i);
     Communicator comm(buffer.mpi_comm);
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
     if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
       // make sure is memory type device
       if (buffer.memtype != memory_type::device)
@@ -433,7 +433,7 @@ make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<!std::is
     auto buffer = matrix_base->get(i);
     auto kindex = matrix_base->kpoint_index(i);
     Communicator comm(buffer.mpi_comm);
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
     if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
       // make sure is memory type device
       if (buffer.memtype != memory_type::device)
@@ -467,7 +467,7 @@ auto make_mmvector(std::shared_ptr<VectorBaseZ> vector_base)
     // vector_t vector();
     auto buffer = vector_base->get(i);
     if (buffer.memtype == memory_type::device) {
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
       Kokkos::View<double*, Kokkos::CudaSpace, Kokkos::MemoryUnmanaged> src(buffer.data, buffer.size[0]);
       vector_t dst("vector", buffer.size[0]);
       Kokkos::deep_copy(dst, src);

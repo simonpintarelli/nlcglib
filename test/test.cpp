@@ -52,7 +52,7 @@ run_unmanaged()
   eigh(H, eigvals, S);
 }
 
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
 void
 run_unmanaged_cuda()
 {
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 
   run();
 
-  #ifdef __CUDA
+  #ifdef __NLCGLIB__CUDA
   run_unmanaged_cuda();
   #endif
 

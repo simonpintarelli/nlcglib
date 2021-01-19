@@ -1,4 +1,4 @@
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
 #include <Kokkos_Complex.hpp>
 #include <cassert>
 #include <complex>

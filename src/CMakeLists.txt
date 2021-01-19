@@ -6,7 +6,7 @@ target_link_libraries(nlcglib_internal INTERFACE my_lapack)
 target_include_directories(nlcglib_internal PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(nlcglib_internal PUBLIC ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(nlcglib_internal PUBLIC ${CUDA_INCLUDE_DIRS})
-target_compile_definitions(nlcglib_internal PUBLIC $<$<BOOL:${USE_CUDA}>:__CUDA>)
+target_compile_definitions(nlcglib_internal PUBLIC $<$<BOOL:${USE_CUDA}>:__NLCGLIB__CUDA>)
 set(nlcglib_internal_location $<TARGET_FILE:nlcglib_internal>)
 
 
@@ -18,7 +18,7 @@ target_include_directories(nlcglib
 nlcglib_setup_target(nlcglib)
 set_target_properties(nlcglib PROPERTIES
   PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/nlcglib.hpp)
-target_compile_definitions(nlcglib PUBLIC $<$<BOOL:${USE_CUDA}>:__CUDA>)
+target_compile_definitions(nlcglib PUBLIC $<$<BOOL:${USE_CUDA}>:__NLCGLIB__CUDA>)
 
 include(GNUInstallDirs)
 

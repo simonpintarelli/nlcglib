@@ -9,7 +9,7 @@ struct exec
 {
 };
 
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
 template <>
 struct exec<Kokkos::CudaSpace>
 {

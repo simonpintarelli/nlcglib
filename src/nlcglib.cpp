@@ -321,7 +321,7 @@ nlcg_check_gradient_host(EnergyBase& energy)
 void
 nlcg_check_gradient_cuda(EnergyBase& energy)
 {
-#if defined (__CLANG) && defined (__CUDA)
+#if defined (__CLANG) && defined (__NLCGLIB__CUDA)
   Kokkos::initialize();
   nlcg_check_gradient<Kokkos::CudaSpace>(energy);
   Kokkos::finalize();
@@ -342,7 +342,7 @@ nlcg_mvp2_cpu(EnergyBase& energy_base, smearing_type smearing, double temp, doub
 nlcg_info
 nlcg_mvp2_device(EnergyBase& energy_base, smearing_type smearing, double temp, double tol, double kappa, double tau, int maxiter, int restart)
 {
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
   Kokkos::initialize();
   auto info = nlcg<Kokkos::CudaSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
   Kokkos::finalize();
@@ -365,7 +365,7 @@ nlcg_mvp2_device_cpu(EnergyBase& energy_base,
                       int maxiter,
                       int restart)
 {
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
   Kokkos::initialize();
   auto info = nlcg<Kokkos::CudaSpace, Kokkos::HostSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
   Kokkos::finalize();
@@ -388,7 +388,7 @@ nlcg_mvp2_cpu_device(EnergyBase& energy_base,
                       int maxiter,
                       int restart)
 {
-#ifdef __CUDA
+#ifdef __NLCGLIB__CUDA
   Kokkos::initialize();
   auto info = nlcg<Kokkos::HostSpace, Kokkos::CudaSpace>(
       energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
