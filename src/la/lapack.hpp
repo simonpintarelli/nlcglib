@@ -317,56 +317,6 @@ struct inner_ {
 /// Hermitian inner product, summed
 struct innerh_tr
 {
-  // template<class M1, class M2>
-  // typename M1::numeric_t operator()(const M1& X,
-  //                                   const M2& Y)
-  // {
-  //   int nrows = X.array().extent(0);
-  //   int ncols = X.array().extent(1);
-
-  //   using matrix_t = M1;
-  //   using T = typename M1::numeric_t;
-
-  //   using memory_space = typename matrix_t::storage_t::memory_space;
-
-  //   Kokkos::View<T*, memory_space> tmp("", nrows);
-
-  //   auto x = X.array();
-  //   auto y = Y.array();
-
-  //   T sum{0};
-  //   if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memory_space>::accessible) {
-  //     // inner_reduce along rows
-  //     Kokkos::parallel_for(
-  //         "", Kokkos::RangePolicy<Kokkos::Cuda>(0, nrows), KOKKOS_LAMBDA(int i) {
-  //           for (int j = 0; j < ncols; ++j) {
-  //             tmp(i) += x(i, j) * Kokkos::conj(y(i, j));
-  //           }
-  //         });
-  //     // sum vector
-  //     Kokkos::parallel_reduce(
-  //         "",
-  //         Kokkos::RangePolicy<Kokkos::Cuda>(0, nrows),
-  //         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
-  //         sum);
-  //   } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memory_space>::accessible) {
-  //     // compute on host
-  //     Kokkos::parallel_for(
-  //         "", Kokkos::RangePolicy<exec_t<memory_space>>(0, nrows), KOKKOS_LAMBDA(int i) {
-  //           for (int j = 0; j < ncols; ++j) {
-  //             tmp(i) += x(i, j) * Kokkos::conj(y(i, j));
-  //           }
-  //         });
-  //     Kokkos::parallel_reduce(
-  //         "",
-  //         Kokkos::RangePolicy<Kokkos::Serial>(0, nrows),
-  //         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
-  //         sum);
-  //   }
-
-  //   return sum;
-  // }
-
 #ifdef __NLCGLIB__CUDA
   template <class M1, class M2>
   std::enable_if_t<
