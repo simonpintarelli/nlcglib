@@ -133,6 +133,11 @@ class Communicator
     //   MPI_Comm_free(&mpicomm_);
   }
 
+  MPI_Comm raw() const
+  {
+    return mpicomm_;
+  }
+
  private:
   MPI_Comm mpicomm_;
 };
