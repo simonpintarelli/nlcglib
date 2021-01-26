@@ -27,11 +27,34 @@ struct memory_space<KokkosDVector<X...>>
 };
 
 template<class X>
-using memory_t = typename memory_space<X>::memspace;
+using memory_t = typename memory_space<std::remove_cv_t<std::remove_reference_t<X>>>::memspace;
 
 template <class T>
 struct is_on_host : std::integral_constant<bool, Kokkos::SpaceAccessibility<Kokkos::HostSpace, memory_t<T>>::accessible>
 {};
+
+template <class T>
+struct is_on_device
+    : std::integral_constant<bool, Kokkos::SpaceAccessibility<Kokkos::CudaSpace, memory_t<T>>::accessible>
+{
+};
+
+/// get memory_type enum of x
+template <typename X>
+constexpr memory_type
+get_mem_type(X&& x)
+{
+  memory_type mem_t{memory_type::none};
+  bool is_host = is_on_host<X>::value;
+  bool is_device = is_on_device<X>::value;
+
+  if (is_host && !is_device) {
+    mem_t = memory_type::host;
+  } else if (is_device && !is_host) {
+    mem_t = memory_type::device;
+  }
+  return mem_t;
+}
 
 
 /// Distributed vector based on Kokkos
