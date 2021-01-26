@@ -450,21 +450,7 @@ loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
   eigh(U, w, S);
 
   loewdin_aux(w);
-  // // w <- 1 / sqrt(w)
-  // if (Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible) {
-  //   // compute on device
-  //   Kokkos::parallel_for("scale", Kokkos::RangePolicy<Kokkos::Cuda>(0, w.size()), KOKKOS_LAMBDA(int i) {
-  //       w(i) = 1.0 / sqrt(w(i));
-  //     });
-  // } else if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
-  //   // compute on host
-  //   Kokkos::parallel_for(
-  //       "scale", Kokkos::RangePolicy<Kokkos::Serial>(0, w.size()), KOKKOS_LAMBDA(int i) {
-  //         w(i) = 1.0 / sqrt(w(i));
-  //       });
-  // }
-  // Kokkos::fence();
-  // S <- U / sqrt(eigvals)
+
   scale(S, U, w, 1, 0);
   auto R = zeros_like()(U);
   // R <- S @ U.H
