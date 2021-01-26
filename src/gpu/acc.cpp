@@ -1,8 +1,9 @@
 #ifdef __NLCGLIB__CUDA
+#include <cuda.h>
+#include <cuda_runtime_api.h>
 #include <Kokkos_Complex.hpp>
 #include <cassert>
 #include <complex>
-#include <cuda.h>
 
 namespace nlcglib {
 

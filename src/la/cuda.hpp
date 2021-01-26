@@ -1,7 +1,7 @@
 #pragma once
 
 #include <iostream>
-#include <cuda_runtime.h>
+#include <cuda_runtime_api.h>
 #include <complex>
 #include "cusolver.hpp"
 #include "cublas.hpp"
