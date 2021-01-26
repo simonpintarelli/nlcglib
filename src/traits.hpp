@@ -49,7 +49,6 @@ struct is_future : _is_future<std::remove_cv_t<std::remove_reference_t<X>>>
 {
 };
 
-
 // template <class X>
 // struct is_kokkos_view : _is_kokkos_view<std::remove_reference_t<std::remove_cv_t<X>>>
 // {
@@ -130,5 +129,25 @@ struct result_of<mvector<X>>
 /// compute result of expression, unpacks mvector
 template <class X>
 using result_of_t = typename result_of<X>::type;
+
+/// add const if argument is true
+template <class T, bool is_const>
+struct conditional_add_const {};
+
+template<class T>
+struct conditional_add_const<T, true>
+{
+  using type = typename std::add_const_t<T>;
+};
+
+template <class T>
+struct conditional_add_const<T, false>
+{
+  using type = T;
+};
+
+template<class T, bool is_const>
+using conditional_add_const_t = typename conditional_add_const<T, is_const>::type;
+
 
 }  // namespace nlcglib
