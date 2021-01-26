@@ -39,3 +39,6 @@ NLCGLIB_SETUP_TARGET(test_nvcc)
 
 add_executable(test_check_alignment test_check_alignment.cpp)
 NLCGLIB_SETUP_TARGET(test_check_alignment)
+
+add_executable(test_buffer test_buffer.cpp)
+NLCGLIB_SETUP_TARGET(test_buffer)
