@@ -141,5 +141,11 @@ public:
   virtual void print_info() const = 0;
 };
 
+class OverlapBase
+{
+public:
+  virtual void apply(MatrixBaseZ& out, const MatrixBaseZ& in) = 0;
+};
+
 
 }  // namespace nlcglib
