@@ -56,6 +56,21 @@ get_mem_type(X&& x)
   return mem_t;
 }
 
+template<class T, class... ARGS>
+buffer_protocol<T, 2> as_buffer_protocol(KokkosDVector<T, ARGS...>& kokkosdvec)
+{
+  auto mem_t = get_mem_type(kokkosdvec);
+  std::array<int, 2> strides;
+  strides[0] = kokkosdvec.array().stride(0);
+  strides[1] = kokkosdvec.array().stride(1);
+
+  std::array<int, 2> sizes;
+  sizes[0] = kokkosdvec.array().extent(0);
+  sizes[1] = kokkosdvec.array().extent(1);
+
+  // TODO: is MPI_COMM_SELF always correct here?
+  return buffer_protocol<T, 2>(strides, sizes, kokkosdvec.array().data(), mem_t, MPI_COMM_SELF);
+}
 
 /// Distributed vector based on Kokkos
 template <class T, class LAYOUT = SlabLayoutV, class... KOKKOS_ARGS>
