@@ -436,7 +436,7 @@ loewdin_aux(Kokkos::View<double*, memspace>& w)
       });
 }
 
-
+/// Loewdin orthogonalization
 template <class T, class LAYOUT, class... KOKKOS>
 to_layout_left_t<KokkosDVector<T**, LAYOUT, KOKKOS...>>
 loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
@@ -444,17 +444,17 @@ loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
   using matrix_t = KokkosDVector<T**, KOKKOS...>;
   using memspace = typename matrix_t::storage_t::memory_space;
 
-  auto S = inner_()(X, X);
+  auto M = inner_()(X, X);
   Kokkos::View<double*, memspace> w("eigvals, loewdin", X.array().extent(1));
-  auto U = empty_like()(S);
-  eigh(U, w, S);
+  auto U = empty_like()(M);
+  eigh(U, w, M);
 
   loewdin_aux(w);
 
-  scale(S, U, w, 1, 0);
+  scale(M, U, w, 1, 0);
   auto R = zeros_like()(U);
   // R <- S @ U.H
-  outer(R, S, U);
+  outer(R, M, U);
 
   auto Y = zeros_like()(X);
   transform(Y, Kokkos::complex<double>{0.0}, Kokkos::complex<double>{1.0}, X, R);
@@ -462,6 +462,32 @@ loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
   return Y;
 }
 
+/// Loewdin orthogonalization with overlap operator
+template <class T, class LAYOUT, class... KOKKOS, class S_t>
+to_layout_left_t<KokkosDVector<T**, LAYOUT, KOKKOS...>>
+loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X, S_t&& S)
+{
+  using matrix_t = KokkosDVector<T**, KOKKOS...>;
+  using memspace = typename matrix_t::storage_t::memory_space;
+
+  auto SX = S(X);
+  auto M = inner_()(X, SX);
+  Kokkos::View<double*, memspace> w("eigvals, loewdin", X.array().extent(1));
+  auto U = empty_like()(M);
+  eigh(U, w, M);
+
+  loewdin_aux(w);
+
+  scale(M, U, w, 1, 0);
+  auto R = zeros_like()(U);
+  // R <- S @ U.H
+  outer(R, M, U);
+
+  auto Y = zeros_like()(X);
+  transform(Y, Kokkos::complex<double>{0.0}, Kokkos::complex<double>{1.0}, X, R);
+
+  return Y;
+}
 
 
 
