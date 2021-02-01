@@ -57,8 +57,12 @@ get_mem_type(X&& x)
 }
 
 template<class T, class... ARGS>
-buffer_protocol<T, 2> as_buffer_protocol(KokkosDVector<T, ARGS...>& kokkosdvec)
+buffer_protocol<std::complex<double>, 2> as_buffer_protocol(KokkosDVector<T**, ARGS...>& kokkosdvec)
 {
+  using vector_t = KokkosDVector<T, ARGS...>;
+  using numeric_t = typename vector_t::storage_t::value_type;
+  static_assert(std::is_same<numeric_t, Kokkos::complex<double>>::value, "todo: remove this limitation");
+
   auto mem_t = get_mem_type(kokkosdvec);
   std::array<int, 2> strides;
   strides[0] = kokkosdvec.array().stride(0);
@@ -69,7 +73,9 @@ buffer_protocol<T, 2> as_buffer_protocol(KokkosDVector<T, ARGS...>& kokkosdvec)
   sizes[1] = kokkosdvec.array().extent(1);
 
   // TODO: is MPI_COMM_SELF always correct here?
-  return buffer_protocol<T, 2>(strides, sizes, kokkosdvec.array().data(), mem_t, MPI_COMM_SELF);
+  return buffer_protocol<std::complex<double>, 2>(strides, sizes,
+                                                  reinterpret_cast<std::complex<double>*>(kokkosdvec.array().data()),
+                                                  mem_t, MPI_COMM_SELF);
 }
 
 /// Distributed vector based on Kokkos
