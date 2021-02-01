@@ -465,12 +465,12 @@ loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
 /// Loewdin orthogonalization with overlap operator
 template <class T, class LAYOUT, class... KOKKOS, class S_t>
 to_layout_left_t<KokkosDVector<T**, LAYOUT, KOKKOS...>>
-loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X, S_t&& S)
+loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X,
+        const KokkosDVector<T**, LAYOUT, KOKKOS...>& SX)
 {
   using matrix_t = KokkosDVector<T**, KOKKOS...>;
   using memspace = typename matrix_t::storage_t::memory_space;
 
-  auto SX = S(X);
   auto M = inner_()(X, SX);
   Kokkos::View<double*, memspace> w("eigvals, loewdin", X.array().extent(1));
   auto U = empty_like()(M);
@@ -488,7 +488,6 @@ loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X, S_t&& S)
 
   return Y;
 }
-
 
 
 /// Inner product allocating the returned matrix
