@@ -5,6 +5,7 @@
 #include <memory>
 #include <map>
 #include <stdexcept>
+#include <functional>
 #include <vector>
 #include "mpi.h"
 
@@ -144,8 +145,14 @@ public:
 class OverlapBase
 {
 public:
-  virtual void apply(MatrixBaseZ& out, const MatrixBaseZ& in) = 0;
+  virtual void apply(MatrixBaseZ& out, const MatrixBaseZ& in) const = 0;
+  virtual void apply(const std::pair<int, int>&, MatrixBaseZ::buffer_t& out, MatrixBaseZ::buffer_t& in) const = 0;
 };
 
+class UltrasoftPrecondBase
+{
+public:
+  virtual void apply(const std::pair<int, int>&, MatrixBaseZ::buffer_t& out, MatrixBaseZ::buffer_t& in) const = 0;
+};
 
 }  // namespace nlcglib
