@@ -19,6 +19,8 @@
 #include "utils/logger.hpp"
 #include "utils/timer.hpp"
 #include "utils/format.hpp"
+#include "overlap.hpp"
+#include "ultrasoft_precond.hpp"
 
 typedef std::complex<double> complex_double;
 
