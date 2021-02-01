@@ -10,6 +10,11 @@ namespace nlcglib {
 class Overlap
 {
 public:
+  // need typedef for value_type
+  using value_type = std::function<KokkosDVector<Kokkos::complex<double>**, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace>()>;
+  using key_t = std::pair<int, int>;
+
+public:
   Overlap(const OverlapBase& overlap_base)
       : overlap_base(overlap_base)
   {
@@ -17,6 +22,12 @@ public:
   }
 
   auto at(const key_t& key) const;
+
+  template<typename MVEC>
+  auto operator()(MVEC&& X)
+  {
+    return tapply_op(*this, std::forward<MVEC>(X));
+  }
 
 private:
   const OverlapBase& overlap_base;
@@ -28,7 +39,10 @@ Overlap::at(const key_t& key) const
   auto& ref = overlap_base;
   return [&ref, key](auto X) {
     auto Y = empty_like()(X);
-    ref.apply(key, as_buffer_protocol(Y), as_buffer_protocol(X));
+    // passed as (non-const) reference, must be lvalues ...
+    auto vY = as_buffer_protocol(Y);
+    auto vX = as_buffer_protocol(X);
+    ref.apply(key, vY, vX);
     return Y;
   };
 }
