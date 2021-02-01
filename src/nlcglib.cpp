@@ -223,6 +223,35 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
   return info;
 }
 
+void check_overlap(EnergyBase& energy_base, OverlapBase& overlap_base)
+{
+  Overlap overlap(overlap_base);
+  FreeEnergy<Kokkos::HostSpace> free_energy(0, energy_base, smearing_type::FERMI_DIRAC);
+
+  auto X = free_energy.get_X();
+  // for (auto elem : X) {
+  //   auto key = elem.first;
+  //   auto data = elem.second;
+  //   as_buffer_protocol(data);
+  // }
+  auto SX = overlap(X);
+}
+
+void
+check_ultrasoft_precond(EnergyBase& energy_base, UltrasoftPrecondBase& us_base)
+{
+  USPreconditioner precond(us_base);
+  FreeEnergy<Kokkos::HostSpace> free_energy(0, energy_base, smearing_type::FERMI_DIRAC);
+
+  auto X = free_energy.get_X();
+  // for (auto elem : X) {
+  //   auto key = elem.first;
+  //   auto data = elem.second;
+  //   as_buffer_protocol(data);
+  // }
+  auto SX = precond(X);
+}
+
 
 template <class memspace>
 void nlcg_check_gradient(EnergyBase& energy_base)
