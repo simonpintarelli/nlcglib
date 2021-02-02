@@ -3,6 +3,7 @@
 #include "interface.hpp"
 #include "la/mvector.hpp"
 #include "la/dvector.hpp"
+#include "operator.hpp"
 
 namespace nlcglib {
 
@@ -11,7 +12,7 @@ class Overlap
 {
 public:
   // need typedef for value_type
-  using value_type = std::function<KokkosDVector<Kokkos::complex<double>**, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace>()>;
+  using value_type = applicator<OverlapBase>;
   using key_t = std::pair<int, int>;
 
 public:
@@ -23,11 +24,11 @@ public:
 
   auto at(const key_t& key) const;
 
-  template<typename MVEC>
-  auto operator()(MVEC&& X)
-  {
-    return tapply_op(*this, std::forward<MVEC>(X));
-  }
+  // template<typename MVEC>
+  // auto operator()(MVEC&& X)
+  // {
+  //   return tapply_op(*this, std::forward<MVEC>(X));
+  // }
 
 private:
   const OverlapBase& overlap_base;
@@ -36,15 +37,7 @@ private:
 inline auto
 Overlap::at(const key_t& key) const
 {
-  auto& ref = overlap_base;
-  return [&ref, key](auto X) {
-    auto Y = empty_like()(X);
-    // passed as (non-const) reference, must be lvalues ...
-    auto vY = as_buffer_protocol(Y);
-    auto vX = as_buffer_protocol(X);
-    ref.apply(key, vY, vX);
-    return Y;
-  };
+  return applicator<OverlapBase>(overlap_base, key);
 }
 
 // class Matrix : public MatrixBaseZ

@@ -142,17 +142,23 @@ public:
   virtual void print_info() const = 0;
 };
 
-class OverlapBase
+class OpBase
 {
 public:
-  virtual void apply(MatrixBaseZ& out, const MatrixBaseZ& in) const = 0;
-  virtual void apply(const std::pair<int, int>&, MatrixBaseZ::buffer_t& out, MatrixBaseZ::buffer_t& in) const = 0;
+  using key_t = std::pair<int, int>;
+public:
+  virtual void apply(const key_t&,
+                     MatrixBaseZ::buffer_t& out,
+                     MatrixBaseZ::buffer_t& in) const = 0;
+  virtual std::vector<key_t> get_keys() const = 0;
 };
 
-class UltrasoftPrecondBase
+class OverlapBase : public OpBase
 {
-public:
-  virtual void apply(const std::pair<int, int>&, MatrixBaseZ::buffer_t& out, MatrixBaseZ::buffer_t& in) const = 0;
+};
+
+class UltrasoftPrecondBase : public OpBase
+{
 };
 
 }  // namespace nlcglib

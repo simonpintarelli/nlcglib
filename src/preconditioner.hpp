@@ -63,7 +63,7 @@ private:
  *  http://dx.doi.org/10.1103/RevModPhys.64.1045
  */
 template <class SPACE>
-class PreconditionerTeter : public mvector_base<PreconditionerTeter<SPACE>, diagonal_preconditioner<SPACE>>
+class PreconditionerTeter //: public mvector_base<PreconditionerTeter<SPACE>, diagonal_preconditioner<SPACE>>
 {
 public:
   using memspace = SPACE;
