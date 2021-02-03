@@ -463,7 +463,7 @@ loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
 }
 
 /// Loewdin orthogonalization with overlap operator
-template <class T, class LAYOUT, class... KOKKOS, class S_t>
+template <class T, class LAYOUT, class... KOKKOS>
 to_layout_left_t<KokkosDVector<T**, LAYOUT, KOKKOS...>>
 loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X,
         const KokkosDVector<T**, LAYOUT, KOKKOS...>& SX)

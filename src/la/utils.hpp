@@ -193,7 +193,7 @@ class find_type
   using t = typename T::fjsadlfjasf;
 };
 
-/// TODO: tapply for packed operators
+/// tapply for packed operators
 template <class OP, class ARG0, class... ARGS>
 auto
 tapply_op(OP&& op, const ARG0& arg0, const ARGS&... args)

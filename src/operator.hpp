@@ -16,7 +16,7 @@ public:
   }
 
   template <class X_t>
-  auto operator()(X_t&& X)
+  auto operator()(X_t&& X) const
   {
     auto Y = empty_like()(X);
     auto vX = as_buffer_protocol(X);

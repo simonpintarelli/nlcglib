@@ -49,9 +49,9 @@ struct advance_x
 {
   advance_x(double t) : t(t) {}
 
+  // nc case
   template<class x_t, class dx_t, class ul_t>
   to_layout_left_t<std::remove_reference_t<dx_t>>
-  // auto
   operator()(x_t&& x, dx_t&& dx, ul_t&& ul)
   {
     // pp<to_layout_left_t<dx_t>>::foo;
@@ -59,6 +59,19 @@ struct advance_x
     deep_copy(x_next, x);
     add(x_next, eval(dx), t);
     x_next = loewdin(x_next);
+    return transform_alloc(x_next, eval(ul));
+  }
+
+  // ultra-soft case
+  template <class x_t, class dx_t, class ul_t, class op_t>
+  to_layout_left_t<std::remove_reference_t<dx_t>>
+  operator()(x_t&& x, dx_t&& dx, ul_t&& ul, op_t&& s)
+  {
+    // pp<to_layout_left_t<dx_t>>::foo;
+    auto x_next = empty_like()(x);
+    deep_copy(x_next, x);
+    add(x_next, eval(dx), t);
+    x_next = loewdin(x_next, eval(s(x_next)));
     return transform_alloc(x_next, eval(ul));
   }
 
@@ -83,6 +96,28 @@ geodesic(energy_t& F, X_t& X, const eta_t& eta, const g_x_t& g_x, const g_eta_t&
 
   // X <- ortho((X + t*g_X) @ Ul)
   auto x_next = tapply_async(local::advance_x(t), X, g_x, Ul);
+
+  F.compute(eval_threaded(x_next), fn);
+
+  return std::make_tuple(ek, Ul);
+}
+
+template <class energy_t, class X_t, class eta_t, class g_x_t, class g_eta_t, class Op_t>
+auto
+geodesic_us(energy_t& F, X_t& X, const eta_t& eta, const g_x_t& g_x, const g_eta_t& g_eta, const Op_t& S, double t)
+{
+  // compute eta_next <- eta + t* g_eta
+  auto eta_next = tapply_async(local::advance_eta(t), eta, g_eta);
+  // get eigenvalues and eigenvectors of next eta
+  auto ek_Ul = tapply_async(local::eigvals_and_vectors(), eta_next);
+  // grab results
+  auto ek = eval_threaded(tapply([](auto ek_ul) { return std::get<0>(eval(ek_ul)); }, ek_Ul));
+  auto Ul = eval_threaded(tapply([](auto ek_ul) { return std::get<1>(eval(ek_ul)); }, ek_Ul));
+  // obtain occupation numbers
+  auto fn = F.get_smearing().fn(ek);
+
+  // X <- ortho((X + t*g_X) @ Ul)
+  auto x_next = tapply_async(local::advance_x(t), X, g_x, Ul, S);
 
   F.compute(eval_threaded(x_next), fn);
 

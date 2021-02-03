@@ -10,19 +10,19 @@ namespace local {
 
 struct lmult
 {
-  template<class x_t, class hx_t, class prec_t>
+  template<class x_t, class sx_t, class hx_t, class prec_t>
   to_layout_left_t<std::remove_reference_t<x_t>>
-  operator()(x_t&& x, hx_t&& hx, prec_t&& prec)
+  operator()(x_t&& x, sx_t&& sx, hx_t&& hx, prec_t&& prec)
   {
     // Lagrange multipliers
     // compute ll = (xkx)^{-1} @ xKhx
-    auto xkx = inner_()(x, prec(x));
-    auto xkhx = inner_()(x, prec(hx));
+    auto xkx = inner_()(sx, prec(x));
+    auto xkhx = inner_()(sx, prec(hx));
     auto khx = prec(hx);
     solve_sym(xkx, xkhx);
     auto ll = xkhx;
     // X @ ll
-    auto xll = transform_alloc(x, ll);
+    auto xll = transform_alloc(sx, ll);
     return xll;
   }
 };
@@ -55,6 +55,24 @@ struct precondgx
     return delta_x;
   }
 };
+
+struct precondgx_us
+{
+  template <class x_t, class hx_t, class prec_t, class ll_t>
+  to_layout_left_t<std::remove_reference_t<x_t>> operator()(x_t&& x,
+                                                            hx_t&& hx,
+                                                            prec_t&& prec,
+                                                            ll_t&& xll)
+  {
+    auto delta_x = zeros_like()(x);
+    // delta_x <- -hx
+    add(delta_x, hx, -1.0, 0);
+    // delta_x <- += X @ ll
+    add(delta_x, eval(xll), 1.0);
+    return prec(delta_x);
+  }
+};
+
 
 struct rotatex
 {
@@ -109,14 +127,18 @@ struct slope_x
   }
 };
 
-struct conjugatex
+class conjugatex
 {
-  conjugatex(double gamma) : gamma(gamma) {}
+public:
+  conjugatex(double gamma)
+      : gamma(gamma)
+  {
+  }
 
   /**
    * Overwrites zxp
    */
-  template<class dx_t, class zxp_t, class x_t>
+  template <class dx_t, class zxp_t, class x_t>
   to_layout_left_t<std::remove_reference_t<zxp_t>>
   operator()(dx_t&& dx, zxp_t&& zxp, x_t&& x)
   {
@@ -129,8 +151,31 @@ struct conjugatex
     return zxp;
   }
 
+  /** Ultra-soft case, note that it overwrites zxp */
+  template <class dx_t, class zxp_t, class x_t, class sx_t>
+  to_layout_left_t<std::remove_reference_t<zxp_t>>
+  operator()(dx_t&& dx, zxp_t&& zxp, x_t&& x, sx_t&& sx)
+  {
+    // Zxp needs orthogonality updated
+    auto sx_zxp = inner_()(sx, zxp);
+    // ll = (SX⊹ SX)⁻¹ (SX ⊹ ZXP)
+    auto sx2 = inner_()(sx, sx);
+    solve_sym(sx2, sx_zxp);
+    auto ll = sx_zxp;
+    // corr = SX ll
+    auto corr = transform_alloc(sx, ll);
+    // zxp <- gamma  * zxp - gamma SX ll
+    add(zxp, corr, -gamma, gamma);
+    // zxp <- Δₓ + xzp
+    add(zxp, dx, 1);
+
+    return zxp;
+  }
+
+private:
   double gamma;
 };
+
 
 struct conjugateeta
 {
@@ -153,11 +198,11 @@ struct conjugateeta
 }  // local
 
 /// Lagrange multipliers
-template <class X_t, class Hx_t, class Prec_t>
+template <class X_t, class SX_t, class Hx_t, class Prec_t>
 auto
-lagrange_multipliers(const X_t& X, const Hx_t& Hx, const Prec_t& Prec)
+lagrange_multipliers(const X_t& X, const SX_t& SX, const Hx_t& Hx, const Prec_t& Prec)
 {
-  return tapply_async(local::lmult(), X, Hx, Prec);
+  return tapply_async(local::lmult(), X, SX, Hx, Prec);
 }
 
 /// gradient
@@ -173,6 +218,15 @@ auto precondGradX(const X_t& X, const Hx_t& Hx, const Prec_t& Prec, const ll_t& 
 {
   return tapply_async(local::precondgx(), X, Hx, Prec, Xll);
 }
+
+template <class SX_t, class Hx_t, class Prec_t, class ll_t>
+auto
+precondGradX_us(const SX_t& SX, const Hx_t& Hx, const Prec_t& Prec, const ll_t& Xll)
+{
+  // TODO: ulgy, precondgx only differs in signature of the preconditioner application
+  return tapply_async(local::precondgx_us(), SX, Hx, Prec, Xll);
+}
+
 
 /// apply subspace rotation on X
 template<class X_t, class U_t>
@@ -214,6 +268,15 @@ auto conjugatex(dx_t&& dx, zxp_t&& zxp, x_t&& x, double gamma)
 {
   return tapply_async(local::conjugatex(gamma), dx, zxp, x);
 }
+
+template <class dx_t, class zxp_t, class x_t, class sx_t>
+auto
+conjugatex_us(dx_t&& dx, zxp_t&& zxp, x_t&& x, sx_t&& sx, double gamma)
+{
+  throw std::runtime_error("not implemented");
+  return tapply_async(local::conjugatex(gamma), dx, zxp, x, sx);
+}
+
 
 template<class deta_t, class zetap_t>
 auto conjugateeta(deta_t&& deta, zetap_t&& zep, double gamma)
