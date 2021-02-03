@@ -150,6 +150,46 @@ struct potrs<Kokkos::complex<double>> : lapack_base
   }
 };
 
+template <typename T>
+struct getrf {};
+
+template <>
+struct getrf<Kokkos::complex<double>> : lapack_base
+{
+  inline int static call(CBLAS_ORDER order, int m, int n, Kokkos::complex<double>* A, int lda, int* ipiv)
+  {
+    return LAPACKE_zgetrf(order, m, n, reinterpret_cast<CPX *>(A), lda, ipiv);
+  }
+};
+
+template <typename T>
+struct getrs {};
+
+template <>
+struct getrs<Kokkos::complex<double>> : lapack_base
+{
+  inline int static call(CBLAS_ORDER order,
+                         char uplo,
+                         int n,
+                         int nrhs,
+                         const Kokkos::complex<double> *A,
+                         int lda,
+                         int *ipiv,
+                         Kokkos::complex<double> *B,
+                         int ldb)
+  {
+    return LAPACKE_zgetrs(order,
+                          uplo,
+                          n,
+                          nrhs,
+                          reinterpret_cast<const CPX *>(A),
+                          lda,
+                          ipiv,
+                          reinterpret_cast<CPX *>(B),
+                          ldb);
+  }
+};
+
 
 template <typename T>
 struct gemm
