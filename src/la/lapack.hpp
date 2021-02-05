@@ -407,9 +407,9 @@ template<class X>
 double l2norm(const mvector<X>& x) {
   auto tmp = eval_threaded(tapply(innerh_tr(), x, x));
   auto z = sum(tmp);
-  if (std::abs(Kokkos::imag(z)) > 1e-10) {
-    throw std::runtime_error("invalid value");
-  }
+  // if (std::abs(Kokkos::imag(z)) > 1e-10) {
+  //   throw std::runtime_error("invalid value");
+  // }
   return Kokkos::real(z);
 }
 
