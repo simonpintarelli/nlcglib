@@ -223,6 +223,53 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
   return info;
 }
 
+template<class memspace>
+void check_overlap(EnergyBase& e, OverlapBase& Sb, OverlapBase& Sib)
+{
+  FreeEnergy<memspace, memspace> Energy(100, e, smearing_type::FERMI_DIRAC);
+
+  auto X = copy(Energy.get_X());
+  Overlap S(Sb);
+  Overlap Sinv(Sib);
+
+  std::cout << "l2norm(X) = " << l2norm(X) << "\n";
+
+  auto SX = tapply_op(S, X);
+  auto SinvX = tapply_op(Sinv, X);
+  std::cout << "l2norm(SX): " << l2norm(SX) << "\n";
+  std::cout << "l2norm(SinvX): " << l2norm(SinvX) << "\n";
+
+  auto tr = innerh_reduce(X, SX);
+  std::cout << "tr(XSX): " << tr << "\n";
+
+  auto Xref = tapply([](auto x, auto s, auto si){
+                       auto sx = s(x);
+                       auto x2 = si(sx);
+                       return  x2;
+                     }, X, S, Sinv);
+  auto Xref2 = tapply(
+      [](auto x, auto s, auto si) {
+        auto six = si(x);
+        auto x2 = s(six);
+        return x2;
+      }, X, S, Sinv);
+
+  auto error = tapply([](auto x, auto y) {
+                        auto z = copy(x);
+                        add(z, y, -1, 1);
+                        return z;
+                      }, X, Xref);
+
+  double diff = l2norm(error);
+  std::cout << "** check: S(S_inv(x)), error: " << diff << "\n";
+}
+
+void nlcheck_overlap(EnergyBase& e, OverlapBase& s, OverlapBase& si)
+{
+  Kokkos::initialize();
+  check_overlap<Kokkos::HostSpace>(e, s, si);
+  Kokkos::finalize();
+}
 
 template <class memspace, class xspace=memspace>
  nlcg_info nlcg_us(EnergyBase& energy_base, UltrasoftPrecondBase& us_precond_base, OverlapBase& overlap_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
@@ -341,7 +388,6 @@ template <class memspace, class xspace=memspace>
       // obtain new H@x, compute g_X, g_eta, delta_x, delta_eta
       Hx = free_energy.get_HX();
       X = copy(free_energy.get_X());
-      // updated fn is missing!!
       auto fni = free_energy.get_fn();
 
       eta = eval_threaded(tapply(make_diag(), ek));
@@ -351,6 +397,7 @@ template <class memspace, class xspace=memspace>
       auto delta_eta = grad_eta.delta_eta(Hij, ek, wk);
 
       auto SX = tapply_op(S, X);
+      // this is SXll
       auto Xll = lagrange_multipliers(X, SX, Hx, P);
       auto g_X = gradX(SX, Hx, fni, Xll, wk);
       auto delta_x = precondGradX_us(SX, Hx, P, Xll);
@@ -592,10 +639,10 @@ nlcg_us_device(EnergyBase& energy_base,
                OverlapBase& overlap_base,
                smearing_type smear,
                double T,
-               int maxiter,
                double tol,
                double kappa,
                double tau,
+               int maxiter,
                int restart)
 {
 #ifdef __NLCGLIB__CUDA
@@ -615,15 +662,15 @@ nlcg_us_cpu(EnergyBase& energy_base,
             OverlapBase& overlap_base,
             smearing_type smear,
             double T,
-            int maxiter,
             double tol,
             double kappa,
             double tau,
+            int maxiter,
             int restart)
 {
   Kokkos::initialize();
   auto info =
-      nlcg<Kokkos::HostSpace>(energy_base, smear, T, maxiter, tol, kappa, tau, restart);
+    nlcg_us<Kokkos::HostSpace>(energy_base, us_precond_base, overlap_base, smear, T, maxiter, tol, kappa, tau, restart);
   Kokkos::finalize();
 
   return info;
