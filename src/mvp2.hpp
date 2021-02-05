@@ -14,11 +14,12 @@ struct lmult
   to_layout_left_t<std::remove_reference_t<x_t>>
   operator()(x_t&& x, sx_t&& sx, hx_t&& hx, prec_t&& prec)
   {
+    // TODO x is not used
     // Lagrange multipliers
     // compute ll = (xkx)^{-1} @ xKhx
-    auto xkx = inner_()(sx, prec(x));
+    auto xkx = inner_()(sx, prec(sx));
     auto xkhx = inner_()(sx, prec(hx));
-    auto khx = prec(hx);
+    // auto khx = prec(hx);
     solve_sym(xkx, xkhx);
     auto ll = xkhx;
     // X @ ll
@@ -156,6 +157,7 @@ public:
   to_layout_left_t<std::remove_reference_t<zxp_t>>
   operator()(dx_t&& dx, zxp_t&& zxp, x_t&& x, sx_t&& sx)
   {
+    // TODO x is not used!
     // Zxp needs orthogonality updated
     auto sx_zxp = inner_()(sx, zxp);
     // ll = (SX⊹ SX)⁻¹ (SX ⊹ ZXP)
@@ -273,7 +275,6 @@ template <class dx_t, class zxp_t, class x_t, class sx_t>
 auto
 conjugatex_us(dx_t&& dx, zxp_t&& zxp, x_t&& x, sx_t&& sx, double gamma)
 {
-  throw std::runtime_error("not implemented");
   return tapply_async(local::conjugatex(gamma), dx, zxp, x, sx);
 }
 
