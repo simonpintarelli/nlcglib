@@ -1,3 +1,5 @@
+#include <omp.h>
+#include <Kokkos_Core.hpp>
 #include <cfenv>
 #include <iomanip>
 #include <iostream>
@@ -10,6 +12,7 @@
 #include "la/layout.hpp"
 #include "la/map.hpp"
 #include "la/mvector.hpp"
+#include "la/utils.hpp"
 #include "linesearch/linesearch.hpp"
 #include "mvp2.hpp"
 #include "preconditioner.hpp"
@@ -241,7 +244,6 @@ void check_overlap(EnergyBase& e, OverlapBase& Sb, OverlapBase& Sib)
 
   auto tr = innerh_reduce(X, SX);
   std::cout << "tr(XSX): " << tr << "\n";
-
   auto Xref = tapply([](auto x, auto s, auto si){
                        auto sx = s(x);
                        auto x2 = si(sx);
@@ -668,7 +670,9 @@ nlcg_us_cpu(EnergyBase& energy_base,
             int maxiter,
             int restart)
 {
-  Kokkos::initialize();
+  Kokkos::InitArguments args;
+  args.num_threads = omp_get_max_threads();
+  Kokkos::initialize(args);
   auto info =
     nlcg_us<Kokkos::HostSpace>(energy_base, us_precond_base, overlap_base, smear, T, maxiter, tol, kappa, tau, restart);
   Kokkos::finalize();
@@ -692,7 +696,10 @@ nlcg_us_device_cpu(EnergyBase& energy_base,
                    int restart)
 {
 #ifdef __NLCGLIB__CUDA
-  Kokkos::initialize();
+  Kokkos::InitArguments args;
+  args.num_threads = omp_get_max_threads();
+  Kokkos::initialize(args);
+
   auto info = nlcg_us<Kokkos::CudaSpace, Kokkos::HostSpace>(
       energy_base, us_precond_base, overlap_base, smearing, temp, maxiter, tol, kappa, tau, restart);
   Kokkos::finalize();
