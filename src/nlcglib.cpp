@@ -217,7 +217,7 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
       auto tlap = timer.stop();
       logger << "cg iteration took " << tlap << " s\n";
       logger.flush();
-    } catch (DescentError) {
+    } catch (DescentError&) {
       logger << "WARNING: No descent direction found, nlcg didn't reach final tolerance\n";
       return info;
     }
@@ -448,7 +448,7 @@ template <class memspace, class xspace=memspace>
       auto tlap = timer.stop();
       logger << "cg iteration took " << tlap << " s\n";
       logger.flush();
-    } catch (DescentError) {
+    } catch (DescentError&) {
       logger << "WARNING: No descent direction found, nlcg didn't reach final tolerance\n";
       return info;
     }
