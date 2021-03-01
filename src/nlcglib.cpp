@@ -32,10 +32,10 @@ namespace nlcglib {
 auto print_info (double free_energy, double ks_energy, double entropy, double slope, int step)
 {
     auto& logger = Logger::GetInstance();
-    logger << std::setw(15) << std::left << step << std::setw(15) << std::left << std::scientific
+    logger << TO_STDOUT << std::setw(15) << std::left << step << std::setw(15) << std::left << std::scientific
            << std::setprecision(16) << free_energy << "\t" << std::setw(15) << std::left
-           << std::scientific << std::setprecision(10) << slope << "\n";
-    logger << "\t kT * S: " << std::setprecision(10) << entropy << "\n";
+           << std::scientific << std::setprecision(10) << slope << "\n"
+           << "\t kT * S: " << std::setprecision(10) << entropy << "\n";
 
     nlcg_info info;
     info.F = free_energy;
@@ -370,9 +370,9 @@ template <class memspace, class xspace=memspace>
       info = print_info(
           free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), slope, i);
 
-      logger << "kT * S: " << std::setprecision(10) << free_energy.get_entropy() << "\n";
-      logger << "F     : " << std::setprecision(10) << free_energy.get_F() << "\n";
-      logger << "NLCG SUCCESS\n";
+      logger << TO_STDOUT << "kT * S: " << std::setprecision(10) << free_energy.get_entropy() << "\n"
+             << "F     : " << std::setprecision(10) << free_energy.get_F() << "\n"
+             << "NLCG SUCCESS\n";
       return info;
     }
 

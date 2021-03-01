@@ -12,12 +12,17 @@
 #include "csingleton.hpp"
 
 namespace nlcglib {
+
+const static struct to_stdout_trigger {} TO_STDOUT;
+
 class Logger : public CSingleton<Logger>
 {
 public:
   Logger() {
     MPI_Comm_rank(MPI_COMM_WORLD, &pid_);
   }
+
+  Logger(Logger&&) = default;
 
   void attach_file(const std::string& prefix = "out", const std::string& suffix = ".log")
   {
@@ -36,7 +41,7 @@ public:
   template <typename T>
   Logger& operator<<(const T& output)
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(std::mutex);
     sbuf_.str("");
 
     for (auto& v : prefixes_) {
@@ -53,28 +58,38 @@ public:
     return *this;
   }
 
+  Logger operator<<(const to_stdout_trigger&)
+  {
+    Logger log;
+    log.prefixes_ = prefixes_;
+    log.stream_ptr_ = stream_ptr_;
+    log.detach_stdout_ = false;
+    return log;
+  }
+
   void push_prefix(const std::string& tag)
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(std::mutex);
     prefixes_.push_back(tag);
   }
 
   void pop_prefix()
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(std::mutex);
     prefixes_.pop_back();
   }
 
   void clear_prefix()
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(std::mutex);
     prefixes_.clear();
   }
 
   void flush()
   {
     if(stream_ptr_) {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::mutex mutex;
+      std::lock_guard<std::mutex> lock(mutex);
       auto& out = *(stream_ptr_.get());
       out.flush();
     }
@@ -89,7 +104,6 @@ public:
 private:
   std::list<std::string> prefixes_;
   std::shared_ptr<std::ostream> stream_ptr_;
-  std::mutex mutex_;
   std::stringstream sbuf_;
   bool detach_stdout_ = false;
   int pid_ = 0;
