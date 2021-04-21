@@ -93,7 +93,8 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
   auto commk = wk.commk();
   Smearing smearing = free_energy.get_smearing();
   // set fn = f_D(ek)
-  auto fn = smearing.fn(ek);
+  // auto fn = smearing.fn(ek);
+  auto fn = free_energy.get_fn();
   auto X0 = free_energy.get_X();
 
   free_energy.compute(X0, fn);
@@ -322,7 +323,8 @@ template <class memspace, class xspace=memspace>
   auto commk = wk.commk();
   Smearing smearing = free_energy.get_smearing();
   // set fn = f_D(ek)
-  auto fn = smearing.fn(ek);
+  // auto fn = smearing.fn(ek);
+  auto fn = free_energy.get_fn();
   auto X0 = free_energy.get_X();
 
   free_energy.compute(X0, fn);
