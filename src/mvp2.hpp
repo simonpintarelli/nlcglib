@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Kokkos_Complex.hpp>
 #include "la/lapack.hpp"
 #include "la/utils.hpp"
 #include "mpi/communicator.hpp"
@@ -99,12 +100,13 @@ struct rotateeta
 struct slope
 {
   template<class gx_t, class zx_t, class ge_t, class ze_t>
-  Kokkos::complex<double>
+  std::tuple<double, double>
   operator()(gx_t&& gx, zx_t&& zx, ge_t&& geta, ze_t&& zeta)
   {
     auto slope_eta = innerh_tr()(eval(geta), eval(zeta));
-    auto slope = 2 * innerh_tr()(gx, zx) + slope_eta;
-    return slope;
+    auto slope_x = 2 * innerh_tr()(gx, zx);
+    using numeric_t = Kokkos::complex<double>;
+    return std::make_tuple(slope_x.real(), slope_eta.real());
   }
 };
 
@@ -245,10 +247,22 @@ auto rotateEta(const Eta_t& Eta, const U_t& U)
 }
 
 template <class gx_t, class zx_t, class ge_t, class ze_t>
-double
+std::tuple<double, double>
 compute_slope(const gx_t& gx, const zx_t& zx, const ge_t& geta, ze_t& zeta, const Communicator& commk)
 {
-  return sum(eval_threaded(tapply(local::slope(), gx, zx, geta, zeta)), commk) .real();
+  double slope_x = 2*sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk) .real();
+  double slope_eta = sum(eval_threaded(tapply(local::slope_eta(), gx, zx)), commk).real();
+  return std::make_tuple(slope_x, slope_eta);
+}
+
+template <class gx_t, class zx_t, class ge_t, class ze_t>
+double
+compute_slope_single(
+    const gx_t& gx, const zx_t& zx, const ge_t& geta, ze_t& zeta, const Communicator& commk)
+{
+  double slope_x = 2 * sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk).real();
+  double slope_eta = sum(eval_threaded(tapply(local::slope_eta(), gx, zx)), commk).real();
+  return slope_x + slope_eta;
 }
 
 template <class ge_t, class ze_t>

@@ -43,7 +43,7 @@ auto print_info (double free_energy, double ks_energy, double entropy, double sl
     nlcg_info info;
     info.F = free_energy;
     info.S = entropy;
-    info.tolerance = slope;
+    info.tolerance = slope_x + slope_eta;
     info.iter = step;
 
     return info;
@@ -95,12 +95,11 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
   auto wk = free_energy.get_wk();
   auto commk = wk.commk();
   Smearing smearing = free_energy.get_smearing();
-  // set fn = f_D(ek)
-  // auto fn = smearing.fn(ek);
-  auto fn = free_energy.get_fn();
-  auto X0 = free_energy.get_X();
 
+  auto fn = smearing.fn(ek);
+  auto X0 = free_energy.get_X();
   free_energy.compute(X0, fn);
+
   auto Hx = free_energy.get_HX();
   auto X = copy(free_energy.get_X());
 
@@ -120,13 +119,15 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
   auto Z_x = copy(delta_x);
   auto Z_eta = copy(delta_eta);
 
-  double slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+
+  auto slope_x_eta = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+  double slope = std::get<0>(slope_x_eta) + std::get<1>(slope_x_eta);
 
   if (slope >= 0) {
     throw std::runtime_error("ascending slope detected. Abort!");
   }
 
-  double fr = compute_slope(g_X, delta_x, g_eta, delta_eta, commk);
+  double fr = compute_slope_single(g_X, delta_x, g_eta, delta_eta, commk);
   line_search ls;
   ls.t_trial = 0.2;
   ls.tau = tau;
@@ -181,7 +182,7 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
       auto Z_Xp = rotateX(Z_x, u);
       auto Z_etap = rotateEta(Z_eta, u);
       // conjugate directions
-      double fr_new = compute_slope(g_X, delta_x, g_eta, delta_eta, commk);
+      double fr_new = compute_slope_single(g_X, delta_x, g_eta, delta_eta, commk);
       if (fr_new > 0) {
         throw std::runtime_error("Error: increasing slope !!!, <.,.> = " + format("%.5g", fr_new));
       }
@@ -202,7 +203,8 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
         Z_eta = eval_threaded(conjugateeta(delta_eta, Z_etap, gamma));
       }
 
-      slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+      slope_x_eta = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+      slope = std::get<0>(slope_x_eta) + std::get<1>(slope_x_eta);
 
       if (slope >= 0) {
         if (i % restart == 0 || force_restart)
@@ -211,11 +213,11 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
         Z_x = copy(delta_x);
         Z_eta = copy(delta_eta);
 
-        slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+        slope_x_eta = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+        slope = std::get<0>(slope_x_eta) + std::get<1>(slope_x_eta);
       }
 
-      info = print_info(
-          free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), slope, i);
+      info = print_info(free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), std::get<0>(slope_x_eta), std::get<1>(slope_x_eta), i);
       free_energy.ehandle().print_info();
 
       auto tlap = timer.stop();
@@ -325,12 +327,11 @@ template <class memspace, class xspace=memspace>
   auto wk = free_energy.get_wk();
   auto commk = wk.commk();
   Smearing smearing = free_energy.get_smearing();
-  // set fn = f_D(ek)
-  // auto fn = smearing.fn(ek);
-  auto fn = free_energy.get_fn();
-  auto X0 = free_energy.get_X();
 
+  auto fn = smearing.fn(ek);
+  auto X0 = free_energy.get_X();
   free_energy.compute(X0, fn);
+
   auto Hx = free_energy.get_HX();
   auto X = copy(free_energy.get_X());
 
@@ -351,13 +352,14 @@ template <class memspace, class xspace=memspace>
   auto Z_x = copy(delta_x);
   auto Z_eta = copy(delta_eta);
 
-  double slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+  auto slope_x_eta = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+  double slope = std::get<0>(slope_x_eta) + std::get<1>(slope_x_eta);
 
   if (slope >= 0) {
     throw std::runtime_error("ascending slope detected. Abort!");
   }
 
-  double fr = compute_slope(g_X, delta_x, g_eta, delta_eta, commk);
+  double fr = compute_slope_single(g_X, delta_x, g_eta, delta_eta, commk);
   line_search ls;
   ls.t_trial = 0.2;
   ls.tau = tau;
@@ -415,7 +417,7 @@ template <class memspace, class xspace=memspace>
       auto Z_Xp = rotateX(Z_x, u);
       auto Z_etap = rotateEta(Z_eta, u);
       // conjugate directions
-      double fr_new = compute_slope(g_X, delta_x, g_eta, delta_eta, commk);
+      double fr_new = compute_slope_single(g_X, delta_x, g_eta, delta_eta, commk);
       if (fr_new > 0) {
         throw std::runtime_error("Error: increasing slope !!!, <.,.> = " + format("%.5g", fr_new));
       }
@@ -436,7 +438,8 @@ template <class memspace, class xspace=memspace>
         Z_eta = eval_threaded(conjugateeta(delta_eta, Z_etap, gamma));
       }
 
-      slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+      slope_x_eta = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+      slope = std::get<0>(slope_x_eta) + std::get<1>(slope_x_eta);
 
       if (slope >= 0) {
         if (i % restart == 0 || force_restart)
@@ -445,11 +448,11 @@ template <class memspace, class xspace=memspace>
         Z_x = copy(delta_x);
         Z_eta = copy(delta_eta);
 
-        slope = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+        slope_x_eta = compute_slope(g_X, Z_x, g_eta, Z_eta, commk);
+        slope = std::get<0>(slope_x_eta) + std::get<1>(slope_x_eta);
       }
 
-      info = print_info(
-          free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), slope, i);
+      info = print_info(free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), std::get<0>(slope_x_eta), std::get<1>(slope_x_eta), i);
       free_energy.ehandle().print_info();
 
       auto tlap = timer.stop();
@@ -531,7 +534,9 @@ void nlcg_check_gradient(EnergyBase& energy_base)
 
   // compute slope in X
   auto g_eta = grad_eta.g_eta(Hij, wk, ek, fn, free_energy.occupancy());
-  double slope = compute_slope(g_X, delta_x, g_eta, delta_eta, commk);
+  auto slope_x_eta = compute_slope(g_X, delta_x, g_eta, delta_eta, commk);
+  double slope = std::get<0>(slope_x_eta) + std::get<1>(slope_x_eta);
+
   Logger() << "slope (all): " << std::setprecision(8) << slope << "\n";
 
   // compute at t=0, because fn will change, e.g. fn=f_n(ek)
