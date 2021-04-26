@@ -2,6 +2,7 @@
 #include <Kokkos_Core.hpp>
 #include <cfenv>
 #include <iomanip>
+#include <ios>
 #include <iostream>
 #include <nlcglib.hpp>
 #include "exec_space.hpp"
@@ -29,13 +30,15 @@ typedef std::complex<double> complex_double;
 
 namespace nlcglib {
 
-auto print_info (double free_energy, double ks_energy, double entropy, double slope, int step)
+auto print_info (double free_energy, double ks_energy, double entropy, double slope_x, double slope_eta, int step)
 {
     auto& logger = Logger::GetInstance();
-    logger << TO_STDOUT << std::setw(15) << std::left << step << std::setw(15) << std::left << std::scientific
-           << std::setprecision(16) << free_energy << "\t" << std::setw(15) << std::left
-           << std::scientific << std::setprecision(10) << slope << "\n"
-           << "\t kT * S: " << std::setprecision(10) << entropy << "\n";
+    logger << TO_STDOUT << std::setw(15) << std::left << step << std::setw(15) << std::left
+           << std::scientific << std::setprecision(16) << free_energy << "\t" << std::setw(15)
+           << std::left << std::scientific << std::setprecision(13) << slope_x << " "
+           << std::scientific << std::setprecision(13) << slope_eta << "\n"
+           << "\t kT * S   : " << std::setprecision(13) << entropy << "\n"
+           << "\t KS energy: " << std::setprecision(13) << ks_energy << "\n";
 
     nlcg_info info;
     info.F = free_energy;
@@ -66,8 +69,8 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
 
   free_energy.compute();
 
-  logger << "F (initial) =  " << std::setprecision(8) << free_energy.get_F() << "\n";
-  logger << "KS (initial) =  " << std::setprecision(8) << free_energy.ks_energy() << "\n";
+  logger << "F (initial) =  " << std::setprecision(13) << free_energy.get_F() << "\n";
+  logger << "KS (initial) =  " << std::setprecision(13) << free_energy.ks_energy() << "\n";
   logger << "nlcglib parameters\n"
            << std::setw(10) << "T "
            << ": " << T << "\n"
@@ -138,11 +141,11 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
 
     // check for convergence
     if (std::abs(slope) < tol) {
-      info = print_info(
-          free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), slope, i);
+      info = print_info(free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), std::get<0>(slope_x_eta), std::get<1>(slope_x_eta), i);
 
-      logger << "kT * S: " << std::setprecision(10) << free_energy.get_entropy() << "\n";
-      logger << "F     : " << std::setprecision(10) << free_energy.get_F() << "\n";
+      logger << "kT * S   : " << std::setprecision(13) << free_energy.get_entropy() << "\n";
+      logger << "KS-energy: " << std::setprecision(13) << free_energy.get_F() - free_energy.get_entropy() << "\n";
+      logger << "F        : " << std::setprecision(13) << free_energy.get_F() << "\n";
       logger << "NLCG SUCCESS\n";
       return info;
     }
@@ -369,11 +372,13 @@ template <class memspace, class xspace=memspace>
 
     // check for convergence
     if (std::abs(slope) < tol) {
-      info = print_info(
-          free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), slope, i);
+      info = print_info(free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), std::get<0>(slope_x_eta), std::get<1>(slope_x_eta), i);
 
-      logger << TO_STDOUT << "kT * S: " << std::setprecision(10) << free_energy.get_entropy() << "\n"
-             << "F     : " << std::setprecision(10) << free_energy.get_F() << "\n"
+      logger << TO_STDOUT
+             << "kT * S   : " << std::setprecision(13) << free_energy.get_entropy()
+             << "\n"
+             << "F        : " << std::setprecision(13) << free_energy.get_F() << "\n"
+             << "KS-energy: " << std::setprecision(13) << free_energy.get_F() - free_energy.get_entropy() << "\n"
              << "NLCG SUCCESS\n";
       return info;
     }

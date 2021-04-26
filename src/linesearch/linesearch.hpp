@@ -54,10 +54,10 @@ line_search::bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0, bool& force
   while (t > 1e-8) {
     auto ek_ul = G(t);
     double Fp = FE.get_F();
-    Logger::GetInstance() << "fd slope: " << std::scientific << (Fp - F0) / t << ", t: " << t
-                          << "\n";
+    Logger::GetInstance() << "fd slope: " << std::scientific << std::setprecision(3) << (Fp - F0) / t << ", t: " << t
+                          << "F :" << std::setprecision(12) << Fp << "\n";
     if (Fp < F0) {
-      Logger::GetInstance() << "fd slope: " << std::scientific << (Fp - F0)/t << "\n";
+      Logger::GetInstance() << "fd slope: " << std::scientific << std::setprecision(3) << (Fp - F0)/t << "\n";
       force_restart = false;
       return ek_ul;
     }
