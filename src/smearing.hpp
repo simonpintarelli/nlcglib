@@ -132,8 +132,8 @@ fermi_entropy(const Kokkos::View<double*, args...>& fn, double mo)
   std::valarray<double> fn_val(fn_host.data(), fn.size());
   fn_val /= mo;
 
-  std::valarray<bool> zero_loc = fn_val <= 1e-12;
-  std::valarray<bool> ones_loc = fn_val >= 1-1e-12;
+  std::valarray<bool> zero_loc = fn_val <= 1e-15;
+  std::valarray<bool> ones_loc = fn_val >= 1-1e-15;
   std::valarray<double> fni = fn_val[(!zero_loc) && (!ones_loc)];
 
   return (fni * std::log(fni) + (1.0 - fni) * std::log(1.0 - fni)).sum();

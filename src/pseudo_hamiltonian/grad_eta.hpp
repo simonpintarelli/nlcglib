@@ -125,7 +125,7 @@ public:
       double wk_loc = wk[key];
       auto gETA_loc = gETA[key].array();
       int nbands = fn_loc.size();
-      if (std::abs(sumfn) < 1e-10) {
+      if (std::abs(sumfn) < 1e-12) {
         // zero contribution
       } else {
         Kokkos::parallel_for(
