@@ -459,6 +459,16 @@ template <class memspace, class xspace=memspace>
       logger << "cg iteration took " << tlap << " s\n";
       logger.flush();
     } catch (DescentError&) {
+      auto zero = tapply_async(zeros_like(), Z_eta);
+      auto Ft = [&](double t) { return geodesic_us(free_energy, X, eta, Z_x, zero, S, t); };
+      logger << "--- bt search failed, print energies along Z_X ---\n";
+      for (double t : linspace(0, 0.5, 10)) {
+        Ft(t);
+        double Ef = free_energy.get_F();
+        logger << "t: " << std::scientific << std::setprecision(5) << t
+               << ", Ef: " << std::setprecision(13) << Ef << "\n";
+      }
+      logger << "----------\n";
       logger << "WARNING: No descent direction found, nlcg didn't reach final tolerance\n";
       return info;
     }
