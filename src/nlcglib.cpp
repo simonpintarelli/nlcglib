@@ -1,6 +1,7 @@
 #include <omp.h>
 #include <Kokkos_Core.hpp>
 #include <cfenv>
+#include <set>
 #include <iomanip>
 #include <ios>
 #include <iostream>
@@ -279,6 +280,19 @@ void nlcheck_overlap(EnergyBase& e, OverlapBase& s, OverlapBase& si)
   Kokkos::finalize();
 }
 
+
+struct minus
+{
+  template <class X>
+  auto operator()(X&& x)
+  {
+    auto res = empty_like()(x);
+    add(res, x, -1, 0);
+    return res;
+  }
+};
+
+
 template <class memspace, class xspace=memspace>
  nlcg_info nlcg_us(EnergyBase& energy_base, UltrasoftPrecondBase& us_precond_base, OverlapBase& overlap_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
 {
@@ -460,17 +474,89 @@ template <class memspace, class xspace=memspace>
       logger.flush();
     } catch (DescentError&) {
       auto zero = tapply_async(zeros_like(), Z_eta);
+      auto slope_x_eta = compute_slope(g_X, Z_x, g_eta, zero, commk);
+      double slope_x = std::get<0>(slope_x_eta);
+
       auto Ft = [&](double t) {
-        return geodesic_us(free_energy, X, eta, Z_x, tapply_async(zeros_like(), Z_eta), S, t);
+        return geodesic_us(free_energy, X, eta, Z_x, zero, S, t);
       };
-      logger << "--- bt search failed, print energies along Z_X ---\n";
-      for (double t : linspace(0, 0.5, 10)) {
+
+      logger << "--- DEBUG bt search failed, print energies along Z_X ---\n";
+      auto uniform_range = linspace(0, 0.5, 10);
+      std::vector<double> ts(uniform_range.begin(), uniform_range.end());
+      for (auto ti : {1e-4, 1e-5, 1e-6, 1e-7}) ts.push_back(ti);
+
+      std::sort(ts.begin(), ts.end());
+
+      std::vector<double> Fs;
+
+      for (double t : ts) {
         Ft(t);
         double Ef = free_energy.get_F();
+        Fs.push_back(Ef);
         logger << "t: " << std::scientific << std::setprecision(5) << t
-               << ", Ef: " << std::setprecision(13) << Ef << "\n";
+               << ", Ef: " << std::fixed << std::setprecision(13) << Ef << "\n";
       }
+      /* compute slopes */
+      logger << "slope (<G_X, Z_X>): " << std::setprecision(5) << std::scientific << slope_x << "\n";
+      double F0 = Fs[0];
+      for (auto i = 1u; i < Fs.size(); ++i) {
+        double Fi = Fs[i];
+        double dt = ts[i] - ts[0];
+        double dF = Fi - F0;
+        logger << "slope (dt=" << std::setprecision(5) << std::scientific << dt
+               << "): " << std::setprecision(5) << std::scientific << (dF / dt) << "\n";
+      }
+
+      {
+        /* steepest descent in eta  */
+        logger << " --- DEBUG, steepest descent in Eta ---\n";
+        auto zerox = tapply_async(zeros_like(), Z_x);
+        // -g_eta
+        auto zg_eta = tapply_async(minus(), g_eta);
+
+        auto slope_x_eta = compute_slope(g_X, zerox, g_eta, zg_eta, commk);
+        double slope_eta = std::get<1>(slope_x_eta);
+
+        auto Ft_eta = [&](double t) { return geodesic_us(free_energy, X, eta, zerox, zg_eta, S, t); };
+
+
+        logger << "slope (<g_eta, -g_eta>): " << std::setprecision(5) << std::scientific << slope_eta
+               << "\n";
+        std::vector<double> Fs;
+        for (double t : ts) {
+          Ft_eta(t);
+          double Ef = free_energy.get_F();
+          Fs.push_back(Ef);
+          logger << "t: " << std::scientific << std::setprecision(5) << t << ", Ef: " << std::fixed
+                 << std::setprecision(13) << Ef << "\n";
+        }
+      }
+      {
+        /* steepest descent in eta  */
+        logger << " --- DEBUG, search along Z_eta (preconditioned) ---\n";
+        auto zerox = tapply_async(zeros_like(), Z_x);
+        auto slope_x_eta = compute_slope(g_X, zerox, g_eta, Z_eta, commk);
+        double slope_eta = std::get<1>(slope_x_eta);
+
+        logger << "slope (<g_eta, Z_eta>): " << std::setprecision(5) << std::scientific
+               << slope_eta << "\n";
+
+        auto Ft_zeta = [&](double t) {
+          return geodesic_us(free_energy, X, eta, zerox, Z_eta, S, t);
+        };
+        std::vector<double> Fs;
+        for (double t : ts) {
+          Ft_zeta(t);
+          double Ef = free_energy.get_F();
+          Fs.push_back(Ef);
+          logger << "t: " << std::scientific << std::setprecision(5) << t << ", Ef: " << std::fixed
+                 << std::setprecision(13) << Ef << "\n";
+        }
+      }
+
       logger << "----------\n";
+
       logger << "WARNING: No descent direction found, nlcg didn't reach final tolerance\n";
       return info;
     }
