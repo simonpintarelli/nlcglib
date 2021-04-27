@@ -460,7 +460,9 @@ template <class memspace, class xspace=memspace>
       logger.flush();
     } catch (DescentError&) {
       auto zero = tapply_async(zeros_like(), Z_eta);
-      auto Ft = [&](double t) { return geodesic_us(free_energy, X, eta, Z_x, zero, S, t); };
+      auto Ft = [&](double t) {
+        return geodesic_us(free_energy, X, eta, Z_x, tapply_async(zeros_like(), Z_eta), S, t);
+      };
       logger << "--- bt search failed, print energies along Z_X ---\n";
       for (double t : linspace(0, 0.5, 10)) {
         Ft(t);

@@ -55,14 +55,14 @@ line_search::bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0, bool& force
     auto ek_ul = G(t);
     double Fp = FE.get_F();
     Logger::GetInstance() << "fd slope: " << std::scientific << std::setprecision(3) << (Fp - F0) / t << " t: " << t
-                          << " F:" << std::setprecision(12) << Fp << "\n";
+                          << " F:" << std::fixed << std::setprecision(13) << Fp << "\n";
     if (Fp < F0) {
       Logger::GetInstance() << "fd slope: " << std::scientific << std::setprecision(3) << (Fp - F0)/t << "\n";
       force_restart = false;
       return ek_ul;
     }
     t *= tau;
-    Logger::GetInstance() << "\tbacktracking search tau = " << std::scientific << t << "\n";
+    Logger::GetInstance() << "\tbacktracking search tau = " << std::scientific << std::setprecision(5) << t << "\n";
   }
   // TODO: let logger print state
   Logger::GetInstance().flush();
