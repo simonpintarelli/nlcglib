@@ -34,11 +34,11 @@ auto print_info (double free_energy, double ks_energy, double entropy, double sl
 {
     auto& logger = Logger::GetInstance();
     logger << TO_STDOUT << std::setw(15) << std::left << step << std::setw(15) << std::left
-           << std::scientific << std::setprecision(16) << free_energy << "\t" << std::setw(15)
+           << std::fixed << std::setprecision(13) << free_energy << "\t" << std::setw(15)
            << std::left << std::scientific << std::setprecision(13) << slope_x << " "
            << std::scientific << std::setprecision(13) << slope_eta << "\n"
-           << "\t kT * S   : " << std::setprecision(13) << entropy << "\n"
-           << "\t KS energy: " << std::setprecision(13) << ks_energy << "\n";
+           << "\t kT * S   : " << std::fixed << std::setprecision(13) << entropy << "\n"
+           << "\t KS energy: " << std::fixed << std::setprecision(13) << ks_energy << "\n";
 
     nlcg_info info;
     info.F = free_energy;
