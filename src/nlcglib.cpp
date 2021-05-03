@@ -520,7 +520,6 @@ template <class memspace, class xspace=memspace>
 
         auto Ft_eta = [&](double t) { return geodesic_us(free_energy, X, eta, zerox, zg_eta, S, t); };
 
-
         logger << "slope (<g_eta, -g_eta>): " << std::setprecision(5) << std::scientific << slope_eta
                << "\n";
         std::vector<double> Fs;
