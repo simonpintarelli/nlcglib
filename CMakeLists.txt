@@ -46,6 +46,8 @@ else()
   message(FATAL_ERROR "must specify a LAPACK_VENDOR")
 endif()
 
+find_package(nlohmann_json 3.2.0 REQUIRED)
+
 add_subdirectory(src)
 set(nlcglib_internal_location $<TARGET_FILE:nlcglib_internal>)
 
