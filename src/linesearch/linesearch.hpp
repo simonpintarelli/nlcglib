@@ -3,8 +3,15 @@
 #include "exceptions.hpp"
 #include "utils/logger.hpp"
 #include <iomanip>
+#include <tuple>
 
 namespace nlcglib {
+
+
+struct line_search_info
+{
+  std::string type; // the ls-type used
+};
 
 class line_search
 {
@@ -22,11 +29,11 @@ public:
     Logger::GetInstance() << "line search t_trial = " << std::scientific << t_trial << "\n";
     double F0 = FE.get_F();
     try {
-      return qline(G_base, FE, slope, force_restart);
+      return std::tuple_cat(qline(G_base, FE, slope, force_restart), std::make_tuple(line_search_info{"qline"}));
     } catch (StepError& step_error) {
       Logger::GetInstance() << "\t"
                             << "quadratic line search failed -> backtracking search\n";
-      return bt_search(G_base, FE, F0, force_restart);
+      return std::tuple_cat(bt_search(G_base, FE, F0, force_restart), std::make_tuple(line_search_info{"btsearch"}));
     }
   }
 
