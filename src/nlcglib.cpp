@@ -22,6 +22,7 @@
 #include "smearing.hpp"
 #include "traits.hpp"
 #include "utils/logger.hpp"
+#include "utils/step_logger.hpp"
 #include "utils/timer.hpp"
 #include "utils/format.hpp"
 #include "overlap.hpp"
@@ -31,25 +32,76 @@ typedef std::complex<double> complex_double;
 
 namespace nlcglib {
 
-auto print_info (double free_energy, double ks_energy, double entropy, double slope_x, double slope_eta, int step)
+auto
+print_info(double free_energy,
+           double ks_energy,
+           double entropy,
+           double slope_x,
+           double slope_eta,
+           int step)
 {
-    auto& logger = Logger::GetInstance();
-    logger << TO_STDOUT << std::setw(15) << std::left << step << std::setw(15) << std::left
-           << std::fixed << std::setprecision(13) << free_energy << "\t" << std::setw(15)
-           << std::left << std::scientific << std::setprecision(13) << slope_x << " "
-           << std::scientific << std::setprecision(13) << slope_eta << "\n"
-           << "\t kT * S   : " << std::fixed << std::setprecision(13) << entropy << "\n"
-           << "\t KS energy: " << std::fixed << std::setprecision(13) << ks_energy << "\n";
+  auto& logger = Logger::GetInstance();
+  logger << TO_STDOUT << std::setw(15) << std::left << step << std::setw(15) << std::left
+         << std::fixed << std::setprecision(13) << free_energy << "\t" << std::setw(15) << std::left
+         << std::scientific << std::setprecision(13) << slope_x << " " << std::scientific
+         << std::setprecision(13) << slope_eta << "\n"
+         << "\t kT * S   : " << std::fixed << std::setprecision(13) << entropy << "\n"
+         << "\t KS energy: " << std::fixed << std::setprecision(13) << ks_energy << "\n";
 
-    nlcg_info info;
-    info.F = free_energy;
-    info.S = entropy;
-    info.tolerance = slope_x + slope_eta;
-    info.iter = step;
+  nlcg_info info;
+  info.F = free_energy;
+  info.S = entropy;
+  info.tolerance = slope_x + slope_eta;
+  info.iter = step;
 
-    return info;
+  return info;
 }
 
+template <class T1, class T2, class T3>
+void
+cg_write_step_json(double free_energy,
+                   double ks_energy,
+                   double entropy,
+                   double slope_x,
+                   double slope_eta,
+                   T1&& ek,
+                   T2&& fn,
+                   T3&& hii,
+                   Communicator& commk,
+                   int step)
+{
+  StepLogger logger(step);
+  logger.log("F", free_energy);
+  logger.log("EKS", ks_energy);
+  logger.log("entropy", entropy);
+  logger.log("slope_x", slope_x);
+  logger.log("slope_eta", slope_eta);
+
+  auto ek_host =
+      eval_threaded(
+          tapply(
+              [](auto&& x) { return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x); },
+              ek))
+          .allgather(commk);
+
+  auto fn_host =
+      eval_threaded(
+          tapply(
+              [](auto&& x) { return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x); },
+              fn))
+          .allgather(commk);
+
+  auto hii_host =
+      eval_threaded(
+          tapply(
+              [](auto&& x) { return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x); },
+              hii))
+          .allgather(commk);
+
+  logger.log("eta", ek_host);
+  logger.log("fn", fn_host);
+  logger.log("hii", hii_host);
+}
 
 template <class memspace, class xspace=memspace>
 nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
@@ -219,7 +271,18 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
       }
 
       info = print_info(free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), std::get<0>(slope_x_eta), std::get<1>(slope_x_eta), i);
-      free_energy.ehandle().print_info();
+      free_energy.ehandle().print_info(); // print magnetization
+
+      cg_write_step_json(free_energy.get_F(),
+                         free_energy.ks_energy(),
+                         free_energy.get_entropy(),
+                         std::get<0>(slope_x_eta),
+                         std::get<1>(slope_x_eta),
+                         ek,
+                         fni,
+                         eval_threaded(tapply([](auto&& x) { return diag(x); }, Hij)),
+                         commk,
+                         i);
 
       auto tlap = timer.stop();
       logger << "cg iteration took " << tlap << " s\n";
@@ -409,6 +472,7 @@ template <class memspace, class xspace=memspace>
 
       auto ek = std::get<0>(ek_ul);
       auto u = std::get<1>(ek_ul);
+      auto ls_info = std::get<2>(ek_ul);
 
       // obtain new H@x, compute g_X, g_eta, delta_x, delta_eta
       Hx = free_energy.get_HX();
@@ -466,8 +530,24 @@ template <class memspace, class xspace=memspace>
         slope = std::get<0>(slope_x_eta) + std::get<1>(slope_x_eta);
       }
 
-      info = print_info(free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), std::get<0>(slope_x_eta), std::get<1>(slope_x_eta), i);
+      info = print_info(free_energy.get_F(),
+                        free_energy.ks_energy(),
+                        free_energy.get_entropy(),
+                        std::get<0>(slope_x_eta),
+                        std::get<1>(slope_x_eta),
+                        i);
       free_energy.ehandle().print_info();
+
+      cg_write_step_json(free_energy.get_F(),
+                         free_energy.ks_energy(),
+                         free_energy.get_entropy(),
+                         std::get<0>(slope_x_eta),
+                         std::get<1>(slope_x_eta),
+                         ek,
+                         fni,
+                         eval_threaded(tapply([](auto&& x){ return diag(x); }, Hij)),
+                         commk,
+                         i);
 
       auto tlap = timer.stop();
       logger << "cg iteration took " << tlap << " s\n";
