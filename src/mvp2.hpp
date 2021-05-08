@@ -105,7 +105,6 @@ struct slope
   {
     auto slope_eta = innerh_tr()(eval(geta), eval(zeta));
     auto slope_x = 2 * innerh_tr()(gx, zx);
-    using numeric_t = Kokkos::complex<double>;
     return std::make_tuple(slope_x.real(), slope_eta.real());
   }
 };
