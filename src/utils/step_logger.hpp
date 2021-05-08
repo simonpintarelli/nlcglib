@@ -2,14 +2,25 @@
 
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
+#include <Kokkos_Complex.hpp>
 #include <iostream>
 #include <string>
 #include <type_traits>
 #include <type_traits>
 #include "la/mvector.hpp"
 
-namespace nlcglib {
+namespace Kokkos {
 
+template <class T>
+void
+to_json(nlohmann::json& j, const Kokkos::complex<T>& p)
+{
+  j = nlohmann::json{p.real(), p.imag()};
+}
+}  // namespace Kokkos
+
+
+namespace nlcglib {
 
 /// Store CG information in json.
 class StepLogger
@@ -55,8 +66,8 @@ StepLogger::log(const std::string& key, const mvector<V>& x)
   for (auto& elem : x) {
     auto x_key = elem.first;
     auto array = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), elem.second);
-    // std::vector<typename V::value_type> v(array.size());
-    std::vector<double> v(array.size());
+    std::vector<typename V::value_type> v(array.size());
+    // std::vector<double> v(array.size());
     std::copy(array.data(), array.data() + array.size(), v.data());
     nlohmann::json entry;
     entry["ik"] = x_key.first;
