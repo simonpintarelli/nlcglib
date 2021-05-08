@@ -314,6 +314,7 @@ protected:
   double occ;
   /// kb * T
   double kT;
+  /// TODO hardcoded constant
   double tol{1e-11};
 
   mvector<double> wk;
