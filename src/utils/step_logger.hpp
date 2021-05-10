@@ -41,7 +41,7 @@ public:
 
   ~StepLogger()
   {
-    std::ofstream fout(fname, std::ios_base::out);
+    std::ofstream fout(fname, std::ios_base::app);
     fout << dict;
     fout.flush();
   }
@@ -76,6 +76,5 @@ StepLogger::log(const std::string& key, const mvector<V>& x)
     dict[key] += entry;
   }
 }
-
 
 }  // namespace nlcglib

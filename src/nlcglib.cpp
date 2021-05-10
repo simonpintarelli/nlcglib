@@ -189,6 +189,9 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
          << std::setw(15) << std::left << "Residual" << "\n";
 
   bool force_restart = false;
+  if (commk.rank() == 0) {
+    std::ofstream fout("nlcg.json", std::ios_base::out);  // clear `nlcg.json`
+  }
   for (int i = 1; i < maxiter+1; ++i) {
     logger << "Iteration " << i << "\n";
     timer.start();
@@ -445,6 +448,11 @@ template <class memspace, class xspace=memspace>
          << std::setw(15) << std::left << "Residual" << "\n";
 
   bool force_restart = false;
+
+  if(commk.rank() == 0)
+  {
+    std::ofstream fout("nlcg.json", std::ios_base::out); // clear `nlcg.json`
+  }
   for (int i = 1; i < maxiter+1; ++i) {
     logger << "Iteration " << i << "\n";
     timer.start();
