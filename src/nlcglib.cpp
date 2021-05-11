@@ -215,7 +215,7 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
           slope,
           force_restart);
 
-      auto ek = std::get<0>(ek_ul);
+      ek = std::get<0>(ek_ul);
       auto u = std::get<1>(ek_ul);
 
       // obtain new H@x, compute g_X, g_eta, delta_x, delta_eta
@@ -226,13 +226,13 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
 
       eta = eval_threaded(tapply(make_diag(), ek));
 
-      auto Hij = eval_threaded(tapply(inner_(), X, Hx, wk));
-      auto g_eta = grad_eta.g_eta(Hij, wk, ek, fni, free_energy.occupancy());
-      auto delta_eta = grad_eta.delta_eta(Hij, ek, wk);
+      Hij = eval_threaded(tapply(inner_(), X, Hx, wk));
+      g_eta = grad_eta.g_eta(Hij, wk, ek, fni, free_energy.occupancy());
+      delta_eta = grad_eta.delta_eta(Hij, ek, wk);
 
-      auto Xll = lagrange_multipliers(X, X, Hx, Prec);
-      auto g_X = gradX(X, Hx, fni, Xll, wk);
-      auto delta_x = precondGradX(X, Hx, Prec, Xll);
+      Xll = lagrange_multipliers(X, X, Hx, Prec);
+      g_X = gradX(X, Hx, fni, Xll, wk);
+      delta_x = precondGradX(X, Hx, Prec, Xll);
 
       // rotate previous search direction ..
       auto Z_Xp = rotateX(Z_x, u);
@@ -478,7 +478,7 @@ template <class memspace, class xspace=memspace>
           slope,
           force_restart);
 
-      auto ek = std::get<0>(ek_ul);
+      ek = std::get<0>(ek_ul);
       auto u = std::get<1>(ek_ul);
       auto ls_info = std::get<2>(ek_ul);
 
@@ -489,15 +489,15 @@ template <class memspace, class xspace=memspace>
 
       eta = eval_threaded(tapply(make_diag(), ek));
 
-      auto Hij = eval_threaded(tapply(inner_(), X, Hx, wk));
-      auto g_eta = grad_eta.g_eta(Hij, wk, ek, fni, free_energy.occupancy());
-      auto delta_eta = grad_eta.delta_eta(Hij, ek, wk);
+      Hij = eval_threaded(tapply(inner_(), X, Hx, wk));
+      g_eta = grad_eta.g_eta(Hij, wk, ek, fni, free_energy.occupancy());
+      delta_eta = grad_eta.delta_eta(Hij, ek, wk);
 
-      auto SX = tapply_op(S, X);
+      SX = tapply_op(S, X);
       // this is SXll
-      auto Xll = lagrange_multipliers(X, SX, Hx, P);
-      auto g_X = gradX(SX, Hx, fni, Xll, wk);
-      auto delta_x = precondGradX_us(SX, Hx, P, Xll);
+      Xll = lagrange_multipliers(X, SX, Hx, P);
+      g_X = gradX(SX, Hx, fni, Xll, wk);
+      delta_x = precondGradX_us(SX, Hx, P, Xll);
 
       // rotate previous search direction ..
       auto Z_Xp = rotateX(Z_x, u);
