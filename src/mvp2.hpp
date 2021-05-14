@@ -249,7 +249,7 @@ template <class gx_t, class zx_t, class ge_t, class ze_t>
 std::tuple<double, double>
 compute_slope(const gx_t& gx, const zx_t& zx, const ge_t& geta, ze_t& zeta, const Communicator& commk)
 {
-  double slope_x = 2*sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk) .real();
+  double slope_x = sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk) .real();
   double slope_eta = sum(eval_threaded(tapply(local::slope_eta(), geta, zeta)), commk).real();
   return std::make_tuple(slope_x, slope_eta);
 }
@@ -259,7 +259,7 @@ double
 compute_slope_single(
     const gx_t& gx, const zx_t& zx, const ge_t& geta, ze_t& zeta, const Communicator& commk)
 {
-  double slope_x = 2 * sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk).real();
+  double slope_x = sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk).real();
   double slope_eta = sum(eval_threaded(tapply(local::slope_eta(), geta, zeta)), commk).real();
   return slope_x + slope_eta;
 }
