@@ -286,7 +286,7 @@ transform(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
 }
 
 
-/// add
+/// add: C =  beta*C  + alpha * A
 template <class M0, class M1>
 std::enable_if_t<std::is_same<typename M0::storage_t::memory_space, Kokkos::HostSpace>::value, void>
 add(M0& C,
@@ -323,7 +323,5 @@ add(M0& C,
     throw std::runtime_error("not implemented.");
   }
 }
-
-
 
 }  // namespace nlcglib

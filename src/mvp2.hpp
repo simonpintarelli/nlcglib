@@ -44,6 +44,7 @@ struct gradx
 
 struct precondgx
 {
+  // TODO: unused variable x!
   template <class x_t, class hx_t, class prec_t, class ll_t>
   to_layout_left_t<std::remove_reference_t<x_t>>
   operator()(x_t&& x, hx_t&& hx, prec_t&& prec, ll_t&& xll)
@@ -60,6 +61,7 @@ struct precondgx
 
 struct precondgx_us
 {
+  // TODO: unused variable x!
   template <class x_t, class hx_t, class prec_t, class ll_t>
   to_layout_left_t<std::remove_reference_t<x_t>> operator()(x_t&& x,
                                                             hx_t&& hx,
@@ -153,7 +155,7 @@ public:
     return zxp;
   }
 
-  /** Ultra-soft case, note that it overwrites zxp */
+  /** Ultra-soft case, note that zxp is overwritten */
   template <class dx_t, class zxp_t, class x_t, class sx_t>
   to_layout_left_t<std::remove_reference_t<zxp_t>>
   operator()(dx_t&& dx, zxp_t&& zxp, x_t&& x, sx_t&& sx)
@@ -191,6 +193,7 @@ struct conjugateeta
   to_layout_left_t<std::remove_reference_t<zetap_t>>
   operator()(deta_t&& deta, zetap_t&& zep)
   {
+    // zep <- 1.0 * zep + gamma * deta
     add(zep, deta, 1.0, gamma);
     return zep;
   }
@@ -291,7 +294,7 @@ conjugatex_us(dx_t&& dx, zxp_t&& zxp, x_t&& x, sx_t&& sx, double gamma)
   return tapply_async(local::conjugatex(gamma), dx, zxp, x, sx);
 }
 
-
+/// zep <- deta + gamma * zep
 template<class deta_t, class zetap_t>
 auto conjugateeta(deta_t&& deta, zetap_t&& zep, double gamma)
 {
