@@ -410,7 +410,7 @@ double l2norm(const mvector<X>& x) {
   // if (std::abs(Kokkos::imag(z)) > 1e-10) {
   //   throw std::runtime_error("invalid value");
   // }
-  return Kokkos::real(z);
+  return std::sqrt(Kokkos::real(z));
 }
 
 #ifdef __NLCGLIB__CUDA
