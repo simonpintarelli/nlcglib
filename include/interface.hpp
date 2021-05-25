@@ -131,6 +131,7 @@ public:
   /// maximum number of electrons per orbital
   virtual int occupancy() = 0;
   virtual double get_total_energy() = 0;
+  virtual std::map<std::string, double> get_energy_components() = 0;
   virtual std::shared_ptr<MatrixBaseZ> get_hphi() = 0;
   virtual std::shared_ptr<MatrixBaseZ> get_sphi() = 0;
   virtual std::shared_ptr<MatrixBaseZ> get_C(memory_type) = 0;

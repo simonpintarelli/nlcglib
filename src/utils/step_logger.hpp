@@ -1,7 +1,6 @@
 #pragma once
 
 #include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
 #include <Kokkos_Complex.hpp>
 #include <iostream>
 #include <string>
@@ -27,7 +26,7 @@ class StepLogger
 {
 public:
   StepLogger(int i, std::string fname = "nlcg.json")
-      : fname(fname)
+      : i(i), fname(fname)
   {
     dict["type"] = "cg_iteration";
     dict["step"] = i;
@@ -36,17 +35,21 @@ public:
   template<class X>
   std::enable_if_t<std::is_scalar<std::remove_reference_t<X>>::value> log(const std::string& key, X&& x);
 
+  template<class X>
+  void log(const std::string& key, const std::map<std::string, X>& v);
+
   template<class V>
   void log(const std::string& key, const mvector<V>& x);
 
   ~StepLogger()
   {
-    std::ofstream fout(fname, std::ios_base::app);
+    std::ofstream fout(std::string("nlcg") + std::to_string(i) + ".json", std::ios_base::out);
     fout << dict;
     fout.flush();
   }
 
 private:
+  int i;
   std::string fname{"nlcg.json"};
   nlohmann::json dict;
 };
@@ -56,6 +59,12 @@ std::enable_if_t<std::is_scalar<std::remove_reference_t<X>>::value>
 StepLogger::log(const std::string& key, X&& x)
 {
   dict[key] = x;
+}
+
+template<class X>
+void StepLogger::log(const std::string& key, const std::map<std::string, X>& v)
+{
+  dict[key] = v;
 }
 
 template <class V>

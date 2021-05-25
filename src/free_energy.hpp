@@ -28,8 +28,12 @@ public:
   auto get_gkvec_ekin();
   double occupancy();
   double ks_energy();
+  std::map<std::string, double> ks_energy_components();
 
-  double get_F() const { return free_energy; }
+  double get_F() const
+  {
+    return free_energy;
+  }
   double get_entropy() const { return entropy; }
   const auto& ehandle() const { return energy; }
 
@@ -172,6 +176,13 @@ double
 FreeEnergy<MEMSPACE, XMEMSPACE>::ks_energy()
 {
   return this->energy.get_total_energy();
+}
+
+template <class MEMSPACE, class XMEMSPACE>
+std::map<std::string, double>
+FreeEnergy<MEMSPACE, XMEMSPACE>::ks_energy_components()
+{
+  return this->energy.get_energy_components();
 }
 
 }  // namespace nlcglib
