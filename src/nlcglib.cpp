@@ -67,6 +67,7 @@ cg_write_step_json(double free_energy,
                    T1&& ek,
                    T2&& fn,
                    T3&& hii,
+                   std::map<std::string, double> energy_components,
                    Communicator& commk,
                    int step)
 {
@@ -76,31 +77,37 @@ cg_write_step_json(double free_energy,
   logger.log("entropy", entropy);
   logger.log("slope_x", slope_x);
   logger.log("slope_eta", slope_eta);
+  logger.log("ks_energy_comps", energy_components);
 
-  auto ek_host =
-      eval_threaded(
-          tapply(
-              [](auto&& x) { return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x); },
-              ek))
-          .allgather(commk);
+  if (step % 10 == 0) {
+    auto ek_host =
+        eval_threaded(tapply(
+                          [](auto&& x) {
+                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
+                          },
+                          ek))
+            .allgather(commk);
 
-  auto fn_host =
-      eval_threaded(
-          tapply(
-              [](auto&& x) { return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x); },
-              fn))
-          .allgather(commk);
+    auto fn_host =
+        eval_threaded(tapply(
+                          [](auto&& x) {
+                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
+                          },
+                          fn))
+            .allgather(commk);
 
-  auto hii_host =
-      eval_threaded(
-          tapply(
-              [](auto&& x) { return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x); },
-              hii))
-          .allgather(commk);
+    auto hii_host =
+        eval_threaded(tapply(
+                          [](auto&& x) {
+                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
+                          },
+                          hii))
+            .allgather(commk);
 
-  logger.log("eta", ek_host);
-  logger.log("fn", fn_host);
-  logger.log("hii", hii_host);
+    logger.log("eta", ek_host);
+    logger.log("fn", fn_host);
+    logger.log("hii", hii_host);
+  }
 }
 
 template <class memspace, class xspace=memspace>
@@ -276,6 +283,8 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
       info = print_info(free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), std::get<0>(slope_x_eta), std::get<1>(slope_x_eta), i);
       free_energy.ehandle().print_info(); // print magnetization
 
+      auto tlap = timer.stop();
+
       cg_write_step_json(free_energy.get_F(),
                          free_energy.ks_energy(),
                          free_energy.get_entropy(),
@@ -284,10 +293,10 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
                          ek,
                          fni,
                          eval_threaded(tapply([](auto&& x) { return diag(x); }, Hij)),
+                         free_energy.ks_energy_components(),
                          commk,
                          i);
 
-      auto tlap = timer.stop();
       logger << "cg iteration took " << tlap << " s\n";
       logger.flush();
     } catch (DescentError&) {
@@ -546,6 +555,8 @@ template <class memspace, class xspace=memspace>
                         i);
       free_energy.ehandle().print_info();
 
+      auto tlap = timer.stop();
+
       cg_write_step_json(free_energy.get_F(),
                          free_energy.ks_energy(),
                          free_energy.get_entropy(),
@@ -553,11 +564,11 @@ template <class memspace, class xspace=memspace>
                          std::get<1>(slope_x_eta),
                          ek,
                          fni,
-                         eval_threaded(tapply([](auto&& x){ return diag(x); }, Hij)),
+                         eval_threaded(tapply([](auto&& x) { return diag(x); }, Hij)),
+                         free_energy.ks_energy_components(),
                          commk,
                          i);
 
-      auto tlap = timer.stop();
       logger << "cg iteration took " << tlap << " s\n";
       logger.flush();
     } catch (DescentError&) {
