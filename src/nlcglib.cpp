@@ -207,10 +207,12 @@ nlcg_info nlcg(EnergyBase& energy_base, smearing_type smear, double T, int maxit
     if (std::abs(slope) < tol) {
       info = print_info(free_energy.get_F(), free_energy.ks_energy(), free_energy.get_entropy(), std::get<0>(slope_x_eta), std::get<1>(slope_x_eta), i);
 
-      logger << "kT * S   : " << std::setprecision(13) << free_energy.get_entropy() << "\n";
-      logger << "KS-energy: " << std::setprecision(13) << free_energy.get_F() - free_energy.get_entropy() << "\n";
-      logger << "F        : " << std::setprecision(13) << free_energy.get_F() << "\n";
-      logger << "NLCG SUCCESS\n";
+      logger << TO_STDOUT
+             << "kT * S   : " << std::setprecision(13) << free_energy.get_entropy()
+             << "\n"
+             << "F        : " << std::setprecision(13) << free_energy.get_F() << "\n"
+             << "KS-energy: " << std::setprecision(13) << free_energy.get_F() - free_energy.get_entropy() << "\n"
+             << "NLCG SUCCESS\n";
       return info;
     }
 
@@ -369,7 +371,7 @@ struct minus
 
 
 template <class memspace, class xspace=memspace>
- nlcg_info nlcg_us(EnergyBase& energy_base, UltrasoftPrecondBase& us_precond_base, OverlapBase& overlap_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
+nlcg_info nlcg_us(EnergyBase& energy_base, UltrasoftPrecondBase& us_precond_base, OverlapBase& overlap_base, smearing_type smear, double T, int maxiter, double tol, double kappa, double tau, int restart)
 {
   // std::feclearexcept(FE_ALL_EXCEPT);
   feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT & ~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
@@ -390,8 +392,8 @@ template <class memspace, class xspace=memspace>
 
   free_energy.compute();
 
-  logger << "F (initial) =  " << std::setprecision(8) << free_energy.get_F() << "\n";
-  logger << "KS (initial) =  " << std::setprecision(8) << free_energy.ks_energy() << "\n";
+  logger << "F (initial) =  " << std::setprecision(13) << free_energy.get_F() << "\n";
+  logger << "KS (initial) =  " << std::setprecision(13) << free_energy.ks_energy() << "\n";
   logger << "nlcglib parameters\n"
            << std::setw(10) << "T "
            << ": " << T << "\n"

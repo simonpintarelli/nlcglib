@@ -229,7 +229,7 @@ template <class SX_t, class Hx_t, class Prec_t, class ll_t>
 auto
 precondGradX_us(const SX_t& SX, const Hx_t& Hx, const Prec_t& Prec, const ll_t& Xll)
 {
-  // TODO: ulgy, precondgx only differs in signature of the preconditioner application
+  // TODO: precondgx only differs in signature of the preconditioner application
   return tapply_async(local::precondgx_us(), SX, Hx, Prec, Xll);
 }
 
