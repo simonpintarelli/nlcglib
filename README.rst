@@ -23,10 +23,9 @@ start the direct solver (usually between 5 and 10).
           {
               "nlcg": {
                   "T": 300,
-                  "smearing": "FD",
                   "tol": 1e-9,
                   "restart": 10,
-                  "maxiter": 100,
+                  "maxiter": 300,
                   "processing_unit": "gpu"
               },
               "parameters": {"num_dft_iter": 5}
@@ -34,13 +33,6 @@ start the direct solver (usually between 5 and 10).
 
 `processing_unit` is either `gpu` or `cpu`, if not set, the SIRIUS default (`gpu` in QE-SIRIUS) will be used.
 
-In the nlcg section, smearing can either be `FD` for Fermi-Dirac or `GS` for
-Gaussian-Spline (the smearing set in the QE input will be ignored). `maxiter` is
-for the difficult problems ~150 on average. CG will stop if the tolerance (tol) is
-reached, e.g. when the modulus of the descent (slope) along the search direction is less
-than tol. It's roughly proportional to the error in the total energy.
-
-Current limitations
-===================
-
-Pseudo-potentials must be norm-conserving, wave-functions *must not* be distributed.
+The minimization will stop if the tolerance (tol) is reached, e.g. when the
+modulus of the descent (slope) along the search direction is less than tol. It's
+roughly proportional to the error in the total energy.
