@@ -33,11 +33,19 @@ template <class T>
 struct is_on_host : std::integral_constant<bool, Kokkos::SpaceAccessibility<Kokkos::HostSpace, memory_t<T>>::accessible>
 {};
 
+#ifdef __NLCGLIB_CUDA
 template <class T>
 struct is_on_device
     : std::integral_constant<bool, Kokkos::SpaceAccessibility<Kokkos::CudaSpace, memory_t<T>>::accessible>
 {
 };
+#else
+template <class T>
+struct is_on_device
+  : std::integral_constant<bool, false>
+{
+};
+#endif
 
 /// get memory_type enum of x
 template <typename X>
