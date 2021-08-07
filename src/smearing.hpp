@@ -234,7 +234,7 @@ get_occupation_numbers(
 
   auto fn_scratch = eval_threaded(tapply([](auto ek) {
     int n = ek.size();
-    Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::ViewAllocateWithoutInitializing("fn"), n);
+    Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), n);
     return out;
   }, x_all));
 
@@ -256,7 +256,7 @@ get_occupation_numbers(
         using memspace = typename decltype(ek)::memory_space;
         static_assert(std::is_same<memspace, Kokkos::HostSpace>::value, "must be host space");
         int n = ek.size();
-        Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::ViewAllocateWithoutInitializing("fn"), n);
+        Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), n);
 
         for (int i = 0; i < n; ++i) {
           out(i) = occ * SMEARING::compute((ek(i) - mu) / kT);
@@ -268,7 +268,7 @@ get_occupation_numbers(
   using target_memspc = typename X::memory_space;
   // copy back to target memory space
   auto fn = eval_threaded(tapply([](auto fn_host) {
-                         auto fn = Kokkos::View<double*, target_memspc>(Kokkos::ViewAllocateWithoutInitializing("fn"), fn_host.size());
+                                   auto fn = Kokkos::View<double*, target_memspc>(Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), fn_host.size());
                          Kokkos::deep_copy(fn, fn_host);
                          return fn;
                        }, fn_host));

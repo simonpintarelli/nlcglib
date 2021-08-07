@@ -257,9 +257,12 @@ mvector<T>::allgather(Communicator comm) const
     for (auto block_id = 0ul; block_id < offsets[rank].size(); ++block_id) {
       int lsize = global_number_of_elements[rank][block_id];
       int offset = offsets[rank][block_id];
-      Kokkos::View<numeric_t*, Kokkos::HostSpace> tmp(Kokkos::ViewAllocateWithoutInitializing(""), lsize);
+      Kokkos::View<numeric_t*, Kokkos::HostSpace> tmp(
+          Kokkos::view_alloc(Kokkos::WithoutInitializing, ""),
+          lsize);
       std::copy(send_recv_buffer.data() + offset, send_recv_buffer.data() + offset + lsize, tmp.data());
-      T dst(Kokkos::ViewAllocateWithoutInitializing(""), lsize);
+      T dst(Kokkos::view_alloc(Kokkos::WithoutInitializing, ""),
+            lsize);
       Kokkos::deep_copy(dst, tmp);
       auto key = global_keys[rank][block_id];
       result[key] = dst;

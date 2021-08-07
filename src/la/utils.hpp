@@ -101,7 +101,7 @@ Kokkos::View<T*, ARGS...>
 _empty_like(const Kokkos::View<T*, ARGS...>& other)
 {
   // return Kokkos::View<T*, ARGS...>("tmp", other.size());
-  auto ret = Kokkos::View<T*, ARGS...>(Kokkos::ViewAllocateWithoutInitializing("tmp"), other.size());
+  auto ret = Kokkos::View<T*, ARGS...>(Kokkos::view_alloc(Kokkos::WithoutInitializing, "tmp"), other.size());
 #ifdef DEBUG
   // initialize with NAN to throw an error immediately if not overwritten
   using memspc = typename Kokkos::View<T*, ARGS...>::memory_space;
@@ -118,7 +118,7 @@ to_layout_left_t<KokkosDVector<T, LAYOUT, ARGS...>>
 _empty_like(const KokkosDVector<T, LAYOUT, ARGS...>& other)
 {
   using return_type = to_layout_left_t<KokkosDVector<T, LAYOUT, ARGS...>>;
-  auto ret = return_type(other.map(), Kokkos::ViewAllocateWithoutInitializing("tmp"));
+  auto ret = return_type(other.map(), Kokkos::view_alloc(Kokkos::WithoutInitializing, "tmp"));
 #ifdef DEBUG
   using memspc = typename return_type::storage_t::memory_space;
   // initialize with NAN to throw an error immediately if not overwritten

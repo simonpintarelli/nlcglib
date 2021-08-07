@@ -12,6 +12,12 @@
 
 namespace nlcglib {
 
+namespace _local {
+
+using view_alloc_no_init_t =
+    decltype(Kokkos::view_alloc(Kokkos::WithoutInitializing, std::string{}));
+
+}  // _local
 
 // forward declaration
 template <class T, class LAYOUT, class... X>
@@ -105,7 +111,7 @@ public:
   {
   }
 
-  KokkosDVector(const Map<layout_t>& map, Kokkos::ViewAllocateWithoutInitializing vaw)
+  KokkosDVector(const Map<layout_t>& map, _local::view_alloc_no_init_t&& vaw)
       : map_(map)
       , kokkos_(vaw, map.nrows(), map.ncols())
   {
@@ -192,7 +198,7 @@ KokkosDVector<T, LAYOUT, KOKKOS_ARGS...> KokkosDVector<T, LAYOUT, KOKKOS_ARGS...
 {
   static_assert(!std::is_same<typename storage_t::memory_traits, Kokkos::MemoryUnmanaged>::value, "not yet implemented");
 
-  KokkosDVector Result(this->map_, Kokkos::ViewAllocateWithoutInitializing(label));
+  KokkosDVector Result(this->map_, Kokkos::view_alloc(Kokkos::WithoutInitializing, label));
 
   Kokkos::deep_copy(Result.array(), this->array());
   return Result;
