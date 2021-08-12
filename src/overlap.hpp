@@ -1,11 +1,61 @@
 #pragma once
 
+#include <memory>
 #include "interface.hpp"
 #include "la/mvector.hpp"
 #include "la/dvector.hpp"
 #include "operator.hpp"
+#include "mpi/communicator.hpp"
+
 
 namespace nlcglib {
+
+namespace local {
+
+template<class iterable_t>
+class op_iterator
+{
+public:
+  using key_t = std::pair<int, int>;
+  using value_t = std::pair<key_t, typename iterable_t::value_type>;
+
+public:
+  op_iterator(const std::vector<key_t>& keys, iterable_t& obj, bool end)
+      : keys(keys),
+        obj(obj)  {
+    if (end) {
+      pos = keys.size();
+    } else {
+      key_t k = keys[0];
+      pair = std::make_unique<value_t>(k, obj.at(k));
+    }
+  }
+
+  op_iterator& operator++ () {
+    pos++;
+    pair = std::make_unique<value_t>(keys[pos], obj.at(keys[pos]));
+    return *this;
+  }
+
+  std::pair<key_t, typename iterable_t::value_type>& operator*() {
+    // auto key = this->keys[pos];
+    // return std::make_pair(key, obj.at(key));
+    return *pair;
+  }
+
+  bool operator!= (const op_iterator<iterable_t>& other) {
+    return this->pos != other.pos;
+  }
+
+private:
+  std::vector<key_t> keys;
+  iterable_t& obj;
+  std::unique_ptr<value_t> pair;
+  int pos{0};
+};
+
+
+}  // local
 
 /// Wrapper for overlap operation computed by sirius, behaves like mvector in an expression.
 class Overlap
@@ -22,20 +72,32 @@ public:
     /* empty */
   }
 
-  auto at(const key_t& key) const;
+  auto at(const key_t& key) const -> value_type;
 
-  // template<typename MVEC>
-  // auto operator()(MVEC&& X)
+  auto begin() { return local::op_iterator<Overlap> (overlap_base.get_keys(), *this, false); }
+  auto end() { return local::op_iterator<Overlap>(overlap_base.get_keys(), *this, true); }
+  auto begin() const { return local::op_iterator<const Overlap>(overlap_base.get_keys(), *this, false); }
+  auto end() const { return local::op_iterator<const Overlap>(overlap_base.get_keys(), *this, true); }
+
+  // void test()
   // {
-  //   return tapply_op(*this, std::forward<MVEC>(X));
+  //   key_t k(0,0);
+  //   using pair_t = std::pair<key_t, value_type>;
+  //   pair_t p(k, this->at(k));
+  //   std::unique_ptr<pair_t> x = std::make_unique<pair_t>(k, this->at(k));
   // }
+
+  Communicator commk() const {
+    throw std::runtime_error("not implemented");
+  }
+
 
 private:
   const OverlapBase& overlap_base;
 };
 
 inline auto
-Overlap::at(const key_t& key) const
+Overlap::at(const key_t& key) const -> value_type
 {
   return applicator<OverlapBase>(overlap_base, key);
 }
