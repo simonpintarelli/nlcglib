@@ -7,11 +7,6 @@
 
 namespace nlcglib {
 
-template <class T>
-struct pp
-{
-};
-
 namespace local {
 struct advance_eta
 {
