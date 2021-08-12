@@ -111,6 +111,10 @@ public:
   {
   }
 
+  KokkosDVector(const Map<layout_t>& map, storage_t array);
+
+  /// ViewCtorProp has a variadic template constructor which isn't declared explicit
+  /// this constructor is thus ambigous unless kokkos will fix it's ViewCtorProp constructor
   KokkosDVector(const Map<layout_t>& map, _local::view_alloc_no_init_t&& vaw)
       : map_(map)
       , kokkos_(vaw, map.nrows(), map.ncols())
@@ -192,9 +196,17 @@ KokkosDVector<T, LAYOUT, KOKKOS_ARGS...>::KokkosDVector(const Map<LAYOUT>& map,
   static_assert(dim == 2, "constructor is only valid for a 2-dimensional array");
 }
 
-
 template <class T, class LAYOUT, class... KOKKOS_ARGS>
-KokkosDVector<T, LAYOUT, KOKKOS_ARGS...> KokkosDVector<T, LAYOUT, KOKKOS_ARGS...>::copy(std::string label) const
+KokkosDVector<T, LAYOUT, KOKKOS_ARGS...>::KokkosDVector(const Map<LAYOUT>& map,
+                                                        storage_t array)
+    : map_(map), kokkos_(array)
+{
+
+}
+
+    template <class T, class LAYOUT, class... KOKKOS_ARGS>
+    KokkosDVector<T, LAYOUT, KOKKOS_ARGS...> KokkosDVector<T, LAYOUT, KOKKOS_ARGS...>::copy(
+        std::string label) const
 {
   static_assert(!std::is_same<typename storage_t::memory_traits, Kokkos::MemoryUnmanaged>::value, "not yet implemented");
 
@@ -213,6 +225,14 @@ deep_copy(KokkosDVector<T1, L1, KOKKOS1...>& dst, const KokkosDVector<T2, L2, KO
   Kokkos::deep_copy(dst.array(), src.array());
 }
 
+template <class KokkosSpace, class T2, class L2, class... KOKKOS2>
+inline auto
+create_mirror_view_and_copy(const KokkosSpace& Space, const KokkosDVector<T2, L2, KOKKOS2...>& src)
+{
+  using ret = KokkosDVector<T2, L2, KokkosSpace>;
+  auto dst = Kokkos::create_mirror_view_and_copy(Space, src.array());
+  return ret(src.map(), dst);
+}
 
 template <class... T>
 struct to_kokkos_dvector {};
@@ -243,6 +263,17 @@ create_host_mirror(KokkosDVector<T**, LAYOUT, KOKKOS_ARGS...>& other)
 template <class T, class LAYOUT, class... KOKKOS_ARGS>
 auto
 create_host_mirror(const KokkosDVector<T*, LAYOUT, KOKKOS_ARGS...>& other)
+{
+  using return_t = KokkosDVector<T*, LAYOUT, Kokkos::HostSpace>;
+  return_t out(other.map());
+  deep_copy(out, other);
+  return out;
+}
+
+
+template <class T, class LAYOUT, class... KOKKOS_ARGS>
+auto
+create_mirror_view_and_copy(const KokkosDVector<T*, LAYOUT, KOKKOS_ARGS...>& other)
 {
   using return_t = KokkosDVector<T*, LAYOUT, Kokkos::HostSpace>;
   return_t out(other.map());
