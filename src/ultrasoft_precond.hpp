@@ -25,6 +25,11 @@ public:
 
   auto at(const key_t& key) const;
 
+  auto begin() { return local::op_iterator<USPreconditioner> (us_precond_base.get_keys(), *this, false); }
+  auto end() { return local::op_iterator<USPreconditioner>(us_precond_base.get_keys(), *this, true); }
+  auto begin() const { return local::op_iterator<const USPreconditioner>(us_precond_base.get_keys(), *this, false); }
+  auto end() const { return local::op_iterator<const USPreconditioner>(us_precond_base.get_keys(), *this, true); }
+
 private:
   const UltrasoftPrecondBase& us_precond_base;
 };
