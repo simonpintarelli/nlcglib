@@ -70,7 +70,17 @@ get_mem_type(X&& x)
   return mem_t;
 }
 
-template<class T, class... ARGS>
+
+template <class T, class... ARGS>
+buffer_protocol<std::complex<double>, 2>
+as_buffer_protocol(const KokkosDVector<T**, ARGS...>& kokkosdvec)
+{
+  using type = KokkosDVector<T**, ARGS...>;
+  return as_buffer_protocol(const_cast<type&>(kokkosdvec));
+}
+
+
+template <class T, class... ARGS>
 buffer_protocol<std::complex<double>, 2> as_buffer_protocol(KokkosDVector<T**, ARGS...>& kokkosdvec)
 {
   using vector_t = KokkosDVector<T, ARGS...>;
