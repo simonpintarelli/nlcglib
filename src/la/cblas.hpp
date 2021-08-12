@@ -317,9 +317,9 @@ struct geam<Kokkos::complex<double>> : blas_base
                           const int ldc)
   {
 #ifdef __USE_MKL
-    char c_ordering;
-    char transa;
-    char transb;
+    char c_ordering{'C'};
+    char transa{'N'};
+    char transb{'N'};
     if (Order == CBLAS_ORDER::CblasColMajor)
       c_ordering = 'C';
     else if(Order == CBLAS_ORDER::CblasRowMajor)
