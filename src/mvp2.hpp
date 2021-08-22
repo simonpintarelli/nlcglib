@@ -134,31 +134,25 @@ struct slope_x
 class conjugatex
 {
 public:
-  conjugatex(double gamma)
-      : gamma(gamma)
-  {
-  }
-
   /**
    * Overwrites zxp
    */
-  template <class dx_t, class zxp_t, class x_t>
+  template <class zxp_t, class x_t>
   to_layout_left_t<std::remove_reference_t<zxp_t>>
-  operator()(dx_t&& dx, zxp_t&& zxp, x_t&& x)
+  operator()(zxp_t&& zxp, x_t&& x)
   {
     // Zxp needs orthogonality updated
     auto tmp = inner_()(x, zxp);
     // corr = X @ X^H @ Z_X^{(i-1)}
     auto corr = transform_alloc(x, tmp);
-    add(zxp, corr, -gamma, gamma);
-    add(zxp, dx, 1);
+    add(zxp, corr, -1, 1);
     return zxp;
   }
 
   /** Ultra-soft case, note that zxp is overwritten */
-  template <class dx_t, class zxp_t, class x_t, class sx_t>
+  template <class zxp_t, class x_t, class sx_t>
   to_layout_left_t<std::remove_reference_t<zxp_t>>
-  operator()(dx_t&& dx, zxp_t&& zxp, x_t&& x, sx_t&& sx)
+  operator()(zxp_t&& zxp, x_t&& x, sx_t&& sx)
   {
     // TODO x is not used!
     // Zxp needs orthogonality updated
@@ -169,16 +163,12 @@ public:
     auto ll = sx_zxp;
     // corr = SX ll
     auto corr = transform_alloc(sx, ll);
-    // zxp <- gamma  * zxp - gamma SX ll
-    add(zxp, corr, -gamma, gamma);
-    // zxp <- Δₓ + xzp
-    add(zxp, dx, 1);
+    // zxp <-  zxp - SX ll
+    add(zxp, corr, -1, 1);
 
     return zxp;
   }
 
-private:
-  double gamma;
 };
 
 
@@ -281,17 +271,19 @@ slope_x(const gx_t& gx, zx_t& zx, const Communicator& commk)
   return sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk).real();
 }
 
-template <class dx_t, class zxp_t, class x_t>
-auto conjugatex(dx_t&& dx, zxp_t&& zxp, x_t&& x, double gamma)
+/// apply lagrange multipliers for Z^{(i-1)}
+template <class zxp_t, class x_t>
+auto conjugatex(zxp_t&& zxp, x_t&& x, double gamma)
 {
-  return tapply_async(local::conjugatex(gamma), dx, zxp, x);
+  return tapply_async(local::conjugatex(), zxp, x);
 }
 
-template <class dx_t, class zxp_t, class x_t, class sx_t>
+/// apply Lagrange multipliers for Z^{(i-1)}
+template <class zxp_t, class x_t, class sx_t>
 auto
-conjugatex_us(dx_t&& dx, zxp_t&& zxp, x_t&& x, sx_t&& sx, double gamma)
+apply_lagrange_mult_us(zxp_t&& zxp, x_t&& x, sx_t&& sx, double gamma)
 {
-  return tapply_async(local::conjugatex(gamma), dx, zxp, x, sx);
+  return tapply_async(local::conjugatex(), zxp, x, sx);
 }
 
 /// zep <- deta + gamma * zep

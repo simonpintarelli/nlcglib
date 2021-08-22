@@ -17,23 +17,23 @@ class line_search
 {
 private:
   template <class GEODESIC, class FREE_ENERGY>
-  auto qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope, bool& force_restart);
+  auto qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_restart);
 
   template <class GEODESIC, class FREE_ENERGY>
-  auto bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0, bool& force_restart);
+  auto bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0, bool& force_restart);
 
 public:
   template <class GEODESIC, class FREE_ENERGY>
-  auto operator()(GEODESIC&& G_base, FREE_ENERGY&& FE, double slope, bool& force_restart)
+  auto operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope, bool& force_restart)
   {
     Logger::GetInstance() << "line search t_trial = " << std::scientific << t_trial << "\n";
     double F0 = FE.get_F();
     try {
-      return std::tuple_cat(qline(G_base, FE, slope, force_restart), std::make_tuple(line_search_info{"qline"}));
+      return std::tuple_cat(qline(G, FE, slope, force_restart), std::make_tuple(line_search_info{"qline"}));
     } catch (StepError& step_error) {
       Logger::GetInstance() << "\t"
                             << "quadratic line search failed -> backtracking search\n";
-      return std::tuple_cat(bt_search(G_base, FE, F0, force_restart), std::make_tuple(line_search_info{"btsearch"}));
+      return std::tuple_cat(bt_search(G, FE, F0, force_restart), std::make_tuple(line_search_info{"btsearch"}));
     }
   }
 
@@ -49,9 +49,8 @@ public:
  */
 template <class GEODESIC, class FREE_ENERGY>
 auto
-line_search::bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0, bool& force_restart)
+line_search::bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0, bool& force_restart)
 {
-  auto G = G_base(FE);
 
   if (tau >= 1) {
     throw std::runtime_error("invalid value");
@@ -88,11 +87,8 @@ line_search::bt_search(GEODESIC& G_base, FREE_ENERGY& FE, double F0, bool& force
  */
 template <class GEODESIC, class FREE_ENERGY>
 auto
-line_search::qline(GEODESIC& G_base, FREE_ENERGY& FE, double slope, bool& force_restart)
+line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_restart)
 {
-  // G(t)
-  auto G = G_base(FE);
-
   double F0 = FE.get_F();
 
   // // DEBUG check slope

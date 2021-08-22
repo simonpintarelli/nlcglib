@@ -204,7 +204,7 @@ auto
 get_occupation_numbers(
     const mvector<X>& x, double kT, double occ, int Ne, const scalar_vec_t& wk, double tol)
 {
-  // todo create xhost
+  // TODO: use nlcglib::create_mirror_view_and_copy function
   auto x_host = eval_threaded(tapply(
       [](auto x) {
         auto x_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);

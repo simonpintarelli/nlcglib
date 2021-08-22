@@ -37,8 +37,14 @@ NLCGLIB_SETUP_TARGET(test_smearing)
 add_executable(test_nvcc test_nvcc.cpp)
 NLCGLIB_SETUP_TARGET(test_nvcc)
 
-add_executable(test_check_alignment test_check_alignment.cpp)
-NLCGLIB_SETUP_TARGET(test_check_alignment)
+# add_executable(test_check_alignment test_check_alignment.cpp)
+# NLCGLIB_SETUP_TARGET(test_check_alignment)
 
 add_executable(test_buffer test_buffer.cpp)
 NLCGLIB_SETUP_TARGET(test_buffer)
+
+add_executable(test_dvector_mirror_view_and_copy test_dvector_mirror_view_and_copy.cpp)
+NLCGLIB_SETUP_TARGET(test_dvector_mirror_view_and_copy)
+
+add_executable(test_utils test_utils.cpp)
+NLCGLIB_SETUP_TARGET(test_utils)

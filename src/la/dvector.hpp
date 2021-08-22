@@ -32,6 +32,12 @@ struct memory_space<KokkosDVector<X...>>
   using memspace = typename KokkosDVector<X...>::storage_t::memory_space;
 };
 
+template <class... X>
+struct memory_space<Kokkos::View<X...>>
+{
+  using memspace = typename Kokkos::View<X...>::memory_space;
+};
+
 template<class X>
 using memory_t = typename memory_space<std::remove_cv_t<std::remove_reference_t<X>>>::memspace;
 
@@ -235,11 +241,13 @@ deep_copy(KokkosDVector<T1, L1, KOKKOS1...>& dst, const KokkosDVector<T2, L2, KO
   Kokkos::deep_copy(dst.array(), src.array());
 }
 
+
 template <class KokkosSpace, class T2, class L2, class... KOKKOS2>
 inline auto
 create_mirror_view_and_copy(const KokkosSpace& Space, const KokkosDVector<T2, L2, KOKKOS2...>& src)
 {
-  using ret = KokkosDVector<T2, L2, KokkosSpace>;
+  // TODO: we are hardcoding LayoutLeft for return type here.
+  using ret = KokkosDVector<T2, L2, Kokkos::LayoutLeft, KokkosSpace>;
   auto dst = Kokkos::create_mirror_view_and_copy(Space, src.array());
   return ret(src.map(), dst);
 }

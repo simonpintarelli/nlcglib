@@ -221,7 +221,7 @@ transform(M0& C,
 }
 
 
-/// add
+/// add C <- alpha * A + beta * C
 template <class M0, class M1>
 std::enable_if_t<std::is_same<typename M0::storage_t::memory_space, Kokkos::CudaSpace>::value, void>
 add(M0& C,
