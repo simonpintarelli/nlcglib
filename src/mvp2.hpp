@@ -145,6 +145,7 @@ public:
     auto tmp = inner_()(x, zxp);
     // corr = X @ X^H @ Z_X^{(i-1)}
     auto corr = transform_alloc(x, tmp);
+    // zxp <- zxp - corr
     add(zxp, corr, -1, 1);
     return zxp;
   }

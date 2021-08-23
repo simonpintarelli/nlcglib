@@ -146,16 +146,12 @@ descent_direction_impl<memspc_t>::exec_spc(x_t&& x,
   double fr = fr_x + fr_eta;
 
   // CG contributions
-  // this-exec_conjugatex, sx, zxp_t &&zxp, zetap_t &&zetap, ul_t &&ul, gx_t &&gx, geta_t &&geta,
-  // double wk)
   auto res_conj = this->exec_conjugate(x, sx, zxp, zetap, ul, gx, g_eta);
   double slope_zp = std::get<0>(res_conj);
   auto z_x = std::get<1>(res_conj);
   auto z_eta = std::get<2>(res_conj);
 
   return std::make_tuple(fr, delta_x, delta_eta, z_x, z_eta, slope_zp);
-
-  // TODO accumulate inner product <delta, g>
 }
 
 
@@ -420,7 +416,6 @@ descent_direction::conjugated(const mem_t& memspc,
 
   double fr = sum(std::get<0>(ures), commk);
 
-  // TODO: pass fr(i-1) and then compute gamma = fr(i) / fr(i-1)
   double gamma = fr / fr_old;
   auto delta_x = std::get<1>(ures);
   auto delta_eta = std::get<2>(ures);
@@ -448,9 +443,6 @@ descent_direction::conjugated(const mem_t& memspc,
           delta_eta,
           z_x,
           z_eta));
-  std::cout << "foo"
-            << "\n";
-
 
   return std::make_tuple(fr, slope, z_x, z_eta);
 }

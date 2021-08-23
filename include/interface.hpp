@@ -132,8 +132,8 @@ public:
   virtual int occupancy() = 0;
   virtual double get_total_energy() = 0;
   virtual std::map<std::string, double> get_energy_components() = 0;
-  virtual std::shared_ptr<MatrixBaseZ> get_hphi() = 0;
-  virtual std::shared_ptr<MatrixBaseZ> get_sphi() = 0;
+  virtual std::shared_ptr<MatrixBaseZ> get_hphi(memory_type) = 0;
+  virtual std::shared_ptr<MatrixBaseZ> get_sphi(memory_type) = 0;
   virtual std::shared_ptr<MatrixBaseZ> get_C(memory_type) = 0;
   virtual std::shared_ptr<VectorBaseZ> get_fn() = 0;
   virtual void set_fn(const std::vector<std::pair<int, int>>&, const std::vector<std::vector<double>>&) = 0;

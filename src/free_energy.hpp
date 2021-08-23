@@ -27,6 +27,7 @@ public:
   auto get_gkvec_ekin();
   double occupancy();
   double ks_energy();
+
   std::map<std::string, double> ks_energy_components();
 
   double get_F() const { return free_energy; }
@@ -117,22 +118,21 @@ FreeEnergy::compute()
 auto
 FreeEnergy::get_X()
 {
-  // memory type none -> take what sirius has as default
-  return make_mmatrix<Kokkos::HostSpace>(this->energy.get_C(memory_type::none));
+  return make_mmatrix<Kokkos::HostSpace>(this->energy.get_C(memory_type::host));
 }
 
 
 auto
 FreeEnergy::get_HX()
 {
-  return make_mmatrix<Kokkos::HostSpace>(this->energy.get_hphi());
+  return make_mmatrix<Kokkos::HostSpace>(this->energy.get_hphi(memory_type::host));
 }
 
 
 auto
 FreeEnergy::get_SX()
 {
-  return make_mmatrix<Kokkos::HostSpace>(this->energy.get_sphi());
+  return make_mmatrix<Kokkos::HostSpace>(this->energy.get_sphi(memory_type::host));
 }
 
 auto

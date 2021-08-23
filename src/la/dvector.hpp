@@ -72,7 +72,10 @@ get_mem_type(X&& x)
     mem_t = memory_type::host;
   } else if (is_device && !is_host) {
     mem_t = memory_type::device;
+  } else {
+    throw std::runtime_error("memory type unknown!");
   }
+
   return mem_t;
 }
 
