@@ -27,8 +27,6 @@
 #include "utils/logger.hpp"
 #include "utils/step_logger.hpp"
 #include "utils/timer.hpp"
-
-
 #include "descent_direction.hpp"
 
 typedef std::complex<double> complex_double;
@@ -60,7 +58,7 @@ print_info(double free_energy,
   return info;
 }
 
-template <class T1, class T2, class T3>
+template <class T1, class T2>
 void
 cg_write_step_json(double free_energy,
                    double ks_energy,
@@ -69,7 +67,6 @@ cg_write_step_json(double free_energy,
                    double slope_eta,
                    T1&& ek,
                    T2&& fn,
-                   T3&& hii,
                    std::map<std::string, double> energy_components,
                    Communicator& commk,
                    int step)
@@ -99,17 +96,8 @@ cg_write_step_json(double free_energy,
                           fn))
             .allgather(commk);
 
-    auto hii_host =
-        eval_threaded(tapply(
-                          [](auto&& x) {
-                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
-                          },
-                          hii))
-            .allgather(commk);
-
     logger.log("eta", ek_host);
     logger.log("fn", fn_host);
-    logger.log("hii", hii_host);
   }
 }
 
@@ -208,14 +196,16 @@ nlcg_us(EnergyBase& energy_base,
   auto S = Overlap(overlap_base);
   auto P = USPreconditioner(us_precond_base);
 
-  Timer timer;
+    Timer timer;
   FreeEnergy free_energy(T, energy_base, smear);
   std::map<smearing_type, std::string> smear_name{
       {smearing_type::FERMI_DIRAC, "Fermi-Dirac"},
       {smearing_type::GAUSSIAN_SPLINE, "Gaussian-spline"}};
 
   auto& logger = Logger::GetInstance();
+
   logger.detach_stdout();
+
   logger.attach_file_master("nlcg.out");
 
   free_energy.compute();
@@ -283,27 +273,29 @@ nlcg_us(EnergyBase& energy_base,
     }
     try {
       // line search
-      auto g = [x = X, eta, z_x, z_eta, &S, &smearing, &free_energy](double t) {
-        auto ek_ul_xnext = geodesic(xspace(), x, eta, z_x, z_eta, S, t);
+      auto g = [&](double t) {
+        auto ek_ul_xnext = geodesic(xspace(), X, eta, z_x, z_eta, S, t);
         auto ek = std::get<0>(ek_ul_xnext);
-        auto X = std::get<2>(ek_ul_xnext);
+        auto Xn = std::get<2>(ek_ul_xnext);
         auto fn = smearing.fn(ek);
 
-        free_energy.compute(X, fn);
+        free_energy.compute(Xn, fn);
 
         return ek_ul_xnext;
       };
 
-      timer.start();
-      auto ek_ul_x = ls(g, free_energy, slope, force_restart);
-      auto tlap = timer.stop();
+      cg_write_step_json(free_energy.get_F(),
+                         free_energy.ks_energy(),
+                         free_energy.get_entropy(),
+                         slope,
+                         -1,
+                         ek,
+                         fn,
+                         free_energy.ks_energy_components(),
+                         commk,
+                         cg_iter);
 
-      // update (X, fn(ek), ul, Hx) after line-search
-      ek = std::get<0>(ek_ul_x);
-      ul = std::get<1>(ek_ul_x);
-      X = std::get<2>(ek_ul_x);
-      fn = free_energy.get_fn();
-      Hx = copy(free_energy.get_HX());
+      timer.start();
 
       info = print_info(free_energy.get_F(),
                         free_energy.ks_energy(),
@@ -311,14 +303,25 @@ nlcg_us(EnergyBase& energy_base,
                         slope /* slope in X and eta, temporarily */,
                         -1 /* need to separate the two slopes first */,
                         cg_iter);
+
+      auto ek_ul_x = ls(g, free_energy, slope, force_restart);
+      auto tlap = timer.stop();
       logger << "line search took: " << tlap << " seconds\n";
+
+      // update (X, fn(ek), ul, Hx) after line-search
+      ek = std::get<0>(ek_ul_x);
+      ul = std::get<1>(ek_ul_x);
+      X = std::get<2>(ek_ul_x);
+      eta = eval_threaded(tapply(make_diag(), ek));
+      fn = free_energy.get_fn();
+      Hx = copy(free_energy.get_HX());
 
       if ((cg_iter % restart == 0) || force_restart) {
         /* compute directions for steepest descent */
         timer.start();
 
         auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, S, P, free_energy);
-        slope = std::get<0>(slope_zx_zeta);
+        slope = std::get<0>(slope_zx_zeta); // no need to catch slope > 0 -> linesearch will throw
         fr = slope;
         z_x = std::get<1>(slope_zx_zeta);
         z_eta = std::get<2>(slope_zx_zeta);
@@ -335,6 +338,18 @@ nlcg_us(EnergyBase& energy_base,
         slope = std::get<1>(fr_slope_z_x_z_eta);
         z_x = std::get<2>(fr_slope_z_x_z_eta);
         z_eta = std::get<3>(fr_slope_z_x_z_eta);
+
+        if (slope > 0) {
+          // force restart
+          logger << "i=" << cg_iter << ": slope > 0 detected -> restart\n";
+          auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, S, P, free_energy);
+          slope = std::get<0>(slope_zx_zeta);  // no need to catch slope > 0 again -> linesearch will throw
+          fr = slope;
+          z_x = std::get<1>(slope_zx_zeta);
+          z_eta = std::get<2>(slope_zx_zeta);
+
+          force_restart = true;
+        }
 
         auto tlap = timer.stop();
         logger << "conjugated descent took: " << tlap << " seconds\n";
