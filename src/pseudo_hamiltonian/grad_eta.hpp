@@ -29,7 +29,7 @@ namespace GradEtaHelper
       Kokkos::parallel_reduce("dFdmu", Kokkos::RangePolicy<Kokkos::Serial>(0, nbands), KOKKOS_LAMBDA(int i, Kokkos::complex<double>& result) {
           result += (hii(i) - en_loc(i)) * fn_loc(i) * (1-fn_loc(i));
         }, v);
-      dFdmu_loc += v.real() * wk[key]; // note hii is real-valued
+      dFdmu_loc += v.real() * wk[key]; // note that hii is real-valued
     }
     auto dFdmu = commk.allreduce(dFdmu_loc, mpi_op::sum);
     return dFdmu;
@@ -54,13 +54,12 @@ namespace GradEtaHelper
     double v{0};
     for (auto& vwki : wk) {
       auto key = vwki.first;
-      double w_k = vwki.second; // k-point weight
+      double w_k = vwki.second;  // k-point weight
       int nbands = fn[key].size();
       auto fni = fn[key];
       for (int i = 0; i < nbands; ++i) {
-        v += fni(i) * (mo - fni(i));
+        v += fni(i) * (mo - fni(i)) * w_k;
       }
-      v *= w_k;
     }
 
     return commk.allreduce(v, mpi_op::sum);
