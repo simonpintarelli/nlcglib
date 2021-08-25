@@ -33,7 +33,7 @@ template <class T>
 struct is_on_host : std::integral_constant<bool, Kokkos::SpaceAccessibility<Kokkos::HostSpace, memory_t<T>>::accessible>
 {};
 
-#ifdef __NLCGLIB_CUDA
+#ifdef __NLCGLIB__CUDA
 template <class T>
 struct is_on_device
     : std::integral_constant<bool, Kokkos::SpaceAccessibility<Kokkos::CudaSpace, memory_t<T>>::accessible>
