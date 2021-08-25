@@ -26,6 +26,11 @@ public:
   template <class GEODESIC, class FREE_ENERGY>
   auto operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope, bool& force_restart)
   {
+    if (slope > 0) {
+      // char msg[256];
+      // sprintf(msg, "slope = %.5e > 0, abort!", slope);
+      throw SlopeError();
+    }
     Logger::GetInstance() << "line search t_trial = " << std::scientific << t_trial << "\n";
     double F0 = FE.get_F();
     try {
@@ -133,9 +138,10 @@ line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_resta
   Logger::GetInstance() << "\t t_min = " << t_min <<  ", q line prediction error: " << std::scientific << std::setprecision(8) << (F_pred - F_min) <<  "\n";
 
   if (F_min > F0) {
-    Logger::GetInstance() << std::scientific << std::setprecision(12)
-                          << "F_min: " << F_min << "\n"
-                          << "F0:    " << F0 << "\n";
+    Logger::GetInstance() << std::setprecision(13)
+                          << "\t quadratic line search failed:"
+                          << "\t - F_min: " << F_min << "\n"
+                          << "\t  -F0:    " << F0 << "\n\n";
     throw StepError();
   }
 
