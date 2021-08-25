@@ -5,6 +5,7 @@
 #include "la/mvector.hpp"
 #include "mvp2.hpp"
 #include "pseudo_hamiltonian/grad_eta.hpp"
+#include "utils/logger.hpp"
 
 
 namespace nlcglib {
@@ -417,6 +418,9 @@ descent_direction::conjugated(const mem_t& memspc,
   double fr = sum(std::get<0>(ures), commk);
 
   double gamma = fr / fr_old;
+
+  Logger::GetInstance() << " CG gamma " << std::setprecision(3) << gamma << "\n";
+
   auto delta_x = std::get<1>(ures);
   auto delta_eta = std::get<2>(ures);
 
