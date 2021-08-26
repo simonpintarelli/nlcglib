@@ -52,9 +52,16 @@ struct to_layout_left<KokkosDVector<aT, LAYOUT, KOKKOS...>&&>
   using result = KokkosDVector<aT, LAYOUT, Kokkos::LayoutLeft, memspace>;
 };
 
-
+// const ref
 template <class aT, class LAYOUT, class... KOKKOS>
 struct to_layout_left<const KokkosDVector<aT, LAYOUT, KOKKOS...>&> : to_layout_left<KokkosDVector<aT, LAYOUT, KOKKOS...>> {};
+
+// ref
+template <class aT, class LAYOUT, class... KOKKOS>
+struct to_layout_left<KokkosDVector<aT, LAYOUT, KOKKOS...>&>
+    : to_layout_left<KokkosDVector<aT, LAYOUT, KOKKOS...>>
+{
+};
 
 
 template <class aT, class LAYOUT, class... KOKKOS>
