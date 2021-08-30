@@ -269,6 +269,20 @@ nlcg_us(EnergyBase& energy_base,
 
   for (int cg_iter = 0; cg_iter < maxiter; ++cg_iter) {
     if (std::abs(slope) < tol) {
+      info = print_info(free_energy.get_F(),
+                        free_energy.ks_energy(),
+                        free_energy.get_entropy(),
+                        slope,
+                        -1,
+                        cg_iter);
+      logger << TO_STDOUT << "kT * S   : " << std::setprecision(13) << free_energy.get_entropy()
+             << "\n"
+             << "F        : " << std::setprecision(13) << free_energy.get_F() << "\n"
+             << "KS-energy: " << std::setprecision(13)
+             << free_energy.get_F() - free_energy.get_entropy() << "\n"
+             << "NLCG SUCCESS\n";
+      logger.flush();
+
       return info;
     }
     try {
