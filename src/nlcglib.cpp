@@ -189,8 +189,8 @@ nlcg_us(EnergyBase& energy_base,
         int restart)
 {
   // std::feclearexcept(FE_ALL_EXCEPT);
-  feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT &
-                 ~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
+  // feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT &
+  //                ~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
   nlcg_info info;
 
   auto S = Overlap(overlap_base);
