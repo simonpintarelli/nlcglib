@@ -275,6 +275,7 @@ nlcg_us(EnergyBase& energy_base,
                         slope,
                         -1,
                         cg_iter);
+      free_energy.ehandle().print_info();  // print magnetization
       logger << TO_STDOUT << "kT * S   : " << std::setprecision(13) << free_energy.get_entropy()
              << "\n"
              << "F        : " << std::setprecision(13) << free_energy.get_F() << "\n"
@@ -317,6 +318,7 @@ nlcg_us(EnergyBase& energy_base,
                         slope /* slope in X and eta, temporarily */,
                         -1 /* need to separate the two slopes first */,
                         cg_iter);
+      free_energy.ehandle().print_info();  // print magnetization
 
       auto ek_ul_x = ls(g, free_energy, slope, force_restart);
       auto tlap = timer.stop();
