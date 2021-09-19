@@ -33,6 +33,16 @@ typedef std::complex<double> complex_double;
 
 namespace nlcglib {
 
+void initialize()
+{
+  Kokkos::initialize();
+}
+
+void finalize()
+{
+  Kokkos::finalize();
+}
+
 auto
 print_info(double free_energy,
            double ks_energy,
@@ -156,9 +166,7 @@ check_overlap(EnergyBase& e, OverlapBase& Sb, OverlapBase& Sib)
 void
 nlcheck_overlap(EnergyBase& e, OverlapBase& s, OverlapBase& si)
 {
-  Kokkos::initialize();
   check_overlap<Kokkos::HostSpace>(e, s, si);
-  Kokkos::finalize();
 }
 
 
@@ -394,7 +402,6 @@ nlcg_us_cpu(EnergyBase& energy_base,
             int restart)
 {
 #ifdef __NLCGLIB__CUDA
-  Kokkos::initialize();
   auto info = nlcg_us<Kokkos::HostSpace>(energy_base,
                                          us_precond_base,
                                          overlap_base,
@@ -405,7 +412,6 @@ nlcg_us_cpu(EnergyBase& energy_base,
                                          kappa,
                                          tau,
                                          restart);
-  Kokkos::finalize();
   return info;
 #else
   throw std::runtime_error("recompile nlcglib with CUDA.");
@@ -424,7 +430,6 @@ nlcg_us_device(EnergyBase& energy_base,
                int maxiter,
                int restart)
 {
-  Kokkos::initialize();
   auto info = nlcg_us<Kokkos::CudaSpace>(energy_base,
                                          us_precond_base,
                                          overlap_base,
@@ -435,7 +440,6 @@ nlcg_us_device(EnergyBase& energy_base,
                                          kappa,
                                          tau,
                                          restart);
-  Kokkos::finalize();
   return info;
 }
 
@@ -528,6 +532,5 @@ nlcg_us_cpu_device(EnergyBase& energy_base,
   return nlcg_us_device(
       energy_base, us_precond_base, overlap_base, smear, T, tol, kappa, tau, maxiter, restart);
 }
-
 
 }  // namespace nlcglib

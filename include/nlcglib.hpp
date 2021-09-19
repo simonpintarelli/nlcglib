@@ -4,6 +4,9 @@
 
 namespace nlcglib {
 
+void initialize();
+void finalize();
+
 nlcg_info
 nlcg_mvp2_cpu(EnergyBase& energy_base,
               smearing_type smearing,
