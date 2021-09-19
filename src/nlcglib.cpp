@@ -33,6 +33,18 @@ typedef std::complex<double> complex_double;
 
 namespace nlcglib {
 
+void initialize()
+{
+  Kokkos::InitArguments args;
+  args.num_threads = omp_get_max_threads();
+  Kokkos::initialize(args);
+}
+
+void finalize()
+{
+  Kokkos::finalize();
+}
+
 auto
 print_info(double free_energy,
            double ks_energy,
@@ -369,9 +381,7 @@ check_overlap(EnergyBase& e, OverlapBase& Sb, OverlapBase& Sib)
 void
 nlcheck_overlap(EnergyBase& e, OverlapBase& s, OverlapBase& si)
 {
-  Kokkos::initialize();
   check_overlap<Kokkos::HostSpace>(e, s, si);
-  Kokkos::finalize();
 }
 
 
@@ -699,115 +709,6 @@ nlcg_us(EnergyBase& energy_base,
 }
 
 
-template <class memspace>
-void
-nlcg_check_gradient(EnergyBase& energy_base)
-{
-  double T = 300;
-  double kappa = 1;
-  FreeEnergy<memspace> free_energy(T, energy_base, smearing_type::FERMI_DIRAC);
-
-  free_energy.compute();
-  Logger() << "F (initial) =  " << std::setprecision(12) << free_energy.get_F() << "\n";
-  int Ne = energy_base.nelectrons();
-  Logger() << "num electrons: " << Ne << "\n";
-
-  auto X = free_energy.get_X();
-
-  auto ek = free_energy.get_ek();
-  auto wk = free_energy.get_wk();
-  auto commk = wk.commk();
-
-  Logger() << "test call smearing"
-           << "\n";
-  Smearing smearing = free_energy.get_smearing();
-  // set fn = f_D(ek)
-  auto fn = smearing.fn(ek);
-
-  // compute and retrieve new wrappers
-  free_energy.compute(X, fn);
-  Logger() << "F (initial must NOT change) =  " << free_energy.get_F() << std::setprecision(8)
-           << "\n";
-  // retrieve new objs because ptr might have changed
-  X = free_energy.get_X();
-  auto Hx = free_energy.get_HX();  // obtain Hx
-  PreconditionerTeter<memspace> Prec(free_energy.get_gkvec_ekin());
-  GradEta grad_eta(T, kappa);
-  auto Hij = eval_threaded(tapply(inner_(), X, Hx, wk));
-
-  auto xnorm = eval_threaded(tapply(innerh_tr(), X, X));
-  Logger() << "l2norm(X)"
-           << "\n";
-  print(xnorm);
-
-  auto Xll = lagrange_multipliers(X, X, Hx, Prec);
-  auto g_X = gradX(X, Hx, fn, Xll, wk);
-  auto delta_x = precondGradX(X, Hx, Prec, Xll);
-
-  // check that overlap is zero
-  auto no = eval_threaded(tapply_async(
-      [](auto x, auto delta_x) {
-        auto ss = inner_()(x, eval(delta_x));
-        return innerh_tr()(ss, ss);
-      }, X, delta_x));
-  Logger() << "<X, G>: \n";
-  print(no);
-
-  auto X_new = copy(free_energy.get_X());
-
-  std::cout << "new F = " << std::scientific << std::setprecision(8) << free_energy.get_F() << "\n";
-
-  std::cout << " ---- geodesic ----"
-            << "\n";
-  /// call geodesic (aka line evaluator)
-  auto eta = eval_threaded(tapply(make_diag(), ek));
-  auto delta_eta = grad_eta.delta_eta(Hij, ek, wk);
-  std::cout << "|delta_eta| = " << l2norm(delta_eta) << "\n";
-
-  // compute slope in X
-  auto g_eta = grad_eta.g_eta(Hij, wk, ek, fn, free_energy.occupancy());
-  auto slope_x_eta = compute_slope(g_X, delta_x, g_eta, delta_eta, commk);
-  double slope = std::get<0>(slope_x_eta) + std::get<1>(slope_x_eta);
-
-  Logger() << "slope (all): " << std::setprecision(8) << slope << "\n";
-
-  // compute at t=0, because fn will change, e.g. fn=f_n(ek)
-  geodesic(free_energy, X_new, eta, delta_x, delta_eta, 0);
-  // oops now HX is wrong ...
-  double F0 = free_energy.get_F();
-  Logger() << "F0: " << std::scientific << std::setprecision(11) << F0 << "\n";
-  for (double dt : {1e-5, 1e-6, 1e-7}) {
-    std::cout << "dt: " << dt << "\n";
-    geodesic(free_energy, X_new, eta, delta_x, delta_eta, dt);
-    double F1 = free_energy.get_F();
-    Logger() << "F1: " << std::scientific << std::setprecision(11) << F1 << "\n";
-
-    auto dFdt = (F1 - F0) / dt;
-    Logger() << "slope (fd) = " << std::setprecision(8) << dFdt << "\n";
-  }
-}
-
-void
-nlcg_check_gradient_host(EnergyBase& energy)
-{
-#ifdef __CLANG
-  Kokkos::initialize();
-  nlcg_check_gradient<Kokkos::HostSpace>(energy);
-  Kokkos::finalize();
-#endif
-}
-
-
-void
-nlcg_check_gradient_cuda(EnergyBase& energy)
-{
-#if defined(__CLANG) && defined(__NLCGLIB__CUDA)
-  Kokkos::initialize();
-  nlcg_check_gradient<Kokkos::CudaSpace>(energy);
-  Kokkos::finalize();
-#endif
-}
-
 
 nlcg_info
 nlcg_mvp2_cpu(EnergyBase& energy_base,
@@ -819,10 +720,8 @@ nlcg_mvp2_cpu(EnergyBase& energy_base,
               int maxiter,
               int restart)
 {
-  Kokkos::initialize();
   auto info =
       nlcg<Kokkos::HostSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
-  Kokkos::finalize();
 
   return info;
 }
@@ -838,10 +737,8 @@ nlcg_mvp2_device(EnergyBase& energy_base,
                  int restart)
 {
 #ifdef __NLCGLIB__CUDA
-  Kokkos::initialize();
   auto info =
       nlcg<Kokkos::CudaSpace>(energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
-  Kokkos::finalize();
   return info;
 #else
   throw std::runtime_error("recompile nlcglib with CUDA.");
@@ -862,10 +759,8 @@ nlcg_mvp2_device_cpu(EnergyBase& energy_base,
                      int restart)
 {
 #ifdef __NLCGLIB__CUDA
-  Kokkos::initialize();
   auto info = nlcg<Kokkos::CudaSpace, Kokkos::HostSpace>(
       energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
-  Kokkos::finalize();
   return info;
 #else
   throw std::runtime_error("recompile nlcglib with CUDA.");
@@ -886,10 +781,8 @@ nlcg_mvp2_cpu_device(EnergyBase& energy_base,
                      int restart)
 {
 #ifdef __NLCGLIB__CUDA
-  Kokkos::initialize();
   auto info = nlcg<Kokkos::HostSpace, Kokkos::CudaSpace>(
       energy_base, smearing, temp, maxiter, tol, kappa, tau, restart);
-  Kokkos::finalize();
   return info;
 #else
   throw std::runtime_error("recompile nlcglib with CUDA.");
@@ -909,10 +802,8 @@ nlcg_us_device(EnergyBase& energy_base,
                int restart)
 {
 #ifdef __NLCGLIB__CUDA
-  Kokkos::initialize();
   auto info = nlcg_us<Kokkos::CudaSpace>(
       energy_base, us_precond_base, overlap_base, smear, T, maxiter, tol, kappa, tau, restart);
-  Kokkos::finalize();
   return info;
 #else
   throw std::runtime_error("recompile nlcglib with CUDA.");
@@ -931,12 +822,8 @@ nlcg_us_cpu(EnergyBase& energy_base,
             int maxiter,
             int restart)
 {
-  Kokkos::InitArguments args;
-  args.num_threads = omp_get_max_threads();
-  Kokkos::initialize(args);
   auto info = nlcg_us<Kokkos::HostSpace>(
       energy_base, us_precond_base, overlap_base, smear, T, maxiter, tol, kappa, tau, restart);
-  Kokkos::finalize();
 
   return info;
 }
@@ -957,10 +844,6 @@ nlcg_us_device_cpu(EnergyBase& energy_base,
                    int restart)
 {
 #ifdef __NLCGLIB__CUDA
-  Kokkos::InitArguments args;
-  args.num_threads = omp_get_max_threads();
-  Kokkos::initialize(args);
-
   auto info = nlcg_us<Kokkos::CudaSpace, Kokkos::HostSpace>(energy_base,
                                                             us_precond_base,
                                                             overlap_base,
@@ -971,7 +854,6 @@ nlcg_us_device_cpu(EnergyBase& energy_base,
                                                             kappa,
                                                             tau,
                                                             restart);
-  Kokkos::finalize();
   return info;
 #else
   throw std::runtime_error("recompile nlcglib with CUDA.");
@@ -991,7 +873,6 @@ nlcg_us_cpu_device(EnergyBase& energy_base,
                    int restart)
 {
 #ifdef __NLCGLIB__CUDA
-  Kokkos::initialize();
   auto info = nlcg_us<Kokkos::HostSpace, Kokkos::CudaSpace>(energy_base,
                                                             us_precond_base,
                                                             overlap_base,
@@ -1002,12 +883,10 @@ nlcg_us_cpu_device(EnergyBase& energy_base,
                                                             kappa,
                                                             tau,
                                                             restart);
-  Kokkos::finalize();
   return info;
 #else
   throw std::runtime_error("recompile nlcglib with CUDA.");
 #endif
 }
-
 
 }  // namespace nlcglib
