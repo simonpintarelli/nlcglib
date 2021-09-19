@@ -25,8 +25,8 @@ namespace nlcglib {
 class StepLogger
 {
 public:
-  StepLogger(int i, std::string fname = "nlcg.json")
-      : i(i), fname(fname)
+  StepLogger(int i, std::string fname = "nlcg.json", bool active=true)
+      : i(i), fname(fname), active(active)
   {
     dict["type"] = "cg_iteration";
     dict["step"] = i;
@@ -43,14 +43,17 @@ public:
 
   ~StepLogger()
   {
-    std::ofstream fout(std::string("nlcg") + std::to_string(i) + ".json", std::ios_base::out);
-    fout << dict;
-    fout.flush();
+    if(active) {
+      std::ofstream fout(std::string("nlcg") + ".json", std::ios_base::app);
+      fout << dict;
+      fout.flush();
+    }
   }
 
 private:
   int i;
   std::string fname{"nlcg.json"};
+  bool active;
   nlohmann::json dict;
 };
 
@@ -58,12 +61,14 @@ template <class X>
 std::enable_if_t<std::is_scalar<std::remove_reference_t<X>>::value>
 StepLogger::log(const std::string& key, X&& x)
 {
+  if(!active) return;
   dict[key] = x;
 }
 
 template<class X>
 void StepLogger::log(const std::string& key, const std::map<std::string, X>& v)
 {
+  if(!active) return;
   dict[key] = v;
 }
 
@@ -71,6 +76,7 @@ template <class V>
 void
 StepLogger::log(const std::string& key, const mvector<V>& x)
 {
+  if(!active) return;
   // assuming V is a 1-d kokkos array
   for (auto& elem : x) {
     auto x_key = elem.first;
