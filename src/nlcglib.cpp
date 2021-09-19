@@ -27,6 +27,7 @@
 #include "utils/logger.hpp"
 #include "utils/step_logger.hpp"
 #include "utils/timer.hpp"
+#include <cstdio>
 
 typedef std::complex<double> complex_double;
 
@@ -71,7 +72,7 @@ cg_write_step_json(double free_energy,
                    Communicator& commk,
                    int step)
 {
-  StepLogger logger(step);
+  StepLogger logger(step, "nlcg.json", commk.rank() == 0);
   logger.log("F", free_energy);
   logger.log("EKS", ks_energy);
   logger.log("entropy", entropy);
@@ -116,8 +117,7 @@ nlcg(EnergyBase& energy_base,
      int restart)
 {
   // std::feclearexcept(FE_ALL_EXCEPT);
-  feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT &
-                 ~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
+  feenableexcept(~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
   nlcg_info info;
 
   Timer timer;
@@ -417,6 +417,7 @@ nlcg_us(EnergyBase& energy_base,
   auto& logger = Logger::GetInstance();
   logger.detach_stdout();
   logger.attach_file_master("nlcg.out");
+  remove("nlcg.json");
 
   free_energy.compute();
 
