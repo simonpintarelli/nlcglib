@@ -95,13 +95,4 @@ nlcg_us_device_cpu(EnergyBase& energy_base,
                    int maxiter,
                    int restart);
 
-
-void nlcg_check_gradient_host(EnergyBase& energy);
-
-void
-nlcg_check_gradient_cuda(EnergyBase& energy);
-
-void nlcheck_overlap(EnergyBase&, OverlapBase&, OverlapBase&);
-
-
 }  // namespace nlcglib
