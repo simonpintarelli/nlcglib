@@ -36,7 +36,9 @@ namespace nlcglib {
 
 void initialize()
 {
-  Kokkos::initialize();
+  Kokkos::InitArguments args;
+  args.num_threads = omp_get_max_threads();
+  Kokkos::initialize(args);
 }
 
 void finalize()
