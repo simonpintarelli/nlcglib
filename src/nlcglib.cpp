@@ -92,15 +92,15 @@ cg_write_step_json(double free_energy,
                             return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
                           }, fn)) .allgather(commk);
 
-    auto hii_host =
-        eval_threaded(tapply(
-                          [](auto&& x) {
-                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
-                          }, hii)) .allgather(commk);
+    // auto hii_host =
+    //     eval_threaded(tapply(
+    //                       [](auto&& x) {
+    //                         return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
+    //                       }, hii)) .allgather(commk);
 
     logger.log("eta", ek_host);
     logger.log("fn", fn_host);
-    logger.log("hii", hii_host);
+    // logger.log("hii", hii_host);
   }
 }
 
