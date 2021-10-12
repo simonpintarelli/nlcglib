@@ -12,7 +12,7 @@ namespace GradEtaHelper
 
   /// NOTE: the factor 1/ kT isn't included.
   template <class array1_t, class array2_t, class array3_t, class array4_t>
-  double dFdmu(const mvector<array1_t>& Hii, const mvector<array2_t>& en, const mvector<array3_t>& fn, const mvector<array4_t>& wk)
+  double dFdmu(const mvector<array1_t>& Hii, const mvector<array2_t>& en, const mvector<array3_t>& fn, const mvector<array4_t>& wk, double mo)
   {
     static_assert(is_on_host<array1_t>::value && is_on_host<array2_t>::value && is_on_host<array3_t>::value,
                   "GradEtaHelper::dFdmu expects host memory input");
@@ -27,7 +27,7 @@ namespace GradEtaHelper
       // int nbands =
       Kokkos::complex<double> v{0};
       Kokkos::parallel_reduce("dFdmu", Kokkos::RangePolicy<Kokkos::Serial>(0, nbands), KOKKOS_LAMBDA(int i, Kokkos::complex<double>& result) {
-          result += (hii(i) - en_loc(i)) * fn_loc(i) * (1-fn_loc(i));
+          result += (hii(i) - en_loc(i)) * fn_loc(i) * (mo-fn_loc(i)) / mo;
         }, v);
       dFdmu_loc += v.real() * wk[key]; // note that hii is real-valued
     }
@@ -58,7 +58,7 @@ namespace GradEtaHelper
       int nbands = fn[key].size();
       auto fni = fn[key];
       for (int i = 0; i < nbands; ++i) {
-        v += fni(i) * (mo - fni(i)) * w_k;
+        v += fni(i) * (mo - fni(i)) / mo * w_k;
       }
     }
 
@@ -235,7 +235,7 @@ namespace GradEtaHelper
       Kokkos::parallel_for(
           "gEta (1)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
             double fni = fn(i);
-            mgETA(i, i) = -1 / kT_loc * (mHij(i, i) - wk * ek(i)) * fni * (mo - fni);
+            mgETA(i, i) = -1 / kT_loc * (mHij(i, i) - wk * ek(i)) * fni * (mo - fni) / mo;
           });
 
       if (std::abs(dmu_deta) < 1e-12) {
@@ -245,7 +245,7 @@ namespace GradEtaHelper
             "gEta (2)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
               // sumfn dmuFn
               double fni = fn(i);
-              mgETA(i, i) += wk * fni * (mo - fni) / dmu_deta * (dFdmu / kT_loc);
+              mgETA(i, i) += wk * fni * (mo - fni) / mo / dmu_deta * (dFdmu / kT_loc);
             });
       }
 

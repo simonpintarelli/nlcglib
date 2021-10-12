@@ -357,7 +357,7 @@ public:
       F&& free_energy)
   {
     double mo = free_energy.occupancy();
-    double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk);
+    double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk, mo);
     double sumfn = GradEtaHelper::dmu_deta(fn, wk, mo);
 
     auto commk = wk.commk();
@@ -408,7 +408,7 @@ descent_direction::conjugated(const mem_t& memspc,
 {
   double mo = free_energy.occupancy();
   /* always executed on CPU */
-  double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk);
+  double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk, mo);
   double sumfn = GradEtaHelper::dmu_deta(fn, wk, mo);
 
   auto commk = wk.commk();
