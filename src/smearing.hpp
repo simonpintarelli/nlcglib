@@ -49,7 +49,7 @@ find_chemical_potential(Fun&& fun, double mu0, double tol)
 /// Fermi-Dirac smearing
 struct fermi_dirac
 {
-  inline static double compute(double x)
+  inline static double fn(double x)
   {
     if (x < -50) {
       return 1;
@@ -66,7 +66,7 @@ struct fermi_dirac
 /// Gaussian-spline smearing
 struct efermi_spline
 {
-  inline static double compute(double x)
+  inline static double fn(double x)
   {
     double sq2 = std::sqrt(2);
     if (x < 0) {
@@ -220,7 +220,7 @@ get_occupation_numbers(
     int n = ek.size();
     double sum = 0;
     for (int i = 0; i < n; ++i) {
-      sum += occ * SMEARING::compute((ek(i) - mu) / kT);
+      sum += occ * SMEARING::fn((ek(i) - mu) / kT);
     }
 
     // copy back to original space
@@ -258,7 +258,7 @@ get_occupation_numbers(
         Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), n);
 
         for (int i = 0; i < n; ++i) {
-          out(i) = occ * SMEARING::compute((ek(i) - mu) / kT);
+          out(i) = occ * SMEARING::fn((ek(i) - mu) / kT);
         }
         return out;
         },
