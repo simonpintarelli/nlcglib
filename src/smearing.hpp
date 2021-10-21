@@ -49,7 +49,7 @@ find_chemical_potential(Fun&& fun, double mu0, double tol)
 /// Fermi-Dirac smearing
 struct fermi_dirac
 {
-  inline static double fn(double x)
+  inline static double fn(double x, double mo)
   {
     if (x < -50) {
       return 1;
@@ -59,21 +59,36 @@ struct fermi_dirac
       return 0;
     }
 
-    return 1. / (1. + std::exp(x));
+    return mo / (1. + std::exp(x));
   }
+
+  // inline static double dfdx(double x) {
+  //   double fni = fn(x);
+  //   return
+  // }
 };
 
 /// Gaussian-spline smearing
-struct efermi_spline
+struct gaussian_spline
 {
-  inline static double fn(double x)
+  inline static double fn(double x, double mo)
   {
     double sq2 = std::sqrt(2);
     if (x < 0) {
-      return 1 - 0.5 * std::exp(0.5 - std::pow(x - 1 / sq2, 2));
+      return mo*(1 - 0.5 * std::exp(0.5 - std::pow(x - 1 / sq2, 2)));
     } else {
-      return 0.5 * std::exp(0.5 - std::pow(1 / sq2 + x, 2));
+      return mo/2 * std::exp(0.5 - std::pow(1 / sq2 + x, 2));
     }
+  }
+
+  inline static double dfdx(double x, double mo)
+  {
+    //
+    double sqrt2 = std::sqrt(2);
+    if (x <= 0) {
+      return -mo/2 * std::exp((sqrt2 -x)*x) * (sqrt2 - 2*x);
+    }
+    return -mo/2 * std::exp(-x * (sqrt2+x)) * (sqrt2 + 2*x);
   }
 };
 
@@ -175,8 +190,9 @@ inverse_gaussian_spline(const Kokkos::View<double*, args...>& fn_input, double m
 
   double ub = 8.0;
   double lb = -5.0;
-  std::valarray<bool> if0 = efermi_spline::compute(ub) > fn;
-  std::valarray<bool> if1 = efermi_spline::compute(lb) < fn;
+  // note fn is normalized before
+  std::valarray<bool> if0 = gaussian_spline::fn(ub, 1.0) > fn;
+  std::valarray<bool> if1 = gaussian_spline::fn(lb, 1.0) < fn;
 
   std::valarray<bool> ifb = if0 || if1;
 
@@ -220,7 +236,7 @@ get_occupation_numbers(
     int n = ek.size();
     double sum = 0;
     for (int i = 0; i < n; ++i) {
-      sum += occ * SMEARING::fn((ek(i) - mu) / kT);
+      sum += SMEARING::fn((ek(i) - mu) / kT, occ);
     }
 
     // copy back to original space
@@ -258,7 +274,7 @@ get_occupation_numbers(
         Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), n);
 
         for (int i = 0; i < n; ++i) {
-          out(i) = occ * SMEARING::fn((ek(i) - mu) / kT);
+          out(i) = SMEARING::fn((ek(i) - mu) / kT, occ);
         }
         return out;
         },
@@ -272,7 +288,7 @@ get_occupation_numbers(
                          return fn;
                        }, fn_host));
 
-  return fn;
+  return std::make_tuple(mu, fn);
 }
 
 
@@ -301,6 +317,9 @@ public:
   auto ek(const mvector<X>& fn);
 
   template <class X>
+  auto dfdx(const mvector<X>& x);
+
+  template <class X>
   double entropy(const mvector<X>& fn);
 
 
@@ -327,20 +346,14 @@ Smearing::fn(const mvector<X>& x)
 {
   switch (smearing) {
     case smearing_type::FERMI_DIRAC: {
-      return get_occupation_numbers<fermi_dirac>(x,
-                                                 this->kT,
-                                                 this->occ,
-                                                 this->Ne,
-                                                 this->wk,
-                                                 this->tol);
+      auto mu_fn = get_occupation_numbers<fermi_dirac>(
+          x, this->kT, this->occ, this->Ne, this->wk, this->tol);
+      return std::get<1>(mu_fn);
     }
     case smearing_type::GAUSSIAN_SPLINE: {
-      return get_occupation_numbers<efermi_spline>(x,
-                                                   this->kT,
-                                                   this->occ,
-                                                   this->Ne,
-                                                   this->wk,
-                                                   this->tol);
+      auto mu_fn = get_occupation_numbers<gaussian_spline>(
+          x, this->kT, this->occ, this->Ne, this->wk, this->tol);
+      return std::get<1>(mu_fn);
     }
     default:
       throw std::runtime_error("invalid smearing given");
@@ -381,6 +394,25 @@ Smearing::ek(const mvector<X>& fn)
     }
   }
 }
+
+
+template<class X>
+auto
+Smearing::dfdx(const mvector<X>& x)
+{
+  // NOTE: x = (e - mu) / kT
+  switch (smearing) {
+    case smearing_type::FERMI_DIRAC: {
+      return;
+    }
+    case smearing_type::GAUSSIAN_SPLINE: {
+      return;
+    }
+    default:
+      throw std::runtime_error("invalid smearing given");
+  }
+}
+
 
 template <class X>
 double
