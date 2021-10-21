@@ -217,7 +217,7 @@ inverse_gaussian_spline(const Kokkos::View<double*, args...>& fn_input, double m
 
 template <class SMEARING, class X, class scalar_vec_t>
 auto
-get_occupation_numbers(
+occupation_from_mvector(
     const mvector<X>& x, double kT, double occ, int Ne, const scalar_vec_t& wk, double tol)
 {
   auto x_host = eval_threaded(tapply(
@@ -231,8 +231,6 @@ get_occupation_numbers(
     using memspace = typename decltype(ek)::memory_space;
     static_assert(std::is_same<memspace, Kokkos::HostSpace>::value, "must be host space");
 
-    // auto ek_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), ek);
-
     int n = ek.size();
     double sum = 0;
     for (int i = 0; i < n; ++i) {
@@ -241,7 +239,6 @@ get_occupation_numbers(
 
     // copy back to original space
     return sum;
-    // return Kokkos::create_mirror_view_and_copy(memspace(), out);
   };
 
   auto x_all = x_host.allgather(wk.commk());
@@ -346,12 +343,12 @@ Smearing::fn(const mvector<X>& x)
 {
   switch (smearing) {
     case smearing_type::FERMI_DIRAC: {
-      auto mu_fn = get_occupation_numbers<fermi_dirac>(
+      auto mu_fn = occupation_from_mvector<fermi_dirac>(
           x, this->kT, this->occ, this->Ne, this->wk, this->tol);
       return std::get<1>(mu_fn);
     }
     case smearing_type::GAUSSIAN_SPLINE: {
-      auto mu_fn = get_occupation_numbers<gaussian_spline>(
+      auto mu_fn = occupation_from_mvector<gaussian_spline>(
           x, this->kT, this->occ, this->Ne, this->wk, this->tol);
       return std::get<1>(mu_fn);
     }

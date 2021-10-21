@@ -16,7 +16,6 @@
 #include "la/mvector.hpp"
 #include "la/utils.hpp"
 #include "linesearch/linesearch.hpp"
-#include "mvp2.hpp"
 #include "overlap.hpp"
 #include "preconditioner.hpp"
 #include "pseudo_hamiltonian/grad_eta.hpp"
@@ -27,7 +26,7 @@
 #include "utils/logger.hpp"
 #include "utils/step_logger.hpp"
 #include "utils/timer.hpp"
-#include "descent_direction.hpp"
+#include "mvp2/descent_direction.hpp"
 #include <cstdio>
 
 typedef std::complex<double> complex_double;
