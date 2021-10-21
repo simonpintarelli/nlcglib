@@ -62,10 +62,10 @@ struct fermi_dirac
     return mo / (1. + std::exp(x));
   }
 
-  // inline static double dfdx(double x) {
-  //   double fni = fn(x);
-  //   return
-  // }
+  inline static double dfdx(double x, double mo) {
+    double fni = fn(x, mo);
+    return -1 * fni * (mo-fni) / mo;
+  }
 };
 
 /// Gaussian-spline smearing
