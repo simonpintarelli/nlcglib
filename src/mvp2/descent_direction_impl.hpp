@@ -76,10 +76,12 @@ public:
            ul_t&& ul,
            double wk);
 
+  /* CG conjugated direction gradients */
   template <class x_t, class sx_t, class zxp_t, class zetap_t, class ul_t, class gx_t, class geta_t>
   std::tuple<double, to_layout_left_t<zxp_t>, to_layout_left_t<zetap_t>> exec_conjugate(
       x_t&& x, sx_t&& sx, zxp_t&& zxp, zetap_t&& zetap, ul_t&& ul, gx_t&& gx, geta_t&& geta);
 
+  /* CG restart gradients */
   template <class x_t, class e_t, class f_t, class hx_t, class op_t, class prec_t>
   std::tuple<double, to_layout_left_t<x_t>, to_layout_left_t<x_t>> exec_spc(
       x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op_t&& s, prec_t&& p, double wk);
