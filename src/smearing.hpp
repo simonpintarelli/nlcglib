@@ -279,11 +279,14 @@ occupation_from_mvector(
 
   using target_memspc = typename X::memory_space;
   // copy back to target memory space
-  auto fn = eval_threaded(tapply([](auto fn_host) {
-                                   auto fn = Kokkos::View<double*, target_memspc>(Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), fn_host.size());
-                         Kokkos::deep_copy(fn, fn_host);
-                         return fn;
-                       }, fn_host));
+  auto fn = eval_threaded(tapply(
+      [](auto fn_host) {
+        auto fn = Kokkos::View<double*, target_memspc>(
+            Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), fn_host.size());
+        Kokkos::deep_copy(fn, fn_host);
+        return fn;
+      },
+      fn_host));
 
   return std::make_tuple(mu, fn);
 }
