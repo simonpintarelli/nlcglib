@@ -47,19 +47,8 @@ public:
                   double wk);
 
   /* interface routine, does memory transfers if needed, for CG restart (steepest descent) */
-  template <class x_t,
-            class e_t,
-            class f_t,
-            class hx_t,
-            class op_t,
-            class prec_t>
-  auto operator()(x_t&& X,
-                  e_t&& en,
-                  f_t&& fn,
-                  hx_t&& hx,
-                  op_t&& S,
-                  prec_t&& P,
-                  double wk);
+  template <class x_t, class e_t, class f_t, class hx_t, class op_t, class prec_t>
+  auto operator()(x_t&& X, e_t&& en, f_t&& fn, hx_t&& hx, op_t&& S, prec_t&& P, double wk);
 
   template <class x_t,
             class e_t,
@@ -92,8 +81,8 @@ public:
       x_t&& x, sx_t&& sx, zxp_t&& zxp, zetap_t&& zetap, ul_t&& ul, gx_t&& gx, geta_t&& geta);
 
   template <class x_t, class e_t, class f_t, class hx_t, class op_t, class prec_t>
-  std::tuple<double, to_layout_left_t<x_t>, to_layout_left_t<x_t>>
-  exec_spc(x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op_t&& s, prec_t&& p, double wk);
+  std::tuple<double, to_layout_left_t<x_t>, to_layout_left_t<x_t>> exec_spc(
+      x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op_t&& s, prec_t&& p, double wk);
 
 private:
   memspace_t memspc;
@@ -115,8 +104,12 @@ template <class x_t,
           class zxp_t,
           class zetap_t,
           class ul_t>
-std::tuple<double, to_layout_left_t<x_t>, to_layout_left_t<zetap_t>, to_layout_left_t<x_t>,
-           to_layout_left_t<zetap_t>, double>
+std::tuple<double,
+           to_layout_left_t<x_t>,
+           to_layout_left_t<zetap_t>,
+           to_layout_left_t<x_t>,
+           to_layout_left_t<zetap_t>,
+           double>
 descent_direction_impl<memspc_t>::exec_spc(x_t&& x,
                                            e_t&& e,
                                            f_t&& f,
@@ -174,20 +167,10 @@ descent_direction_impl<memspc_t>::exec_conjugate(
 
 
 template <class memspc_t>
-template <class x_t,
-          class e_t,
-          class f_t,
-          class hx_t,
-          class op_t,
-          class prec_t>
+template <class x_t, class e_t, class f_t, class hx_t, class op_t, class prec_t>
 std::tuple<double, to_layout_left_t<x_t>, to_layout_left_t<x_t>>
-descent_direction_impl<memspc_t>::exec_spc(x_t&& x,
-                                           e_t&& e,
-                                           f_t&& f,
-                                           hx_t&& hx,
-                                           op_t&& s,
-                                           prec_t&& p,
-                                           double wk)
+descent_direction_impl<memspc_t>::exec_spc(
+    x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op_t&& s, prec_t&& p, double wk)
 {
   auto sx = s(x);
   auto llm = local::lmult()(x, sx, hx, p);
@@ -204,7 +187,6 @@ descent_direction_impl<memspc_t>::exec_spc(x_t&& x,
   double fr = fr_x + fr_eta;
 
   return std::make_tuple(fr, delta_x, delta_eta);
-
 }
 
 
@@ -265,20 +247,10 @@ descent_direction_impl<memspc_t>::operator()(x_t&& X_h,
 }
 
 template <class memspc_t>
-template <class x_t,
-          class e_t,
-          class f_t,
-          class hx_t,
-          class op_t,
-          class prec_t>
+template <class x_t, class e_t, class f_t, class hx_t, class op_t, class prec_t>
 auto
-descent_direction_impl<memspc_t>::operator()(x_t&& X_h,
-                                             e_t&& en_h,
-                                             f_t&& fn_h,
-                                             hx_t&& hx_h,
-                                             op_t&& S,
-                                             prec_t&& P,
-                                             double wk)
+descent_direction_impl<memspc_t>::operator()(
+    x_t&& X_h, e_t&& en_h, f_t&& fn_h, hx_t&& hx_h, op_t&& S, prec_t&& P, double wk)
 {
   auto X = create_mirror_view_and_copy(memspc, X_h);
   auto en = Kokkos::create_mirror_view_and_copy(memspc, en_h);
