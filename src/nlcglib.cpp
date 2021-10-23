@@ -185,12 +185,11 @@ struct minus
 
 
 /// xspace -> memory space where nlcg is executed
-template <class xspace>
+template <class xspace, enum smearing_type smearing_t>
 nlcg_info
 nlcg_us(EnergyBase& energy_base,
         UltrasoftPrecondBase& us_precond_base,
         OverlapBase& overlap_base,
-        smearing_type smear,
         double T,
         int maxiter,
         double tol,
@@ -207,7 +206,7 @@ nlcg_us(EnergyBase& energy_base,
   auto P = USPreconditioner(us_precond_base);
 
     Timer timer;
-  FreeEnergy free_energy(T, energy_base, smear);
+  FreeEnergy free_energy(T, energy_base, smearing_t);
   std::map<smearing_type, std::string> smear_name{
       {smearing_type::FERMI_DIRAC, "Fermi-Dirac"},
       {smearing_type::GAUSSIAN_SPLINE, "Gaussian-spline"}};
@@ -226,7 +225,7 @@ nlcg_us(EnergyBase& energy_base,
          << std::setw(10) << "T "
          << ": " << T << "\n"
          << std::setw(10) << "smearing "
-         << ": " << smear_name.at(smear) << "\n"
+         << ": " << smear_name.at(smearing_t) << "\n"
          << std::setw(10) << "maxiter"
          << ": " << maxiter << "\n"
          << std::setw(10) << "tol"
@@ -263,7 +262,7 @@ nlcg_us(EnergyBase& energy_base,
          << "\n";
 
   // auto HX_c = copy(Hx);
-  descent_direction dd(T, kappa);
+  descent_direction<smearing_t> dd(T, kappa);
 
   auto eta = eval_threaded(tapply(make_diag(), ek));
   auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, S, P, free_energy);
@@ -403,21 +402,20 @@ nlcg_us_cpu(EnergyBase& energy_base,
             int maxiter,
             int restart)
 {
-#ifdef __NLCGLIB__CUDA
-  auto info = nlcg_us<Kokkos::HostSpace>(energy_base,
-                                         us_precond_base,
-                                         overlap_base,
-                                         smearing,
-                                         temp,
-                                         maxiter,
-                                         tol,
-                                         kappa,
-                                         tau,
-                                         restart);
-  return info;
-#else
-  throw std::runtime_error("recompile nlcglib with CUDA.");
-#endif
+  switch (smearing) {
+    case smearing_type::FERMI_DIRAC: {
+      auto info = nlcg_us<Kokkos::HostSpace, smearing_type::FERMI_DIRAC>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+    case smearing_type::GAUSSIAN_SPLINE: {
+      auto info = nlcg_us<Kokkos::HostSpace, smearing_type::GAUSSIAN_SPLINE>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+    default:
+      throw std::runtime_error("invalid smearing type given");
+  }
 }
 
 nlcg_info
@@ -432,17 +430,32 @@ nlcg_us_device(EnergyBase& energy_base,
                int maxiter,
                int restart)
 {
-  auto info = nlcg_us<Kokkos::CudaSpace>(energy_base,
-                                         us_precond_base,
-                                         overlap_base,
-                                         smearing,
-                                         temp,
-                                         maxiter,
-                                         tol,
-                                         kappa,
-                                         tau,
-                                         restart);
-  return info;
+#ifdef __NLCGLIB__CUDA
+  switch (smearing) {
+    case smearing_type::FERMI_DIRAC: {
+      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::FERMI_DIRAC>(energy_base,
+                                                                         us_precond_base,
+                                                                         overlap_base,
+                                                                         temp,
+                                                                         maxiter,
+                                                                         tol,
+                                                                         kappa,
+                                                                         tau,
+                                                                         restart);
+      return info;
+    }
+    case smearing_type::GAUSSIAN_SPLINE: {
+      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::GAUSSIAN_SPLINE>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+
+    }
+    default:
+      throw std::runtime_error("invalid smearing type given");
+  }
+#else
+  throw std::runtime_error("recompile nlcglib with CUDA.");
+#endif
 }
 
 // norm conserving implementation is missing at the moment

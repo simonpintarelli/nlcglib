@@ -46,6 +46,7 @@ find_chemical_potential(Fun&& fun, double mu0, double tol)
   return mu;
 }
 
+
 /// Fermi-Dirac smearing
 struct fermi_dirac
 {
@@ -91,6 +92,23 @@ struct gaussian_spline
     return -mo/2 * std::exp(-x * (sqrt2+x)) * (sqrt2 + 2*x);
   }
 };
+
+/* smearing aliases */
+template <enum smearing_type smearing_t>
+class smearing;
+
+template <>
+class smearing<smearing_type::FERMI_DIRAC> : public fermi_dirac
+{
+};
+
+template <>
+class smearing<smearing_type::GAUSSIAN_SPLINE> : public gaussian_spline
+{};
+
+template <>
+class smearing<smearing_type::COLD>
+{};
 
 template <class... args>
 auto

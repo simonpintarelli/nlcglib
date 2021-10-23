@@ -3,6 +3,8 @@
 #include "descent_direction_impl.hpp"
 
 namespace nlcglib {
+
+template <enum smearing_type SMEARING_TYPE>
 class descent_direction
 {
 public:
@@ -55,32 +57,14 @@ public:
       const mvector<double>& wk,
       op_t&& S,
       prec_t&& P,
-      F&& free_energy)
-  {
-    double mo = free_energy.occupancy();
-    double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk, mo);
-    double sumfn = GradEtaHelper::dmu_deta(fn, wk, mo);
-
-    auto commk = wk.commk();
-
-    descent_direction_impl<mem_t> functor(
-        memspc, dFdmu, sumfn, T, kappa, mo);
-
-    auto res = eval_threaded(tapply_async(functor, X, en, fn, hx, S, P, wk));
-    auto ures = unzip(res);
-
-    double fr = sum(std::get<0>(ures), commk);
-    auto z_x = std::get<1>(ures);
-    auto z_eta = std::get<2>(ures);
-
-    return std::make_tuple(fr, z_x, z_eta);
-  }
+      F&& free_energy);
 
 private:
   double T;
   double kappa;
 };
 
+template <enum smearing_type SMEARING_TYPE>
 template <class mem_t,
           class x_t,
           class e_t,
@@ -93,19 +77,19 @@ template <class mem_t,
           class prec_t,
           class F>
 auto
-descent_direction::conjugated(const mem_t& memspc,
-                              double fr_old,
-                              const mvector<x_t>& X,
-                              const mvector<e_t>& en,
-                              const mvector<f_t>& fn,
-                              const mvector<hx_t>& hx,
-                              const mvector<zxp_t>& zxp,
-                              const mvector<zetap_t>& zetap,
-                              const mvector<ul_t>& ul,
-                              const mvector<double>& wk,
-                              op_t&& S,
-                              prec_t&& P,
-                              F&& free_energy)
+descent_direction<SMEARING_TYPE>::conjugated(const mem_t& memspc,
+                                             double fr_old,
+                                             const mvector<x_t>& X,
+                                             const mvector<e_t>& en,
+                                             const mvector<f_t>& fn,
+                                             const mvector<hx_t>& hx,
+                                             const mvector<zxp_t>& zxp,
+                                             const mvector<zetap_t>& zetap,
+                                             const mvector<ul_t>& ul,
+                                             const mvector<double>& wk,
+                                             op_t&& S,
+                                             prec_t&& P,
+                                             F&& free_energy)
 {
   double mo = free_energy.occupancy();
   /* always executed on CPU */
@@ -114,8 +98,7 @@ descent_direction::conjugated(const mem_t& memspc,
 
   auto commk = wk.commk();
 
-  descent_direction_impl<mem_t> functor(
-      memspc, dFdmu, sumfn, T, kappa, mo);
+  descent_direction_impl<mem_t, SMEARING_TYPE> functor(memspc, dFdmu, sumfn, T, kappa, mo);
 
   auto res = eval_threaded(tapply_async(functor, X, en, fn, hx, zxp, zetap, ul, S, P, wk));
 
@@ -156,4 +139,44 @@ descent_direction::conjugated(const mem_t& memspc,
 
   return std::make_tuple(fr, slope, z_x, z_eta);
 }
+
+template <enum smearing_type SMEARING_TYPE>
+template <class mem_t,
+          class x_t,
+          class e_t,
+          class f_t,
+          class hx_t,
+          class op_t,
+          class prec_t,
+          class F>
+std::tuple<double, mvector<to_layout_left_t<x_t>>, mvector<to_layout_left_t<x_t>>>
+descent_direction<SMEARING_TYPE>::restarted(const mem_t& memspc,
+                                            const mvector<x_t>& X,
+                                            const mvector<e_t>& en,
+                                            const mvector<f_t>& fn,
+                                            const mvector<hx_t>& hx,
+                                            const mvector<double>& wk,
+                                            op_t&& S,
+                                            prec_t&& P,
+                                            F&& free_energy)
+{
+  double mo = free_energy.occupancy();
+  double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk, mo);
+  double sumfn = GradEtaHelper::dmu_deta(fn, wk, mo);
+
+  auto commk = wk.commk();
+
+  descent_direction_impl<mem_t, SMEARING_TYPE> functor(memspc, dFdmu, sumfn, T, kappa, mo);
+
+  auto res = eval_threaded(tapply_async(functor, X, en, fn, hx, S, P, wk));
+  auto ures = unzip(res);
+
+  double fr = sum(std::get<0>(ures), commk);
+  auto z_x = std::get<1>(ures);
+  auto z_eta = std::get<2>(ures);
+
+  return std::make_tuple(fr, z_x, z_eta);
+}
+
+
 }  // namespace nlcglib

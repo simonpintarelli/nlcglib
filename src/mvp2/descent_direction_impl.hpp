@@ -10,7 +10,7 @@
 
 namespace nlcglib {
 
-template <class memspace_t>
+template <class memspace_t, enum smearing_type smearing_t>
 class descent_direction_impl
 {
 public:
@@ -96,7 +96,7 @@ private:
 };
 
 
-template <class memspc_t>
+template <class memspc_t, enum smearing_type smearing_t>
 template <class x_t,
           class e_t,
           class f_t,
@@ -112,7 +112,7 @@ std::tuple<double,
            to_layout_left_t<x_t>,
            to_layout_left_t<zetap_t>,
            double>
-descent_direction_impl<memspc_t>::exec_spc(x_t&& x,
+descent_direction_impl<memspc_t, smearing_t>::exec_spc(x_t&& x,
                                            e_t&& e,
                                            f_t&& f,
                                            hx_t&& hx,
@@ -148,10 +148,10 @@ descent_direction_impl<memspc_t>::exec_spc(x_t&& x,
 }
 
 
-template <class memspc_t>
+template <class memspc_t, enum smearing_type smearing_t>
 template <class x_t, class sx_t, class zxp_t, class zetap_t, class ul_t, class gx_t, class geta_t>
 std::tuple<double, to_layout_left_t<zxp_t>, to_layout_left_t<zetap_t>>
-descent_direction_impl<memspc_t>::exec_conjugate(
+descent_direction_impl<memspc_t, smearing_t>::exec_conjugate(
     x_t&& x, sx_t&& sx, zxp_t&& zxp, zetap_t&& zetap, ul_t&& ul, gx_t&& gx, geta_t&& geta)
 {
   auto zx_tmp = local::rotatex()(zxp, ul);
@@ -168,10 +168,10 @@ descent_direction_impl<memspc_t>::exec_conjugate(
 }
 
 
-template <class memspc_t>
+template <class memspc_t, enum smearing_type smearing_t>
 template <class x_t, class e_t, class f_t, class hx_t, class op_t, class prec_t>
 std::tuple<double, to_layout_left_t<x_t>, to_layout_left_t<x_t>>
-descent_direction_impl<memspc_t>::exec_spc(
+descent_direction_impl<memspc_t, smearing_t>::exec_spc(
     x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op_t&& s, prec_t&& p, double wk)
 {
   auto sx = s(x);

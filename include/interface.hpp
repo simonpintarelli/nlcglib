@@ -25,7 +25,9 @@ static std::map<memory_type, std::string> memory_names = {{memory_type::none, "n
 enum class smearing_type
 {
   FERMI_DIRAC,
-  GAUSSIAN_SPLINE
+  GAUSSIAN_SPLINE,
+  METHFESSEL_PAXTON,
+  COLD
 };
 
 
