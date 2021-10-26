@@ -246,7 +246,9 @@ nlcg_us(EnergyBase& energy_base,
   auto commk = wk.commk();
   Smearing smearing = free_energy.get_smearing();
 
-  auto fn = smearing.fn(ek);
+  auto mu_fn = smearing.fn(ek);
+  double mu = std::get<0>(mu_fn);
+  auto fn = std::get<1>(mu_fn);
   auto X0 = free_energy.get_X();
   free_energy.compute(X0, fn);
 
@@ -265,7 +267,7 @@ nlcg_us(EnergyBase& energy_base,
   descent_direction<smearing_t> dd(T, kappa);
 
   auto eta = eval_threaded(tapply(make_diag(), ek));
-  auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, S, P, free_energy);
+  auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
   double slope = std::get<0>(slope_zx_zeta);
   auto z_x = std::get<1>(slope_zx_zeta);
   auto z_eta = std::get<2>(slope_zx_zeta);
@@ -297,15 +299,18 @@ nlcg_us(EnergyBase& energy_base,
     }
     try {
       // line search
+
+      // TODO: capture variables explicitly here
       auto g = [&](double t) {
         auto ek_ul_xnext = geodesic(xspace(), X, eta, z_x, z_eta, S, t);
         auto ek = std::get<0>(ek_ul_xnext);
         auto Xn = std::get<2>(ek_ul_xnext);
-        auto fn = smearing.fn(ek);
+        auto mu_fn = smearing.fn(ek);
+        double mu = std::get<0>(mu_fn);
 
-        free_energy.compute(Xn, fn);
+        free_energy.compute(Xn, std::get<1>(mu_fn));
 
-        return ek_ul_xnext;
+        return std::tuple_cat(ek_ul_xnext, std::make_tuple(mu));
       };
 
       cg_write_step_json(free_energy.get_F(),
@@ -329,14 +334,15 @@ nlcg_us(EnergyBase& energy_base,
                         cg_iter);
       free_energy.ehandle().print_info();  // print magnetization
 
-      auto ek_ul_x = ls(g, free_energy, slope, force_restart);
+      auto ek_ul_x_mu = ls(g, free_energy, slope, force_restart);
       auto tlap = timer.stop();
       logger << "line search took: " << tlap << " seconds\n";
 
       // update (X, fn(ek), ul, Hx) after line-search
-      ek = std::get<0>(ek_ul_x);
-      ul = std::get<1>(ek_ul_x);
-      X = std::get<2>(ek_ul_x);
+      ek = std::get<0>(ek_ul_x_mu);
+      ul = std::get<1>(ek_ul_x_mu);
+      X = std::get<2>(ek_ul_x_mu);
+      double mu = std::get<3>(ek_ul_x_mu);
       eta = eval_threaded(tapply(make_diag(), ek));
       fn = free_energy.get_fn();
       Hx = copy(free_energy.get_HX());
@@ -345,7 +351,7 @@ nlcg_us(EnergyBase& energy_base,
         /* compute directions for steepest descent */
         timer.start();
 
-        auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, S, P, free_energy);
+        auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
         slope = std::get<0>(slope_zx_zeta); // no need to catch slope > 0 -> linesearch will throw
         fr = slope;
         z_x = std::get<1>(slope_zx_zeta);
@@ -358,7 +364,7 @@ nlcg_us(EnergyBase& energy_base,
         timer.start();
 
         auto fr_slope_z_x_z_eta =
-            dd.conjugated(xspace(), fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, S, P, free_energy);
+          dd.conjugated(xspace(), fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
         fr = std::get<0>(fr_slope_z_x_z_eta);
         slope = std::get<1>(fr_slope_z_x_z_eta);
         z_x = std::get<2>(fr_slope_z_x_z_eta);
@@ -367,7 +373,7 @@ nlcg_us(EnergyBase& energy_base,
         if (slope > 0) {
           // force restart
           logger << "i=" << cg_iter << ": slope > 0 detected -> restart\n";
-          auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, S, P, free_energy);
+          auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
           slope = std::get<0>(slope_zx_zeta);  // no need to catch slope > 0 again -> linesearch will throw
           fr = slope;
           z_x = std::get<1>(slope_zx_zeta);

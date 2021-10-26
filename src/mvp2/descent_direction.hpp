@@ -35,6 +35,7 @@ public:
                   const mvector<zetap_t>& zetap,
                   const mvector<ul_t>& ul,
                   const mvector<double>& wk,
+                  double mu,
                   op_t&& S,
                   prec_t&& P,
                   F&& free_energy);
@@ -55,6 +56,7 @@ public:
       const mvector<f_t>& fn,
       const mvector<hx_t>& hx,
       const mvector<double>& wk,
+      double mu,
       op_t&& S,
       prec_t&& P,
       F&& free_energy);
@@ -87,18 +89,19 @@ descent_direction<SMEARING_TYPE>::conjugated(const mem_t& memspc,
                                              const mvector<zetap_t>& zetap,
                                              const mvector<ul_t>& ul,
                                              const mvector<double>& wk,
+                                             double mu,
                                              op_t&& S,
                                              prec_t&& P,
                                              F&& free_energy)
 {
   double mo = free_energy.occupancy();
   /* always executed on CPU */
-  double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk, mo);
-  double sumfn = GradEtaHelper::dmu_deta(fn, wk, mo);
+  double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk, mu, T, mo);
+  double sumfn = GradEtaHelper::dmu_deta(fn, wk, mu, T, mo);
 
   auto commk = wk.commk();
 
-  descent_direction_impl<mem_t, SMEARING_TYPE> functor(memspc, dFdmu, sumfn, T, kappa, mo);
+  descent_direction_impl<mem_t, SMEARING_TYPE> functor(memspc, mu, dFdmu, sumfn, T, kappa, mo);
 
   auto res = eval_threaded(tapply_async(functor, X, en, fn, hx, zxp, zetap, ul, S, P, wk));
 
@@ -156,17 +159,18 @@ descent_direction<SMEARING_TYPE>::restarted(const mem_t& memspc,
                                             const mvector<f_t>& fn,
                                             const mvector<hx_t>& hx,
                                             const mvector<double>& wk,
+                                            double mu,
                                             op_t&& S,
                                             prec_t&& P,
                                             F&& free_energy)
 {
   double mo = free_energy.occupancy();
-  double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk, mo);
-  double sumfn = GradEtaHelper::dmu_deta(fn, wk, mo);
+  double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk, mu, T, mo);
+  double sumfn = GradEtaHelper::dmu_deta(fn, wk, mu, T, mo);
 
   auto commk = wk.commk();
 
-  descent_direction_impl<mem_t, SMEARING_TYPE> functor(memspc, dFdmu, sumfn, T, kappa, mo);
+  descent_direction_impl<mem_t, SMEARING_TYPE> functor(memspc, mu, dFdmu, sumfn, T, kappa, mo);
 
   auto res = eval_threaded(tapply_async(functor, X, en, fn, hx, S, P, wk));
   auto ures = unzip(res);

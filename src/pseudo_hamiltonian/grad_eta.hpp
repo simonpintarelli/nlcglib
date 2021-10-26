@@ -4,6 +4,7 @@
 #include "la/mvector.hpp"
 #include "constants.hpp"
 #include "exec_space.hpp"
+#include "smearing.hpp"
 
 namespace nlcglib {
 
@@ -12,7 +13,7 @@ namespace GradEtaHelper
 
   /// NOTE: the factor 1/ kT isn't included.
   template <class array1_t, class array2_t, class array3_t, class array4_t>
-  double dFdmu(const mvector<array1_t>& Hii, const mvector<array2_t>& en, const mvector<array3_t>& fn, const mvector<array4_t>& wk, double mo)
+  double dFdmu(const mvector<array1_t>& Hii, const mvector<array2_t>& en, const mvector<array3_t>& fn, const mvector<array4_t>& wk, double mu, double T, double mo)
   {
     static_assert(is_on_host<array1_t>::value && is_on_host<array2_t>::value && is_on_host<array3_t>::value,
                   "GradEtaHelper::dFdmu expects host memory input");
@@ -27,6 +28,7 @@ namespace GradEtaHelper
       // int nbands =
       Kokkos::complex<double> v{0};
       Kokkos::parallel_reduce("dFdmu", Kokkos::RangePolicy<Kokkos::Serial>(0, nbands), KOKKOS_LAMBDA(int i, Kokkos::complex<double>& result) {
+          // double dfdx = smearing<smearing_type::FERMI_DIRAC>::dfdx((en_loc(i) - mu) / kT, mo);
           result += (hii(i) - en_loc(i)) * fn_loc(i) * (mo-fn_loc(i)) / mo;
         }, v);
       dFdmu_loc += v.real() * wk[key]; // note that hii is real-valued
@@ -44,6 +46,8 @@ namespace GradEtaHelper
   template <class array1_t>
   double dmu_deta(const mvector<array1_t>& fn,
                   const mvector<double>& wk,
+                  double mu,
+                  double T,
                   double mo)
   {
     static_assert(is_on_host<array1_t>::value,

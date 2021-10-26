@@ -15,8 +15,9 @@ class descent_direction_impl
 {
 public:
   descent_direction_impl(
-      const memspace_t& memspc, double dFdmu, double sumfn, double T, double kappa, double mo)
+      const memspace_t& memspc, double mu, double dFdmu, double sumfn, double T, double kappa, double mo)
       : memspc(memspc)
+      , mu(mu)
       , dFdmu(dFdmu)
       , sumfn(sumfn)
       , T(T)
@@ -88,6 +89,7 @@ public:
 
 private:
   memspace_t memspc;
+  double mu;
   double dFdmu;
   double sumfn;
   double T;
@@ -192,7 +194,7 @@ descent_direction_impl<memspc_t, smearing_t>::exec_spc(
 }
 
 
-template <class memspc_t>
+template <class memspc_t, enum smearing_type smearing_t>
 template <class x_t,
           class e_t,
           class f_t,
@@ -203,16 +205,16 @@ template <class x_t,
           class op_t,
           class prec_t>
 auto
-descent_direction_impl<memspc_t>::operator()(x_t&& X_h,
-                                             e_t&& en_h,
-                                             f_t&& fn_h,
-                                             hx_t&& hx_h,
-                                             zxp_t&& zxp_h,
-                                             zetap_t&& zetap_h,
-                                             ul_t&& ul_h,
-                                             op_t&& S,
-                                             prec_t&& P,
-                                             double wk)
+descent_direction_impl<memspc_t, smearing_t>::operator()(x_t&& X_h,
+                                                         e_t&& en_h,
+                                                         f_t&& fn_h,
+                                                         hx_t&& hx_h,
+                                                         zxp_t&& zxp_h,
+                                                         zetap_t&& zetap_h,
+                                                         ul_t&& ul_h,
+                                                         op_t&& S,
+                                                         prec_t&& P,
+                                                         double wk)
 {
   auto X = create_mirror_view_and_copy(memspc, X_h);
   auto en = Kokkos::create_mirror_view_and_copy(memspc, en_h);
@@ -248,10 +250,10 @@ descent_direction_impl<memspc_t>::operator()(x_t&& X_h,
   return std::make_tuple(fr, delta_x_h, delta_eta_h, z_x_h, z_eta_h, slope_zp);
 }
 
-template <class memspc_t>
+template <class memspc_t, enum smearing_type smearing_t>
 template <class x_t, class e_t, class f_t, class hx_t, class op_t, class prec_t>
 auto
-descent_direction_impl<memspc_t>::operator()(
+descent_direction_impl<memspc_t, smearing_t>::operator()(
     x_t&& X_h, e_t&& en_h, f_t&& fn_h, hx_t&& hx_h, op_t&& S, prec_t&& P, double wk)
 {
   auto X = create_mirror_view_and_copy(memspc, X_h);

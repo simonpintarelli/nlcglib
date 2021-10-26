@@ -366,12 +366,12 @@ Smearing::fn(const mvector<X>& x)
     case smearing_type::FERMI_DIRAC: {
       auto mu_fn = occupation_from_mvector<fermi_dirac>(
           x, this->kT, this->occ, this->Ne, this->wk, this->tol);
-      return std::get<1>(mu_fn);
+      return mu_fn;
     }
     case smearing_type::GAUSSIAN_SPLINE: {
       auto mu_fn = occupation_from_mvector<gaussian_spline>(
           x, this->kT, this->occ, this->Ne, this->wk, this->tol);
-      return std::get<1>(mu_fn);
+      return mu_fn;
     }
     default:
       throw std::runtime_error("invalid smearing given");
