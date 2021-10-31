@@ -5,13 +5,13 @@ set(CMAKE_CXX_STANDARD 14)
 
 # user variables
 set(USE_OPENMP On CACHE BOOL "use OpenMP")
-set(USE_CUDA On CACHE BOOL "use cuda")
+set(USE_CUDA Off CACHE BOOL "use cuda")
 
 set(BUILD_TESTS OFF CACHE BOOL "build tests")
 set(LAPACK_VENDOR "OpenBLAS" CACHE STRING "lapack vendor")
 set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS "OpenBLAS" "MKL")
 
-find_package(MPI REQUIRED)
+find_package(MPI REQUIRED COMPONENTS CXX)
 
 if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
@@ -42,6 +42,13 @@ if(LAPACK_VENDOR MATCHES OpenBLAS)
 elseif(LAPACK_VENDOR MATCHES MKL)
   message("LAPACK VENDOR MKL")
   find_package(MKL REQUIRED)
+elseif(LAPACK_VENDOR MATCHES CRAY_LIBSCI)
+  message("LAPACK VENDOR Cray Libsci")
+  find_package(SCI REQUIRED)
+  add_library(my_lapack INTERFACE IMPORTED)
+  set_target_properties(my_lapack PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${SCI_INCLUDE_DIRS}"
+    INTERFACE_LINK_LIBRARIES "${SCI_LIBRARIES}")
 else()
   message(FATAL_ERROR "must specify a LAPACK_VENDOR")
 endif()
