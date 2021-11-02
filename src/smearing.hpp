@@ -53,7 +53,7 @@ struct fermi_dirac
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
     if (x < -50) {
-      return 1;
+      return mo;
     }
 
     if (x > 40) {
