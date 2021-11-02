@@ -251,7 +251,7 @@ occupation_from_mvector(
       },
       x));
 
-  auto fd = [kT = kT, occ = occ](auto ek, auto fn_scratch, double mu) {
+  auto fd = [kT = kT, occ = occ](auto ek, double mu) {
     using memspace = typename decltype(ek)::memory_space;
     static_assert(std::is_same<memspace, Kokkos::HostSpace>::value, "must be host space");
 
@@ -261,25 +261,18 @@ occupation_from_mvector(
       sum += SMEARING::fn((ek(i) - mu) / kT, occ);
     }
 
-    // copy back to original space
     return sum;
   };
 
   auto x_all = x_host.allgather(wk.commk());
   auto wk_all = wk.allgather();
 
-  auto fn_scratch = eval_threaded(tapply([](auto ek) {
-    int n = ek.size();
-    Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), n);
-    return out;
-  }, x_all));
-
   double mu = find_chemical_potential(
-      [&x = x_all, &wk = wk_all, &Ne = Ne, &fn_scratch = fn_scratch, &fd](double mu) {
+      [&x = x_all, &wk = wk_all, &Ne = Ne, &fd](double mu) {
         double fsum = 0;
         for (auto& wki : wk) {
           auto& key = wki.first;
-          fsum += wki.second * fd(x[key], fn_scratch[key], mu);
+          fsum += wki.second * fd(x[key], mu);
         }
         return Ne - fsum;
       },
