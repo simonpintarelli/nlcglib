@@ -50,7 +50,7 @@ find_chemical_potential(Fun&& fun, double mu0, double tol)
 /// Fermi-Dirac smearing
 struct fermi_dirac
 {
-  inline static double fn(double x, double mo)
+  KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
     if (x < -50) {
       return 1;
@@ -63,7 +63,7 @@ struct fermi_dirac
     return mo / (1. + std::exp(x));
   }
 
-  inline static double dfdx(double x, double mo) {
+  KOKKOS_INLINE_FUNCTION static double dfdx(double x, double mo) {
     double fni = fn(x, mo);
     return -1 * fni * (mo-fni) / mo;
   }
@@ -72,7 +72,7 @@ struct fermi_dirac
 /// Gaussian-spline smearing
 struct gaussian_spline
 {
-  inline static double fn(double x, double mo)
+  KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
     double sq2 = std::sqrt(2);
     if (x < 0) {
@@ -82,7 +82,7 @@ struct gaussian_spline
     }
   }
 
-  inline static double dfdx(double x, double mo)
+  KOKKOS_INLINE_FUNCTION static double dfdx(double x, double mo)
   {
     //
     double sqrt2 = std::sqrt(2);
@@ -91,6 +91,12 @@ struct gaussian_spline
     }
     return -mo/2 * std::exp(-x * (sqrt2+x)) * (sqrt2 + 2*x);
   }
+};
+
+
+struct cold_smearing
+{
+
 };
 
 /* smearing aliases */

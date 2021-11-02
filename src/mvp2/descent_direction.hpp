@@ -96,8 +96,8 @@ descent_direction<SMEARING_TYPE>::conjugated(const mem_t& memspc,
 {
   double mo = free_energy.occupancy();
   /* always executed on CPU */
-  double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk, mu, T, mo);
-  double sumfn = GradEtaHelper::dmu_deta(fn, wk, mu, T, mo);
+  double dFdmu = GradEtaHelper<SMEARING_TYPE>::dFdmu(free_energy.get_ek(), en, fn, wk, mu, T, mo);
+  double sumfn = GradEtaHelper<SMEARING_TYPE>::dmu_deta(en, wk, mu, T, mo);
 
   auto commk = wk.commk();
 
@@ -165,8 +165,8 @@ descent_direction<SMEARING_TYPE>::restarted(const mem_t& memspc,
                                             F&& free_energy)
 {
   double mo = free_energy.occupancy();
-  double dFdmu = GradEtaHelper::dFdmu(free_energy.get_ek(), en, fn, wk, mu, T, mo);
-  double sumfn = GradEtaHelper::dmu_deta(fn, wk, mu, T, mo);
+  double dFdmu = GradEtaHelper<SMEARING_TYPE>::dFdmu(free_energy.get_ek(), en, fn, wk, mu, T, mo);
+  double sumfn = GradEtaHelper<SMEARING_TYPE>::dmu_deta(en, wk, mu, T, mo);
 
   auto commk = wk.commk();
 

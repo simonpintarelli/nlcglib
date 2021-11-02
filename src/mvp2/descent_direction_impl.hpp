@@ -115,15 +115,15 @@ std::tuple<double,
            to_layout_left_t<zetap_t>,
            double>
 descent_direction_impl<memspc_t, smearing_t>::exec_spc(x_t&& x,
-                                           e_t&& e,
-                                           f_t&& f,
-                                           hx_t&& hx,
-                                           op_t&& s,
-                                           prec_t&& p,
-                                           zxp_t&& zxp,
-                                           zetap_t&& zetap,
-                                           ul_t&& ul,
-                                           double wk)
+                                                       e_t&& e,
+                                                       f_t&& f,
+                                                       hx_t&& hx,
+                                                       op_t&& s,
+                                                       prec_t&& p,
+                                                       zxp_t&& zxp,
+                                                       zetap_t&& zetap,
+                                                       ul_t&& ul,
+                                                       double wk)
 {
   auto sx = s(x);
   auto llm = local::lmult()(x, sx, hx, p);
@@ -132,9 +132,9 @@ descent_direction_impl<memspc_t, smearing_t>::exec_spc(x_t&& x,
   auto hij = inner_()(x, hx, wk);
   // // std::cout << dFdmu << ", " << sumfn << "\n";
 
-  GradEta grad_eta(this->T, this->kappa);
-  auto g_eta = grad_eta.g_eta(hij, wk, e, f, this->sumfn, this->dFdmu, this->mo);
-  auto delta_eta = GradEta::_delta_eta(this->kappa)(hij, e, wk);
+  GradEta<smearing_t> grad_eta(this->T, this->kappa);
+  auto g_eta = grad_eta.g_eta(hij, mu, wk, e, f, this->sumfn, this->dFdmu, this->mo);
+  auto delta_eta = _delta_eta(this->kappa)(hij, e, wk);
 
   double fr_x = 2 * innerh_tr()(gx, delta_x).real();
   double fr_eta = innerh_tr()(g_eta, delta_eta).real();
@@ -182,9 +182,9 @@ descent_direction_impl<memspc_t, smearing_t>::exec_spc(
   auto delta_x = local::precondgx_us()(sx, hx, p, llm);
   auto hij = inner_()(x, hx, wk);
 
-  GradEta grad_eta(this->T, this->kappa);
-  auto g_eta = grad_eta.g_eta(hij, wk, e, f, this->sumfn, this->dFdmu, this->mo);
-  auto delta_eta = GradEta::_delta_eta(this->kappa)(hij, e, wk);
+  GradEta<smearing_t> grad_eta(this->T, this->kappa);
+  auto g_eta = grad_eta.g_eta(hij, mu, wk, e, f, this->sumfn, this->dFdmu, this->mo);
+  auto delta_eta = _delta_eta(this->kappa)(hij, e, wk);
 
   double fr_x = 2 * innerh_tr()(gx, delta_x).real();
   double fr_eta = innerh_tr()(g_eta, delta_eta).real();
