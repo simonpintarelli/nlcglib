@@ -13,8 +13,8 @@ public:
   FreeEnergy(double T, EnergyBase& energy, smearing_type smear);
   virtual ~FreeEnergy() {}
 
-  template <class tF, class tX>
-  void compute(const mvector<tX>& X, const mvector<tF>& fn);
+  template <class tF, class tX, class tE>
+  void compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<tE>& en, double mu);
 
   void compute();
 
@@ -57,9 +57,9 @@ FreeEnergy::FreeEnergy(double T, EnergyBase& energy, smearing_type smear)
   /* empty */
 }
 
-template <class tF, class tX>
+template <class tF, class tX, class tE>
 void
-FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn)
+FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<tE>& en, double mu)
 {
   // convert fn to std::vector
   auto map_fn = tapply(

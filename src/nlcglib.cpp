@@ -250,7 +250,7 @@ nlcg_us(EnergyBase& energy_base,
   double mu = std::get<0>(mu_fn);
   auto fn = std::get<1>(mu_fn);
   auto X0 = free_energy.get_X();
-  free_energy.compute(X0, fn);
+  free_energy.compute(X0, fn, ek, mu);
 
   auto Hx = copy(free_energy.get_HX());
   auto X = copy(free_energy.get_X());
@@ -308,7 +308,7 @@ nlcg_us(EnergyBase& energy_base,
         auto mu_fn = smearing.fn(ek);
         double mu = std::get<0>(mu_fn);
 
-        free_energy.compute(Xn, std::get<1>(mu_fn));
+        free_energy.compute(Xn, std::get<1>(mu_fn), ek, mu);
 
         return std::tuple_cat(ek_ul_xnext, std::make_tuple(mu));
       };
