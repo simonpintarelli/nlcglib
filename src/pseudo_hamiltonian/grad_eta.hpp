@@ -39,8 +39,8 @@ struct GradEtaHelper
           "dFdmu",
           Kokkos::RangePolicy<Kokkos::Serial>(0, nbands),
           KOKKOS_LAMBDA(int i, Kokkos::complex<double>& result) {
-            double dfdx = smearing<smearing_t>::dfdx((en_loc(i) - mu) / kT, mo);
-            result += (hii(i) - en_loc(i)) * (-1.0 * dfdx);
+            double delta = smearing<smearing_t>::delta((en_loc(i) - mu) / kT, mo);
+            result += (hii(i) - en_loc(i)) * (-1.0 * delta);
           },
           v);
       dFdmu_loc += v.real() * wk[key];  // note that hii is real-valued
@@ -72,8 +72,8 @@ struct GradEtaHelper
       int nbands = en[key].size();
       auto en_loc = en[key];
       for (int i = 0; i < nbands; ++i) {
-        double dfdx = smearing<smearing_t>::dfdx((en_loc(i) - mu) / kT, mo);
-        v += -1 * dfdx * w_k;
+        double delta = smearing<smearing_t>::delta((en_loc(i) - mu) / kT, mo);
+        v += -1 * delta * w_k;
       }
     }
 
@@ -151,8 +151,8 @@ public:
     double kT_loc = kT;
     Kokkos::parallel_for(
         "gEta (1)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
-          double dfdx = smearing<smearing_t>::dfdx((ek(i) - mu) / kT_loc, mo);
-          mgETA(i, i) = -1 / kT_loc * (mHij(i, i) - wk * ek(i)) * (-1*dfdx);
+          double delta = smearing<smearing_t>::delta((ek(i) - mu) / kT_loc, mo);
+          mgETA(i, i) = -1 / kT_loc * (mHij(i, i) - wk * ek(i)) * (-1.0 * delta);
         });
 
     if (std::abs(dmu_deta) < 1e-12) {
@@ -161,8 +161,8 @@ public:
       Kokkos::parallel_for(
           "gEta (2)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
             // sumfn dmuFn
-            double dfdx = smearing<smearing_t>::dfdx((ek(i) - mu) / kT_loc, mo);
-            mgETA(i, i) += wk * (-1*dfdx) / dmu_deta * (dFdmu / kT_loc);
+            double delta = smearing<smearing_t>::delta((ek(i) - mu) / kT_loc, mo);
+            mgETA(i, i) += wk * (-1.0 * delta) / dmu_deta * (dFdmu / kT_loc);
           });
     }
 
