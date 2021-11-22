@@ -16,7 +16,7 @@ public:
   template <class tF, class tX, class tE>
   void compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<tE>& en, double mu);
 
-  void compute();
+  // void compute();
 
   auto get_X();
   auto get_HX();
@@ -92,7 +92,7 @@ FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<t
   energy.compute();
 
   double etot = energy.get_total_energy();
-  double S = smearing.entropy(fn);
+  double S = smearing.entropy(fn, en, mu);
 
   entropy = physical_constants::kb * T * S;
   free_energy = etot + entropy;
@@ -104,16 +104,16 @@ FreeEnergy::get_fn()
   return make_mmvector<Kokkos::HostSpace>(this->energy.get_fn());
 }
 
-void
-FreeEnergy::compute()
-{
-  energy.compute();
-  double etot = energy.get_total_energy();
-  double S = smearing.entropy(this->get_fn());
+// void
+// FreeEnergy::compute()
+// {
+//   energy.compute();
+//   double etot = energy.get_total_energy();
+//   double S = smearing.entropy(this->get_fn(), en, mu, T);
 
-  entropy = physical_constants::kb * T * S;
-  free_energy = etot + entropy;
-}
+//   entropy = physical_constants::kb * T * S;
+//   free_energy = etot + entropy;
+// }
 
 auto
 FreeEnergy::get_X()

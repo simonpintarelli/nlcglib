@@ -46,9 +46,25 @@ find_chemical_potential(Fun&& fun, double mu0, double tol)
   return mu;
 }
 
+template<class base_class>
+struct sum_entropy
+{
+  template<class... ARGS>
+  static double call(const Kokkos::View<double*, ARGS...>& ek, double mu, double T, double mo) {
+    int n = ek.extent(0);
+
+    double kT = physical_constants::kb * T;
+    double entropy{0};
+    Kokkos::parallel_reduce(Kokkos::RangePolicy<Kokkos::Serial>(0, n),
+                            KOKKOS_LAMBDA(int i, double& v) {
+                              v += base_class::entropy( -1.0 * (ek(i)-mu)/kT, mo);
+                            }, entropy);
+    return entropy;
+  }
+};
 
 /// Fermi-Dirac smearing
-struct fermi_dirac
+struct fermi_dirac : sum_entropy<fermi_dirac>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
@@ -63,17 +79,23 @@ struct fermi_dirac
     return mo / (1. + std::exp(x));
   }
 
-  KOKKOS_INLINE_FUNCTION static double dfdx(double x, double mo) {
+  KOKKOS_INLINE_FUNCTION static double delta(double x, double mo) {
     double fni = fn(x, mo);
     return -1 * fni * (mo-fni) / mo;
+  }
+
+  KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo) {
+    double expx = std::exp(x);
+    return mo*(std::log(1 + expx) - expx * x / (1 + expx));
   }
 };
 
 /// Gaussian-spline smearing
-struct gaussian_spline
+struct gaussian_spline : sum_entropy<gaussian_spline>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
+    // TODO: sign of x does not correspond to notation in the literature
     double sq2 = std::sqrt(2);
     if (x < 0) {
       return mo*(1 - 0.5 * std::exp(0.5 - std::pow(x - 1 / sq2, 2)));
@@ -82,7 +104,7 @@ struct gaussian_spline
     }
   }
 
-  KOKKOS_INLINE_FUNCTION static double dfdx(double x, double mo)
+  KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
     //
     double sqrt2 = std::sqrt(2);
@@ -91,12 +113,71 @@ struct gaussian_spline
     }
     return -mo/2 * std::exp(-x * (sqrt2+x)) * (sqrt2 + 2*x);
   }
+
+  KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
+  {
+    double sqrtpi = std::sqrt(constants::pi);
+    double sqrt2 =  std::sqrt(2);
+    double sqrte = std::exp(0.5);
+
+    if (x > 0) {
+      return 0.25 *
+             (2 * std::exp(-x * (sqrt2 + x)) * x + sqrte * sqrtpi * std::erfc(1 / sqrt2 + x));
+    } else {
+      return 0.25 *
+             (-2 * std::exp(x * (sqrt2 - x)) * x + sqrte * sqrtpi * std::erfc(1 / sqrt2 - x));
+    }
+  }
 };
 
-
-struct cold_smearing
+struct cold_smearing : sum_entropy<cold_smearing>
 {
+  KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
+  {
+    double sqrtpi = std::sqrt(constants::pi);
+    double sqrt2=  std::sqrt(2);
+    return mo*(std::exp(-0.5 + ( sqrt2 - x) * x) * sqrt2 / sqrtpi + std::erfc(1/sqrt2 -x));
+  }
 
+  KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
+  {
+    double sqrtpi = std::sqrt(constants::pi);
+    double sqrt2 = std::sqrt(2);
+    double z = (x - 1 / sqrt2);
+    return mo * 2 * std::exp(-z*z) * (2-sqrt2*x) / sqrtpi;
+  }
+
+  KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
+  {
+    double sqrtpi = std::sqrt(constants::pi);
+    double sqrt2 = std::sqrt(2);
+    return mo*std::exp(-0.5 + (sqrt2-x) * x) * (1 - sqrt2 *x) / sqrtpi;
+  }
+};
+
+/// first order MP smearing
+struct methfessel_paxton_smearing : sum_entropy<methfessel_paxton_smearing>
+{
+  KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
+  {
+    double x2 = x * x;
+    double sqrtpi = std::sqrt(constants::pi);
+    return mo/2 * (1 + std::exp(-x2) * x / sqrtpi + std::erf(x));
+  }
+
+  KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
+  {
+    double x2 = x*x;
+    double sqrtpi = std::sqrt(constants::pi);
+    return mo * std::exp(-x2) * (1 + 0.25*(2-4*x2)) / sqrtpi;
+  }
+
+  KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
+  {
+    double x2 = x * x;
+    double sqrtpi = std::sqrt(constants::pi);
+    return std::exp(-x2) * (1-2*x2) / 4 / sqrtpi;
+  }
 };
 
 /* smearing aliases */
@@ -105,139 +186,20 @@ class smearing;
 
 template <>
 class smearing<smearing_type::FERMI_DIRAC> : public fermi_dirac
-{
-};
+{};
 
 template <>
 class smearing<smearing_type::GAUSSIAN_SPLINE> : public gaussian_spline
 {};
 
 template <>
-class smearing<smearing_type::COLD>
+class smearing<smearing_type::COLD> : public cold_smearing
 {};
 
-template <class... args>
-auto
-inverse_fermi_dirac(Kokkos::View<double*, args...>& fn, double mo)
-{
-  using array_type = Kokkos::View<double*, args...>;
-  int n = fn.size();
-  Kokkos::View<double*, Kokkos::HostSpace> out("ek", n);
-  static_assert(
-      Kokkos::SpaceAccessibility<typename array_type::memory_space, Kokkos::HostSpace>::accessible,
-      "invalid memory space");
-  assert(fn.stride(0) == 1);
+template <>
+class smearing<smearing_type::METHFESSEL_PAXTON> : public methfessel_paxton_smearing
+{};
 
-  std::valarray<double> fn_val(fn.data(), fn.size());
-  std::valarray<bool> zero_loc = fn_val < 1e-12;
-  std::valarray<bool> ones_loc = fn_val > mo-1e-12;
-  // assuming that fn is strictly decreasing!
-  assert(std::is_sorted(fn.data(), fn.data() + n, [](auto x, auto y) { return x > y; }));
-
-  auto first_zero = std::find(std::begin(zero_loc), std::end(zero_loc), true);
-  int num_zeros = std::end(zero_loc) - first_zero;
-  auto last_one = std::find(std::begin(ones_loc), std::end(ones_loc), false);
-  int num_ones = (last_one - std::begin(ones_loc)) + 1;
-
-  double scale = 0.1;
-  for (int i = 0; i < num_ones; ++i) {
-    out(n - (i + 1)) = 50 + scale * (num_ones - (i + 1));
-  }
-
-  for (int i = 0; i < num_zeros; ++i) {
-    out(i) = 50 - scale * (num_zeros - (i + 1));
-  }
-
-  for (int i = 0; i < n; ++i) {
-    if ((zero_loc[i] || ones_loc[i]) == false) {
-      double fi = fn(i) / mo;
-      out(i) = std::log(1.0 / (fi - 1));
-    }
-  }
-
-  return out;
-}
-
-
-template <class... args>
-double
-fermi_entropy(const Kokkos::View<double*, args...>& fn, double mo)
-{
-  auto fn_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), fn);
-  assert(fn_host.stride(0) == 1);
-  if (fn_host.stride(0) != 1)
-    throw std::runtime_error("invalid stride");
-
-  std::valarray<double> fn_val(fn_host.data(), fn.size());
-  fn_val /= mo;
-
-  std::valarray<bool> zero_loc = fn_val <= 1e-15;
-  std::valarray<bool> ones_loc = fn_val >= 1-1e-15;
-  std::valarray<double> fni = fn_val[(!zero_loc) && (!ones_loc)];
-
-  return (fni * std::log(fni) + (1.0 - fni) * std::log(1.0 - fni)).sum();
-}
-
-template <class... args>
-double
-gaussian_spline_entropy(const Kokkos::View<double*, args...>& xkokkos)
-{
-  auto x_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), xkokkos);
-
-  std::valarray<double> x(x_host.data(), x_host.size());
-  static double sqrt_piexp = std::sqrt(constants::pi * std::exp(1.));
-
-  double S = 0;
-  for (double xi : x) {
-    double z = std::abs(xi);
-    S += 0.25 * (2 * std::exp(-z * (std::sqrt(2) + z)) * z
-                 + sqrt_piexp * std::erfc(1. / std::sqrt(2) + z));
-  }
-  return -1.*S;
-}
-
-
-template <class... args>
-Kokkos::View<double*, Kokkos::HostSpace>
-inverse_gaussian_spline(const Kokkos::View<double*, args...>& fn_input, double mo)
-{
-  auto fn_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), fn_input);
-  std::valarray<double> fn(fn_host.data(), fn_host.size());
-  fn /= mo;
-
-  std::valarray<bool> ifu = fn > 0.5;
-
-  std::valarray<double> xi(fn.size());
-
-  // remove numerical noise
-  fn[fn<0.0] = 0.0;
-
-  double ub = 8.0;
-  double lb = -5.0;
-  // note fn is normalized before
-  std::valarray<bool> if0 = gaussian_spline::fn(ub, 1.0) > fn;
-  std::valarray<bool> if1 = gaussian_spline::fn(lb, 1.0) < fn;
-
-  std::valarray<bool> ifb = if0 || if1;
-
-  std::valarray<bool> iifu = ifu && !ifb;
-  std::valarray<double> fn_iifu = fn[iifu];
-
-  std::valarray<bool> iifl = !ifu && !ifb;
-  std::valarray<double> fn_iifl = fn[iifl];
-
-  xi[iifu] = (1. - std::sqrt(1. - 2. * std::log(2. - 2. * fn_iifu))) / std::sqrt(2.);
-  xi[iifl] = (-1. + std::sqrt(1. - 2. * std::log(2. * fn_iifl))) / std::sqrt(2.);
-  xi[if0] = ub;
-  xi[if1] = lb;
-
-  Kokkos::View<double*, Kokkos::HostSpace> out("ek", xi.size());
-  Kokkos::parallel_for(Kokkos::RangePolicy<Kokkos::Serial>(0, fn.size()), KOKKOS_LAMBDA(int i) {
-      out(i) = xi[i];
-    });
-
-  return out;
-}
 
 template <class SMEARING, class X, class scalar_vec_t>
 auto
@@ -312,12 +274,12 @@ occupation_from_mvector(
 class Smearing
 {
 public:
-  Smearing(double T, int num_electrons, double max_occ, const mvector<double>& wk, enum smearing_type smearing)
+  Smearing(double T, int num_electrons, double max_occ, const mvector<double>& wk, enum smearing_type smearing_t)
       : T(T)
       , Ne(num_electrons)
       , occ(max_occ)
       , wk(wk)
-      , smearing(smearing)
+      , smearing_t(smearing_t)
   {
     if (T == 0) {
       throw std::runtime_error("Temperature must be > 0.");
@@ -333,11 +295,8 @@ public:
   template <class X>
   auto ek(const mvector<X>& fn);
 
-  template <class X>
-  auto dfdx(const mvector<X>& x);
-
-  template <class X>
-  double entropy(const mvector<X>& fn);
+  template <class X, class Y>
+  double entropy(const mvector<X>& fn, const mvector<Y>& en, double mu);
 
 
 protected:
@@ -353,14 +312,14 @@ protected:
   double tol{1e-11};
 
   mvector<double> wk;
-  smearing_type smearing;
+  smearing_type smearing_t;
 };
 
 template <class X>
 auto
 Smearing::fn(const mvector<X>& x)
 {
-  switch (smearing) {
+  switch (smearing_t) {
     case smearing_type::FERMI_DIRAC: {
       auto mu_fn = occupation_from_mvector<fermi_dirac>(
           x, this->kT, this->occ, this->Ne, this->wk, this->tol);
@@ -371,12 +330,16 @@ Smearing::fn(const mvector<X>& x)
           x, this->kT, this->occ, this->Ne, this->wk, this->tol);
       return mu_fn;
     }
-    case smearing_type::METHFESSEL_PAXTON:
-      throw std::runtime_error("not yet implemented");
-      break;
-    case smearing_type::COLD:
-      throw std::runtime_error("not yet implemented");
-      break;
+    case smearing_type::METHFESSEL_PAXTON: {
+      auto mu_fn = occupation_from_mvector<methfessel_paxton_smearing>(
+          x, this->kT, this->occ, this->Ne, this->wk, this->tol);
+      return mu_fn;
+    }
+    case smearing_type::COLD: {
+      auto mu_fn = occupation_from_mvector<cold_smearing>(
+          x, this->kT, this->occ, this->Ne, this->wk, this->tol);
+      return mu_fn;
+    }
     default:
       throw std::runtime_error("invalid smearing given");
       break;
@@ -387,7 +350,7 @@ template <class X>
 auto
 Smearing::ek(const mvector<X>& fn)
 {
-  switch (smearing) {
+  switch (smearing_t) {
     case smearing_type::FERMI_DIRAC: {
       auto ek = eval_threaded(tapply(
           [occ = occ, kT = kT](auto fi) {
@@ -429,36 +392,55 @@ Smearing::ek(const mvector<X>& fn)
 }
 
 
-template<class X>
-auto
-Smearing::dfdx(const mvector<X>& x)
-{
-  // NOTE: x = (e - mu) / kT
-  switch (smearing) {
-    case smearing_type::FERMI_DIRAC: {
-      return;
-    }
-    case smearing_type::GAUSSIAN_SPLINE: {
-      return;
-    }
-    default:
-      throw std::runtime_error("invalid smearing given");
-  }
-}
-
-
-template <class X>
+template <class X, class Y>
 double
-Smearing::entropy(const mvector<X>& fn)
+Smearing::entropy(const mvector<X>& fn, const mvector<Y>& en, double mu)
 {
+  static_assert(is_on_host<X>::value, "fn needs to be in host memory");
+  static_assert(is_on_host<Y>::value, "en needs to be in host memory");
   // this sum goes over all k-points, since wk * tapply(..) will inherit wk's communicator
-  switch (smearing) {
+  switch (smearing_t) {
     case smearing_type::FERMI_DIRAC: {
-      return sum(wk * tapply([occ = occ](auto x) { return fermi_entropy(x, occ); }, fn));
+      double S = -1.0 * sum(wk * tapply(
+                                     [occ = occ, mu = mu, T = T](auto enk) {
+                                       double loc = smearing<smearing_type::FERMI_DIRAC>::call(
+                                           enk, mu, T, occ);
+                                       return loc;
+                                     },
+                                     en));
+      return S;
     }
     case smearing_type::GAUSSIAN_SPLINE: {
-      auto x = tapply([occ=occ] (auto fn) { return inverse_gaussian_spline(fn, occ); }, fn);
-      return sum(wk * tapply([](auto x) { return gaussian_spline_entropy(x); }, x));
+      double S = -1.0 * sum(wk * tapply(
+                                     [occ = occ, mu = mu, T = T](auto enk) {
+                                       double loc =
+                                           smearing<smearing_type::GAUSSIAN_SPLINE>::call(
+                                               enk, mu, T, occ);
+                                       return loc;
+                                     },
+                                     en));
+      return S;
+    }
+    case smearing_type::COLD: {
+      double S = -1.0 * sum(wk * tapply(
+                                     [occ = occ, mu = mu, T = T](auto enk) {
+                                       double loc =
+                                           smearing<smearing_type::COLD>::call(
+                                               enk, mu, T, occ);
+                                       return loc;
+                                     },
+                                     en));
+      return S;
+    }
+    case smearing_type::METHFESSEL_PAXTON: {
+      double S = -1.0 * sum(wk * tapply(
+                                     [occ = occ, mu = mu, T = T](auto enk) {
+                                       double loc = smearing<smearing_type::METHFESSEL_PAXTON>::call(
+                                           enk, mu, T, occ);
+                                       return loc;
+                                     },
+                                     en));
+      return S;
     }
     default:
       throw std::runtime_error("invalid smearing type");
