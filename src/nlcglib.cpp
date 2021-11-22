@@ -217,10 +217,6 @@ nlcg_us(EnergyBase& energy_base,
   logger.attach_file_master("nlcg.out");
   remove("nlcg.json");
 
-  free_energy.compute();
-
-  logger << "F (initial) =  " << std::setprecision(13) << free_energy.get_F() << "\n";
-  logger << "KS (initial) =  " << std::setprecision(13) << free_energy.ks_energy() << "\n";
   logger << "nlcglib parameters\n"
          << std::setw(10) << "T "
          << ": " << T << "\n"
@@ -419,6 +415,16 @@ nlcg_us_cpu(EnergyBase& energy_base,
           energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
       return info;
     }
+    case smearing_type::METHFESSEL_PAXTON: {
+      auto info = nlcg_us<Kokkos::HostSpace, smearing_type::METHFESSEL_PAXTON>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+    case smearing_type::COLD: {
+      auto info = nlcg_us<Kokkos::HostSpace, smearing_type::COLD>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
     default:
       throw std::runtime_error("invalid smearing type given");
   }
@@ -439,23 +445,26 @@ nlcg_us_device(EnergyBase& energy_base,
 #ifdef __NLCGLIB__CUDA
   switch (smearing) {
     case smearing_type::FERMI_DIRAC: {
-      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::FERMI_DIRAC>(energy_base,
-                                                                         us_precond_base,
-                                                                         overlap_base,
-                                                                         temp,
-                                                                         maxiter,
-                                                                         tol,
-                                                                         kappa,
-                                                                         tau,
-                                                                         restart);
+      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::FERMI_DIRAC>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
       return info;
     }
     case smearing_type::GAUSSIAN_SPLINE: {
       auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::GAUSSIAN_SPLINE>(
           energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
       return info;
-
     }
+    case smearing_type::METHFESSEL_PAXTON: {
+      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::METHFESSEL_PAXTON>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+    case smearing_type::COLD: {
+      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::COLD>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+
     default:
       throw std::runtime_error("invalid smearing type given");
   }
