@@ -26,6 +26,7 @@ enum class smearing_type
 {
   FERMI_DIRAC,
   GAUSSIAN_SPLINE,
+  GAUSS,
   METHFESSEL_PAXTON,
   COLD
 };

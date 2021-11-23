@@ -209,6 +209,9 @@ nlcg_us(EnergyBase& energy_base,
   FreeEnergy free_energy(T, energy_base, smearing_t);
   std::map<smearing_type, std::string> smear_name{
       {smearing_type::FERMI_DIRAC, "Fermi-Dirac"},
+      {smearing_type::COLD, "Cold"},
+      {smearing_type::GAUSS, "Gauss"},
+      {smearing_type::METHFESSEL_PAXTON, "Methfessel-Paxton"},
       {smearing_type::GAUSSIAN_SPLINE, "Gaussian-spline"}};
 
   auto& logger = Logger::GetInstance();
@@ -415,6 +418,11 @@ nlcg_us_cpu(EnergyBase& energy_base,
           energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
       return info;
     }
+    case smearing_type::GAUSS: {
+      auto info = nlcg_us<Kokkos::HostSpace, smearing_type::GAUSS>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
     case smearing_type::METHFESSEL_PAXTON: {
       auto info = nlcg_us<Kokkos::HostSpace, smearing_type::METHFESSEL_PAXTON>(
           energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
@@ -451,6 +459,11 @@ nlcg_us_device(EnergyBase& energy_base,
     }
     case smearing_type::GAUSSIAN_SPLINE: {
       auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::GAUSSIAN_SPLINE>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+    case smearing_type::GAUSS: {
+      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::GAUSS>(
           energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
       return info;
     }

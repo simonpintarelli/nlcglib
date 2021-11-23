@@ -68,23 +68,19 @@ struct fermi_dirac : sum_entropy<fermi_dirac>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
-    if (x < -50) {
-      return mo;
-    }
-
-    if (x > 40) {
-      return 0;
-    }
-
-    return mo / (1. + std::exp(x));
+    return mo - mo / (1 + std::exp(x));
   }
 
-  KOKKOS_INLINE_FUNCTION static double delta(double x, double mo) {
-    double fni = fn(x, mo);
-    return -1 * fni * (mo-fni) / mo;
+  KOKKOS_INLINE_FUNCTION static double delta(double x, double mo){
+      // double fni = fn(x, mo);
+      // return -1 * fni * (mo-fni) / mo;
+    double denom = std::exp(-x / 2) + std::exp(x / 2);
+    denom *= denom;
+    return mo / denom;
   }
 
-  KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo) {
+  KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
+  {
     double expx = std::exp(x);
     return mo*(std::log(1 + expx) - expx * x / (1 + expx));
   }
@@ -95,23 +91,22 @@ struct gaussian_spline : sum_entropy<gaussian_spline>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
-    // TODO: sign of x does not correspond to notation in the literature
     double sq2 = std::sqrt(2);
-    if (x < 0) {
-      return mo*(1 - 0.5 * std::exp(0.5 - std::pow(x - 1 / sq2, 2)));
+    if (x > 0) {
+      return mo*(1 - 0.5 * std::exp(-x * (sq2 + x)));
     } else {
-      return mo/2 * std::exp(0.5 - std::pow(1 / sq2 + x, 2));
+      return mo/2 * std::exp(x*(sq2-x));
     }
   }
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
-    //
     double sqrt2 = std::sqrt(2);
     if (x <= 0) {
-      return -mo/2 * std::exp((sqrt2 -x)*x) * (sqrt2 - 2*x);
+      return mo * 0.5 * std::exp((sqrt2 - x) * x) * (sqrt2 - 2 * x);
+    } else {
+      return mo * 0.5 * std::exp(-x * (sqrt2 + x)) * (sqrt2 + 2 * x);
     }
-    return -mo/2 * std::exp(-x * (sqrt2+x)) * (sqrt2 + 2*x);
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
@@ -130,13 +125,14 @@ struct gaussian_spline : sum_entropy<gaussian_spline>
   }
 };
 
+/// Cold smearing
 struct cold_smearing : sum_entropy<cold_smearing>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
     double sqrtpi = std::sqrt(constants::pi);
-    double sqrt2=  std::sqrt(2);
-    return mo*(std::exp(-0.5 + ( sqrt2 - x) * x) * sqrt2 / sqrtpi + std::erfc(1/sqrt2 -x));
+    double sqrt2 =  std::sqrt(2);
+    return mo*(std::exp(-0.5 + ( sqrt2 - x) * x) * sqrt2 / sqrtpi + 0.5*std::erfc(1/sqrt2 -x));
   }
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
@@ -144,14 +140,14 @@ struct cold_smearing : sum_entropy<cold_smearing>
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 = std::sqrt(2);
     double z = (x - 1 / sqrt2);
-    return mo * 2 * std::exp(-z*z) * (2-sqrt2*x) / sqrtpi;
+    return mo * std::exp(-z*z) * (2-sqrt2*x) / sqrtpi;
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 = std::sqrt(2);
-    return mo*std::exp(-0.5 + (sqrt2-x) * x) * (1 - sqrt2 *x) / sqrtpi;
+    return mo*std::exp(-0.5 + (sqrt2-x) * x) * (1 - sqrt2 *x) / 2 /sqrtpi;
   }
 };
 
@@ -176,7 +172,25 @@ struct methfessel_paxton_smearing : sum_entropy<methfessel_paxton_smearing>
   {
     double x2 = x * x;
     double sqrtpi = std::sqrt(constants::pi);
-    return std::exp(-x2) * (1-2*x2) / 4 / sqrtpi;
+    return mo * std::exp(-x2) * (1-2*x2) / 4 / sqrtpi;
+  }
+};
+
+struct gauss_smearing : sum_entropy<gauss_smearing>
+{
+  KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
+  {
+    return mo / 2 * (1 + std::erf(x));
+  }
+
+  KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
+  {
+    return mo * std::exp(-x*x) / std::sqrt(constants::pi);
+  }
+
+  KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
+  {
+    return mo / 2 * std::exp(-x*x) / std::sqrt(constants::pi);
   }
 };
 
@@ -191,6 +205,11 @@ class smearing<smearing_type::FERMI_DIRAC> : public fermi_dirac
 template <>
 class smearing<smearing_type::GAUSSIAN_SPLINE> : public gaussian_spline
 {};
+
+template <>
+class smearing<smearing_type::GAUSS> : public gauss_smearing
+{
+};
 
 template <>
 class smearing<smearing_type::COLD> : public cold_smearing
@@ -220,7 +239,7 @@ occupation_from_mvector(
     int n = ek.size();
     double sum = 0;
     for (int i = 0; i < n; ++i) {
-      sum += SMEARING::fn((ek(i) - mu) / kT, occ);
+      sum += SMEARING::fn((mu - ek(i)) / kT, occ);
     }
 
     return sum;
@@ -250,7 +269,7 @@ occupation_from_mvector(
         Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), n);
 
         for (int i = 0; i < n; ++i) {
-          out(i) = SMEARING::fn((ek(i) - mu) / kT, occ);
+          out(i) = SMEARING::fn((mu - ek(i)) / kT, occ);
         }
         return out;
         },
@@ -327,6 +346,11 @@ Smearing::fn(const mvector<X>& x)
     }
     case smearing_type::GAUSSIAN_SPLINE: {
       auto mu_fn = occupation_from_mvector<gaussian_spline>(
+          x, this->kT, this->occ, this->Ne, this->wk, this->tol);
+      return mu_fn;
+    }
+    case smearing_type::GAUSS: {
+      auto mu_fn = occupation_from_mvector<gauss_smearing>(
           x, this->kT, this->occ, this->Ne, this->wk, this->tol);
       return mu_fn;
     }
@@ -421,6 +445,17 @@ Smearing::entropy(const mvector<X>& fn, const mvector<Y>& en, double mu)
                                      en));
       return S;
     }
+    case smearing_type::GAUSS: {
+      double S = -1.0 * sum(wk * tapply(
+                                     [occ = occ, mu = mu, T = T](auto enk) {
+                                       double loc = smearing<smearing_type::GAUSS>::call(
+                                           enk, mu, T, occ);
+                                       return loc;
+                                     },
+                                     en));
+      return S;
+    }
+
     case smearing_type::COLD: {
       double S = -1.0 * sum(wk * tapply(
                                      [occ = occ, mu = mu, T = T](auto enk) {
