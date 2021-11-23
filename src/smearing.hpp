@@ -68,6 +68,9 @@ struct fermi_dirac : sum_entropy<fermi_dirac>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
+    if ( x < -35) {
+      return double{0};
+    }
     return mo - mo / (1 + std::exp(x));
   }
 
