@@ -146,11 +146,17 @@ struct cold_smearing : sum_entropy<cold_smearing>
     return mo * std::exp(-z*z) * (2-sqrt2*x) / sqrtpi;
   }
 
+  KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
+  {
+    double sqrt2 = std::sqrt(2.0);
+    return std::exp(-0.5 + sqrt2 * x - x * x) * (sqrt2 - 6 * x + 2 * sqrt2 * x * x) / std::sqrt(constants::pi);
+  }
+
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 = std::sqrt(2);
-    return mo*std::exp(-0.5 + (sqrt2-x) * x) * (1 - sqrt2 *x) / 2 /sqrtpi;
+    return mo*std::exp(-0.5 + (sqrt2-x) * x) * (1 - sqrt2 *x) / 2 / sqrtpi;
   }
 };
 
@@ -169,6 +175,12 @@ struct methfessel_paxton_smearing : sum_entropy<methfessel_paxton_smearing>
     double x2 = x*x;
     double sqrtpi = std::sqrt(constants::pi);
     return mo * std::exp(-x2) * (1 + 0.25*(2-4*x2)) / sqrtpi;
+  }
+
+  KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
+  {
+    double sqrtpi = std::sqrt(constants::pi);
+    return mo * std::exp(-x*x) * (2*x*x -5) / sqrtpi;
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
