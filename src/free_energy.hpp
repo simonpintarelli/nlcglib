@@ -16,7 +16,7 @@ public:
   template <class tF, class tX, class tE>
   void compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<tE>& en, double mu);
 
-  // void compute();
+  void compute();
 
   auto get_X();
   auto get_HX();
@@ -91,6 +91,10 @@ FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<t
   energy.set_fn(key_fn, vec_fn);
   energy.compute();
 
+  // update fermi energy in SIRIUS (no effect here, but make sure to leave
+  // SIRIUS in a consistent state)
+  energy.set_chemical_potential(mu);
+
   double etot = energy.get_total_energy();
   double S = smearing.entropy(fn, en, mu);
 
@@ -103,17 +107,6 @@ FreeEnergy::get_fn()
 {
   return make_mmvector<Kokkos::HostSpace>(this->energy.get_fn());
 }
-
-// void
-// FreeEnergy::compute()
-// {
-//   energy.compute();
-//   double etot = energy.get_total_energy();
-//   double S = smearing.entropy(this->get_fn(), en, mu, T);
-
-//   entropy = physical_constants::kb * T * S;
-//   free_energy = etot + entropy;
-// }
 
 auto
 FreeEnergy::get_X()
@@ -170,5 +163,18 @@ FreeEnergy::ks_energy_components()
 {
   return this->energy.get_energy_components();
 }
+
+void
+FreeEnergy::compute()
+{
+  // static_assert(false, "this needs some thoughts");
+  energy.compute();
+  double etot = energy.get_total_energy();
+  double S = smearing.entropy(this->get_fn(), this->get_ek(), energy.get_chemical_potential());
+
+  entropy = physical_constants::kb * T * S;
+  free_energy = etot + entropy;
+}
+
 
 }  // namespace nlcglib

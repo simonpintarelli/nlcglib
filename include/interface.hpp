@@ -143,6 +143,8 @@ public:
   virtual std::shared_ptr<VectorBaseZ> get_ek() = 0;
   virtual std::shared_ptr<VectorBaseZ> get_gkvec_ekin() = 0;
   virtual std::shared_ptr<ScalarBaseZ> get_kpoint_weights() = 0;
+  virtual void set_chemical_potential(double) = 0;
+  virtual double get_chemical_potential() = 0;
   virtual void print_info() const = 0;
 };
 
