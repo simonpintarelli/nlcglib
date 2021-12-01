@@ -220,6 +220,8 @@ nlcg_us(EnergyBase& energy_base,
   logger.attach_file_master("nlcg.out");
   remove("nlcg.json");
 
+  free_energy.compute();
+
   logger << "nlcglib parameters\n"
          << std::setw(10) << "T "
          << ": " << T << "\n"
