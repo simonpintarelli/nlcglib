@@ -46,8 +46,75 @@ find_chemical_potential(Fun&& fun, double mu0, double tol)
   return mu;
 }
 
+// outside because nvcc refuses to compile otherwise
+template <class X>
+struct sum_func
+{
+  template <class... KOKKOS_ARGS>
+  static double call(const Kokkos::View<double*, KOKKOS_ARGS...>& ek,
+                     double mu,
+                     double T,
+                     double mo,
+                     double (*func_ptr)(double, double))
+  {
+    int n = ek.extent(0);
+
+    double kT = physical_constants::kb * T;
+    double lsum{0};
+    Kokkos::parallel_reduce(
+        Kokkos::RangePolicy<Kokkos::Serial>(0, n),
+        KOKKOS_LAMBDA(int i, double& v) { v += (*func_ptr)(-1.0 * (ek(i) - mu) / kT, mo); },
+        lsum);
+    return lsum;
+  }
+};
+
+
+
+template <class base_class>
+struct summed
+{
+private:
+  // previously sum_func
+public:
+  template <class... ARGS>
+  static double sum_delta(const Kokkos::View<double*, ARGS...>& ek, double mu, double T, double mo)
+  {
+    return sum_func<base_class>::call(ek, mu, T, mo, &base_class::delta);
+  }
+
+
+  template <class... ARGS>
+  static double sum_fn(const Kokkos::View<double*, ARGS...>& ek,
+                            double mu,
+                            double T,
+                            double mo)
+  {
+    return sum_func<base_class>::call(ek, mu, T, mo, &base_class::fn);
+  }
+
+  template <class... ARGS>
+  static double sum_entropy(const Kokkos::View<double*, ARGS...>& ek,
+                            double mu,
+                            double T,
+                            double mo)
+  {
+    return sum_func<base_class>::call(ek, mu, T, mo, &base_class::entropy);
+  }
+
+  template <class... ARGS>
+  static double sum_dxdelta(const Kokkos::View<double*, ARGS...>& ek,
+                            double mu,
+                            double T,
+                            double mo)
+  {
+    return sum_func<base_class>::call(ek, mu, T, mo, &base_class::dxdelta);
+  }
+};
+
+
 template<class base_class>
-struct sum_entropy
+struct sum_entropy_base
 {
   template<class... ARGS>
   static double call(const Kokkos::View<double*, ARGS...>& ek, double mu, double T, double mo) {
@@ -63,8 +130,10 @@ struct sum_entropy
   }
 };
 
+
+
 /// Fermi-Dirac smearing
-struct fermi_dirac : sum_entropy<fermi_dirac>
+struct fermi_dirac : sum_entropy_base<fermi_dirac>, summed<fermi_dirac>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
@@ -82,6 +151,13 @@ struct fermi_dirac : sum_entropy<fermi_dirac>
     return mo / denom;
   }
 
+  KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
+  {
+    double expx = std::exp(x);
+    return -mo * (expx *(expx-1)) / std::pow(1+expx, 3);
+  }
+
+
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
     double expx = std::exp(x);
@@ -90,11 +166,11 @@ struct fermi_dirac : sum_entropy<fermi_dirac>
 };
 
 /// Gaussian-spline smearing
-struct gaussian_spline : sum_entropy<gaussian_spline>
+struct gaussian_spline : sum_entropy_base<gaussian_spline>, summed<gaussian_spline>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
-    double sq2 = std::sqrt(2);
+    double sq2 = std::sqrt(2.0);
     if (x > 0) {
       return mo*(1 - 0.5 * std::exp(-x * (sq2 + x)));
     } else {
@@ -104,7 +180,7 @@ struct gaussian_spline : sum_entropy<gaussian_spline>
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
-    double sqrt2 = std::sqrt(2);
+    double sqrt2 = std::sqrt(2.0);
     if (x <= 0) {
       return mo * 0.5 * std::exp((sqrt2 - x) * x) * (sqrt2 - 2 * x);
     } else {
@@ -115,7 +191,7 @@ struct gaussian_spline : sum_entropy<gaussian_spline>
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
     double sqrtpi = std::sqrt(constants::pi);
-    double sqrt2 =  std::sqrt(2);
+    double sqrt2 =  std::sqrt(2.0);
     double sqrte = std::exp(0.5);
 
     if (x > 0) {
@@ -129,19 +205,19 @@ struct gaussian_spline : sum_entropy<gaussian_spline>
 };
 
 /// Cold smearing
-struct cold_smearing : sum_entropy<cold_smearing>
+struct cold_smearing : sum_entropy_base<cold_smearing>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
     double sqrtpi = std::sqrt(constants::pi);
-    double sqrt2 =  std::sqrt(2);
+    double sqrt2 =  std::sqrt(2.0);
     return mo*(std::exp(-0.5 + ( sqrt2 - x) * x) * sqrt2 / sqrtpi + 0.5*std::erfc(1/sqrt2 -x));
   }
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
     double sqrtpi = std::sqrt(constants::pi);
-    double sqrt2 = std::sqrt(2);
+    double sqrt2 = std::sqrt(2.0);
     double z = (x - 1 / sqrt2);
     return mo * std::exp(-z*z) * (2-sqrt2*x) / sqrtpi;
   }
@@ -155,13 +231,13 @@ struct cold_smearing : sum_entropy<cold_smearing>
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
     double sqrtpi = std::sqrt(constants::pi);
-    double sqrt2 = std::sqrt(2);
+    double sqrt2 = std::sqrt(2.0);
     return mo*std::exp(-0.5 + (sqrt2-x) * x) * (1 - sqrt2 *x) / 2 / sqrtpi;
   }
 };
 
 /// first order MP smearing
-struct methfessel_paxton_smearing : sum_entropy<methfessel_paxton_smearing>
+struct methfessel_paxton_smearing : sum_entropy_base<methfessel_paxton_smearing>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
@@ -191,7 +267,7 @@ struct methfessel_paxton_smearing : sum_entropy<methfessel_paxton_smearing>
   }
 };
 
-struct gauss_smearing : sum_entropy<gauss_smearing>
+struct gauss_smearing : sum_entropy_base<gauss_smearing>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
@@ -234,7 +310,6 @@ template <>
 class smearing<smearing_type::METHFESSEL_PAXTON> : public methfessel_paxton_smearing
 {};
 
-
 template <class SMEARING, class X, class scalar_vec_t>
 auto
 occupation_from_mvector(
@@ -247,7 +322,7 @@ occupation_from_mvector(
       },
       x));
 
-  auto fd = [kT = kT, occ = occ](auto ek, double mu) {
+  auto fsum = [kT = kT, occ = occ](auto ek, double mu) {
     using memspace = typename decltype(ek)::memory_space;
     static_assert(std::is_same<memspace, Kokkos::HostSpace>::value, "must be host space");
 
@@ -256,7 +331,6 @@ occupation_from_mvector(
     for (int i = 0; i < n; ++i) {
       sum += SMEARING::fn((mu - ek(i)) / kT, occ);
     }
-
     return sum;
   };
 
@@ -264,16 +338,47 @@ occupation_from_mvector(
   auto wk_all = wk.allgather();
 
   double mu = find_chemical_potential(
-      [&x = x_all, &wk = wk_all, &Ne = Ne, &fd](double mu) {
-        double fsum = 0;
+      [&x = x_all, &wk = wk_all, &Ne = Ne, &fsum](double mu) {
+        double sum = 0;
         for (auto& wki : wk) {
           auto& key = wki.first;
-          fsum += wki.second * fd(x[key], mu);
+          sum += wki.second * fsum(x[key], mu);
         }
-        return Ne - fsum;
+        return Ne - sum;
       },
       0, /* mu0 */
       tol /* tolerance */);
+
+  // TODO: start Newton minimization for cold and m-p smearing.
+  if (std::is_same<SMEARING, cold_smearing>::value || std::is_same<SMEARING, methfessel_paxton_smearing>::value) {
+    // auto N = [&x = x_all, &wk = wk_all, &f = SMEARING::fn, kT = kT, occ = occ](double mu) {
+    //   /// TODO f(..) must sum over all x[key]
+    //   double sum = 0;
+    //   for (auto& wki : wk) {
+    //     auto& key = wki.first;
+    //     sum += wki.second * f(x[key], mu);
+    //   }
+    //   return sum;
+    // };
+    // auto dN = [&x = x_all, &wk = wk_all, &f = SMEARING::delta](double mu) {
+
+    //   double fsum = 0;
+    //   for (auto& wki : wk) {
+    //     auto& key = wki.first;
+    //     fsum += wki.second * f(x[key], mu);
+    //   }
+    //   return fsum;
+    // };
+    // auto ddN = [&x = x_all, &wk = wk_all, &f = SMEARING::dxdelta](double mu) {
+    //   double fsum = 0;
+    //   for (auto& wki : wk) {
+    //     auto& key = wki.first;
+    //     fsum += wki.second * f(x[key], mu);
+    //   }
+    //   return fsum;
+    // };
+    // Newton minimization using mu as initial value
+  }
 
   // call eval on x_host (x_host stores only the local k-points)
   auto fn_host = eval_threaded(tapply(
@@ -444,6 +549,7 @@ Smearing::entropy(const mvector<X>& fn, const mvector<Y>& en, double mu)
                                      [occ = occ, mu = mu, T = T](auto enk) {
                                        double loc = smearing<smearing_type::FERMI_DIRAC>::call(
                                            enk, mu, T, occ);
+                                       double foo = smearing<smearing_type::FERMI_DIRAC>::sum_entropy(enk, mu, T, occ);
                                        return loc;
                                      },
                                      en));
