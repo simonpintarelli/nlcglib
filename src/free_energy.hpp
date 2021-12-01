@@ -91,8 +91,7 @@ FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<t
   energy.set_fn(key_fn, vec_fn);
   energy.compute();
 
-  // update fermi energy in SIRIUS (no effect here, but make sure to leave
-  // SIRIUS in a consistent state)
+  // update fermi energy in SIRIUS (no effect here, but make sure to leave SIRIUS in a consistent state)
   energy.set_chemical_potential(mu);
 
   double etot = energy.get_total_energy();
@@ -167,13 +166,7 @@ FreeEnergy::ks_energy_components()
 void
 FreeEnergy::compute()
 {
-  // static_assert(false, "this needs some thoughts");
   energy.compute();
-  double etot = energy.get_total_energy();
-  double S = smearing.entropy(this->get_fn(), this->get_ek(), energy.get_chemical_potential());
-
-  entropy = physical_constants::kb * T * S;
-  free_energy = etot + entropy;
 }
 
 
