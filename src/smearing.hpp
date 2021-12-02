@@ -140,12 +140,18 @@ struct fermi_dirac : sum_entropy_base<fermi_dirac>, summed<fermi_dirac>
     if ( x < -35) {
       return double{0};
     }
+    if ( x > 40) {
+      return mo;
+    }
     return mo - mo / (1 + std::exp(x));
   }
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo){
       // double fni = fn(x, mo);
       // return -1 * fni * (mo-fni) / mo;
+    if (std::abs(x) > 35) {
+      return 0;
+    }
     double denom = std::exp(-x / 2) + std::exp(x / 2);
     denom *= denom;
     return mo / denom;
@@ -153,6 +159,9 @@ struct fermi_dirac : sum_entropy_base<fermi_dirac>, summed<fermi_dirac>
 
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
   {
+    if(std::abs(x) > 40) {
+      return 0;
+    }
     double expx = std::exp(x);
     return -mo * (expx *(expx-1)) / std::pow(1+expx, 3);
   }
@@ -160,6 +169,9 @@ struct fermi_dirac : sum_entropy_base<fermi_dirac>, summed<fermi_dirac>
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
+    if(std::abs(x) > 40) {
+      return 0;
+    }
     double expx = std::exp(x);
     return mo*(std::log(1 + expx) - expx * x / (1 + expx));
   }
