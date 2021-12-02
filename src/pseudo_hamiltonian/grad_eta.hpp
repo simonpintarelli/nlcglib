@@ -40,7 +40,7 @@ struct GradEtaHelper
           Kokkos::RangePolicy<Kokkos::Serial>(0, nbands),
           KOKKOS_LAMBDA(int i, Kokkos::complex<double>& result) {
             double delta = smearing<smearing_t>::delta((en_loc(i) - mu) / kT, mo);
-            result += (hii(i) - en_loc(i)) * (-1.0 * delta);
+            result += (hii(i) - en_loc(i)) * (delta);
           },
           v);
       dFdmu_loc += v.real() * wk[key];  // note that hii is real-valued
@@ -73,7 +73,7 @@ struct GradEtaHelper
       auto en_loc = en[key];
       for (int i = 0; i < nbands; ++i) {
         double delta = smearing<smearing_t>::delta((en_loc(i) - mu) / kT, mo);
-        v += -1 * delta * w_k;
+        v += delta * w_k;
       }
     }
 
@@ -152,7 +152,7 @@ public:
     Kokkos::parallel_for(
         "gEta (1)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
           double delta = smearing<smearing_t>::delta((ek(i) - mu) / kT_loc, mo);
-          mgETA(i, i) = -1 / kT_loc * (mHij(i, i) - wk * ek(i)) * (-1.0 * delta);
+          mgETA(i, i) = -1 / kT_loc * (mHij(i, i) - wk * ek(i)) * (delta);
         });
 
     if (std::abs(dmu_deta) < 1e-12) {
@@ -162,7 +162,7 @@ public:
           "gEta (2)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
             // sumfn dmuFn
             double delta = smearing<smearing_t>::delta((ek(i) - mu) / kT_loc, mo);
-            mgETA(i, i) += wk * (-1.0 * delta) / dmu_deta * (dFdmu / kT_loc);
+            mgETA(i, i) += wk * (delta) / dmu_deta * (dFdmu / kT_loc);
           });
     }
 
