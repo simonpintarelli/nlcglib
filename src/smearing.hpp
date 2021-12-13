@@ -182,16 +182,19 @@ struct gaussian_spline : sum_entropy_base<gaussian_spline>, summed<gaussian_spli
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
+    if (x > 8) return mo;
+    if (x < -8) return 0;
     double sq2 = std::sqrt(2.0);
-    if (x > 0) {
-      return mo*(1 - 0.5 * std::exp(-x * (sq2 + x)));
+    if (x <= 0) {
+      return mo / 2 * std::exp(x * (sq2 - x));
     } else {
-      return mo/2 * std::exp(x*(sq2-x));
+      return mo * (1 - 0.5 * std::exp(-x * (sq2 + x)));
     }
   }
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
+    if (std::abs(x) > 7) return 0;
     double sqrt2 = std::sqrt(2.0);
     if (x <= 0) {
       return mo * 0.5 * std::exp((sqrt2 - x) * x) * (sqrt2 - 2 * x);
@@ -202,6 +205,7 @@ struct gaussian_spline : sum_entropy_base<gaussian_spline>, summed<gaussian_spli
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
+    if (std::abs(x) > 7) return 0;
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 =  std::sqrt(2.0);
     double sqrte = std::exp(0.5);
@@ -221,6 +225,8 @@ struct cold_smearing : sum_entropy_base<cold_smearing>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
+    if (x > 8) return mo;
+    if (x < -8) return 0;
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 =  std::sqrt(2.0);
     return mo*(std::exp(-0.5 + ( sqrt2 - x) * x) * sqrt2 / sqrtpi + 0.5*std::erfc(1/sqrt2 -x));
@@ -228,6 +234,9 @@ struct cold_smearing : sum_entropy_base<cold_smearing>
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
+    if(x < -8) return 0;
+    if(x > 10) return 0;
+
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 = std::sqrt(2.0);
     double z = (x - 1 / sqrt2);
@@ -236,12 +245,16 @@ struct cold_smearing : sum_entropy_base<cold_smearing>
 
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
   {
+    if (x < -8) return 0;
+    if (x > 10) return 0;
     double sqrt2 = std::sqrt(2.0);
     return std::exp(-0.5 + sqrt2 * x - x * x) * (sqrt2 - 6 * x + 2 * sqrt2 * x * x) / std::sqrt(constants::pi);
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
+    if (x < -8) return 0;
+    if (x > 10) return 0;
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 = std::sqrt(2.0);
     return mo*std::exp(-0.5 + (sqrt2-x) * x) * (1 - sqrt2 *x) / 2 / sqrtpi;
