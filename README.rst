@@ -36,3 +36,14 @@ start the direct solver (usually between 5 and 10).
 The minimization will stop if the tolerance (tol) is reached, e.g. when the
 modulus of the descent (slope) along the search direction is less than tol. It's
 roughly proportional to the error in the total energy.
+
+
+References
+==========
+
+- Marzari, N., Vanderbilt, D., & Payne, M. C., Ensemble Density-Functional
+  Theory for Ab Initio Molecular Dynamics of Metals and Finite-Temperature
+  Insulators. , 79(7), 1337–1340. http://dx.doi.org/10.1103/PhysRevLett.79.1337
+- Freysoldt, C., Boeck, S., & Neugebauer, J. Direct minimization technique
+  for metals in density functional theory. , 79(24), 241103.
+  http://dx.doi.org/10.1103/PhysRevB.79.241103
