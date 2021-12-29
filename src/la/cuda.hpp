@@ -329,7 +329,7 @@ zheevd<Kokkos::complex<double>>::call(cusolverEigMode_t jobz,
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
   CALL_CUDA(cudaFree, (work_ptr));
   if (ret_cusolver != CUSOLVER_STATUS_SUCCESS) {
-    std::cerr << "Something went wrong\n"
+    std::cerr << "Error in DnZheevd\n"
               << "return value: " << ret_cusolver << "\n"
               << "info: " << Info << "\n";
 
