@@ -221,7 +221,7 @@ struct gaussian_spline : sum_entropy_base<gaussian_spline>, summed<gaussian_spli
 };
 
 /// Cold smearing
-struct cold_smearing : sum_entropy_base<cold_smearing>
+struct cold_smearing : sum_entropy_base<cold_smearing>, summed<cold_smearing>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
@@ -262,7 +262,7 @@ struct cold_smearing : sum_entropy_base<cold_smearing>
 };
 
 /// first order MP smearing
-struct methfessel_paxton_smearing : sum_entropy_base<methfessel_paxton_smearing>
+struct methfessel_paxton_smearing : sum_entropy_base<methfessel_paxton_smearing>, summed<methfessel_paxton_smearing>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
@@ -292,7 +292,7 @@ struct methfessel_paxton_smearing : sum_entropy_base<methfessel_paxton_smearing>
   }
 };
 
-struct gauss_smearing : sum_entropy_base<gauss_smearing>
+struct gauss_smearing : sum_entropy_base<gauss_smearing>, summed<gauss_smearing>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
@@ -572,9 +572,9 @@ Smearing::entropy(const mvector<X>& fn, const mvector<Y>& en, double mu)
     case smearing_type::FERMI_DIRAC: {
       double S = -1.0 * sum(wk * tapply(
                                      [occ = occ, mu = mu, T = T](auto enk) {
-                                       double loc = smearing<smearing_type::FERMI_DIRAC>::call(
-                                           enk, mu, T, occ);
-                                       double foo = smearing<smearing_type::FERMI_DIRAC>::sum_entropy(enk, mu, T, occ);
+                                       double loc =
+                                           smearing<smearing_type::FERMI_DIRAC>::sum_entropy(
+                                               enk, mu, T, occ);
                                        return loc;
                                      },
                                      en));
@@ -584,7 +584,7 @@ Smearing::entropy(const mvector<X>& fn, const mvector<Y>& en, double mu)
       double S = -1.0 * sum(wk * tapply(
                                      [occ = occ, mu = mu, T = T](auto enk) {
                                        double loc =
-                                           smearing<smearing_type::GAUSSIAN_SPLINE>::call(
+                                           smearing<smearing_type::GAUSSIAN_SPLINE>::sum_entropy(
                                                enk, mu, T, occ);
                                        return loc;
                                      },
@@ -594,7 +594,7 @@ Smearing::entropy(const mvector<X>& fn, const mvector<Y>& en, double mu)
     case smearing_type::GAUSS: {
       double S = -1.0 * sum(wk * tapply(
                                      [occ = occ, mu = mu, T = T](auto enk) {
-                                       double loc = smearing<smearing_type::GAUSS>::call(
+                                       double loc = smearing<smearing_type::GAUSS>::sum_entropy(
                                            enk, mu, T, occ);
                                        return loc;
                                      },
@@ -605,9 +605,8 @@ Smearing::entropy(const mvector<X>& fn, const mvector<Y>& en, double mu)
     case smearing_type::COLD: {
       double S = -1.0 * sum(wk * tapply(
                                      [occ = occ, mu = mu, T = T](auto enk) {
-                                       double loc =
-                                           smearing<smearing_type::COLD>::call(
-                                               enk, mu, T, occ);
+                                       double loc = smearing<smearing_type::COLD>::sum_entropy(
+                                           enk, mu, T, occ);
                                        return loc;
                                      },
                                      en));
@@ -616,8 +615,9 @@ Smearing::entropy(const mvector<X>& fn, const mvector<Y>& en, double mu)
     case smearing_type::METHFESSEL_PAXTON: {
       double S = -1.0 * sum(wk * tapply(
                                      [occ = occ, mu = mu, T = T](auto enk) {
-                                       double loc = smearing<smearing_type::METHFESSEL_PAXTON>::call(
-                                           enk, mu, T, occ);
+                                       double loc =
+                                           smearing<smearing_type::METHFESSEL_PAXTON>::sum_entropy(
+                                               enk, mu, T, occ);
                                        return loc;
                                      },
                                      en));
