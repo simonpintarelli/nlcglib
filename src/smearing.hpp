@@ -565,8 +565,8 @@ template <class X, class Y>
 double
 Smearing::entropy(const mvector<X>& fn, const mvector<Y>& en, double mu)
 {
-  static_assert(is_on_host<X>::value, "fn needs to be in host memory");
-  static_assert(is_on_host<Y>::value, "en needs to be in host memory");
+  static_assert(is_on_host<X>::value, "fn must reside in host memory");
+  static_assert(is_on_host<Y>::value, "en must reside in host memory");
   // this sum goes over all k-points, since wk * tapply(..) will inherit wk's communicator
   switch (smearing_t) {
     case smearing_type::FERMI_DIRAC: {
