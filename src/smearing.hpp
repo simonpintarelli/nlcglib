@@ -5,13 +5,13 @@
 #include <stdexcept>
 #include <valarray>
 #include "constants.hpp"
+#include "dft/newton_minimization_smearing.hpp"
+#include "interface.hpp"
 #include "la/mvector.hpp"
 #include "la/utils.hpp"
+#include "utils/env.hpp"
 #include "utils/logger.hpp"
 #include "utils/timer.hpp"
-#include "utils/env.hpp"
-#include "interface.hpp"
-#include "dft/newton_minimization_smearing.hpp"
 
 namespace nlcglib {
 
@@ -28,7 +28,7 @@ find_chemical_potential(Fun&& fun, double mu0, double tol)
   int counter{0};
   while (std::abs(fun(mu)) > tol && counter < nmax) {
     sp = s;
-    if ( fun (mu) > 0)
+    if (fun(mu) > 0)
       s = 1;
     else
       s = -1;
@@ -85,10 +85,7 @@ public:
 
 
   template <class... ARGS>
-  static double sum_fn(const Kokkos::View<double*, ARGS...>& ek,
-                            double mu,
-                            double T,
-                            double mo)
+  static double sum_fn(const Kokkos::View<double*, ARGS...>& ek, double mu, double T, double mo)
   {
     return sum_func<base_class>::call(ek, mu, T, mo, &base_class::fn);
   }
@@ -112,25 +109,28 @@ public:
   }
 };
 
-struct non_monotonous {};
+struct non_monotonous
+{
+};
 
 /// Fermi-Dirac smearing
 struct fermi_dirac : summed<fermi_dirac>
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
-    if ( x < -35) {
+    if (x < -35) {
       return double{0};
     }
-    if ( x > 40) {
+    if (x > 40) {
       return mo;
     }
     return mo - mo / (1 + std::exp(x));
   }
 
-  KOKKOS_INLINE_FUNCTION static double delta(double x, double mo){
-      // double fni = fn(x, mo);
-      // return -1 * fni * (mo-fni) / mo;
+  KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
+  {
+    // double fni = fn(x, mo);
+    // return -1 * fni * (mo-fni) / mo;
     if (std::abs(x) > 35) {
       return 0;
     }
@@ -141,21 +141,21 @@ struct fermi_dirac : summed<fermi_dirac>
 
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
   {
-    if(std::abs(x) > 40) {
+    if (std::abs(x) > 40) {
       return 0;
     }
     double expx = std::exp(x);
-    return -mo * (expx *(expx-1)) / std::pow(1+expx, 3);
+    return -mo * (expx * (expx - 1)) / std::pow(1 + expx, 3);
   }
 
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
-    if(std::abs(x) > 40) {
+    if (std::abs(x) > 40) {
       return 0;
     }
     double expx = std::exp(x);
-    return mo*(std::log(1 + expx) - expx * x / (1 + expx));
+    return mo * (std::log(1 + expx) - expx * x / (1 + expx));
   }
 };
 
@@ -189,7 +189,7 @@ struct gaussian_spline : summed<gaussian_spline>
   {
     if (std::abs(x) > 7) return 0;
     double sqrtpi = std::sqrt(constants::pi);
-    double sqrt2 =  std::sqrt(2.0);
+    double sqrt2 = std::sqrt(2.0);
     double sqrte = std::exp(0.5);
 
     if (x > 0) {
@@ -208,9 +208,9 @@ struct gaussian_spline : summed<gaussian_spline>
     if (x > 8 || x < -8) return 0;
 
     if (x <= 0) {
-      return -2 *mo * std::exp((sqrt2-x)*x) * ( sqrt2 -x);
+      return -2 * mo * std::exp((sqrt2 - x) * x) * (sqrt2 - x);
     } else {
-      return -2*mo * std::exp(-x*(sqrt2+x)) * x * (sqrt2 + x);
+      return -2 * mo * std::exp(-x * (sqrt2 + x)) * x * (sqrt2 + x);
     }
   }
 };
@@ -223,19 +223,20 @@ struct cold_smearing : summed<cold_smearing>, non_monotonous
     if (x > 8) return mo;
     if (x < -8) return 0;
     double sqrtpi = std::sqrt(constants::pi);
-    double sqrt2 =  std::sqrt(2.0);
-    return mo*(std::exp(-0.5 + (sqrt2 - x) * x) * sqrt2 / sqrtpi + 0.5*std::erfc(1/sqrt2 -x));
+    double sqrt2 = std::sqrt(2.0);
+    return mo *
+           (std::exp(-0.5 + (sqrt2 - x) * x) * sqrt2 / sqrtpi + 0.5 * std::erfc(1 / sqrt2 - x));
   }
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
-    if(x < -8) return 0;
-    if(x > 10) return 0;
+    if (x < -8) return 0;
+    if (x > 10) return 0;
 
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 = std::sqrt(2.0);
     double z = (x - 1 / sqrt2);
-    return mo * std::exp(-z*z) * (2-sqrt2*x) / sqrtpi;
+    return mo * std::exp(-z * z) * (2 - sqrt2 * x) / sqrtpi;
   }
 
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
@@ -243,7 +244,8 @@ struct cold_smearing : summed<cold_smearing>, non_monotonous
     if (x < -8) return 0;
     if (x > 10) return 0;
     double sqrt2 = std::sqrt(2.0);
-    return mo*std::exp(-0.5 + sqrt2 * x - x * x) * (sqrt2 - 6 * x + 2 * sqrt2 * x * x) / std::sqrt(constants::pi);
+    return mo * std::exp(-0.5 + sqrt2 * x - x * x) * (sqrt2 - 6 * x + 2 * sqrt2 * x * x) /
+           std::sqrt(constants::pi);
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
@@ -252,7 +254,7 @@ struct cold_smearing : summed<cold_smearing>, non_monotonous
     if (x > 10) return 0;
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 = std::sqrt(2.0);
-    return mo*std::exp(-0.5 + (sqrt2-x) * x) * (1 - sqrt2 *x) / 2 / sqrtpi;
+    return mo * std::exp(-0.5 + (sqrt2 - x) * x) * (1 - sqrt2 * x) / 2 / sqrtpi;
   }
 };
 
@@ -263,27 +265,27 @@ struct methfessel_paxton_smearing : summed<methfessel_paxton_smearing>, non_mono
   {
     double x2 = x * x;
     double sqrtpi = std::sqrt(constants::pi);
-    return mo/2 * (1 + std::exp(-x2) * x / sqrtpi + std::erf(x));
+    return mo / 2 * (1 + std::exp(-x2) * x / sqrtpi + std::erf(x));
   }
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
-    double x2 = x*x;
+    double x2 = x * x;
     double sqrtpi = std::sqrt(constants::pi);
-    return mo * std::exp(-x2) * (1 + 0.25*(2-4*x2)) / sqrtpi;
+    return mo * std::exp(-x2) * (1 + 0.25 * (2 - 4 * x2)) / sqrtpi;
   }
 
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
   {
     double sqrtpi = std::sqrt(constants::pi);
-    return mo * std::exp(-x*x) * (2*x*x -5) / sqrtpi;
+    return mo * std::exp(-x * x) * (2 * x * x - 5) / sqrtpi;
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
     double x2 = x * x;
     double sqrtpi = std::sqrt(constants::pi);
-    return mo * std::exp(-x2) * (1-2*x2) / 4 / sqrtpi;
+    return mo * std::exp(-x2) * (1 - 2 * x2) / 4 / sqrtpi;
   }
 };
 
@@ -296,17 +298,17 @@ struct gauss_smearing : summed<gauss_smearing>
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
-    return mo * std::exp(-x*x) / std::sqrt(constants::pi);
+    return mo * std::exp(-x * x) / std::sqrt(constants::pi);
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
-    return mo / 2 * std::exp(-x*x) / std::sqrt(constants::pi);
+    return mo / 2 * std::exp(-x * x) / std::sqrt(constants::pi);
   }
 
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
   {
-    return -2*mo*std::exp(-x*x) * x / std::sqrt(constants::pi);
+    return -2 * mo * std::exp(-x * x) * x / std::sqrt(constants::pi);
   }
 };
 
@@ -316,11 +318,13 @@ class smearing;
 
 template <>
 class smearing<smearing_type::FERMI_DIRAC> : public fermi_dirac
-{};
+{
+};
 
 template <>
 class smearing<smearing_type::GAUSSIAN_SPLINE> : public gaussian_spline
-{};
+{
+};
 
 template <>
 class smearing<smearing_type::GAUSS> : public gauss_smearing
@@ -329,23 +333,24 @@ class smearing<smearing_type::GAUSS> : public gauss_smearing
 
 template <>
 class smearing<smearing_type::COLD> : public cold_smearing
-{};
+{
+};
 
 template <>
 class smearing<smearing_type::METHFESSEL_PAXTON> : public methfessel_paxton_smearing
-{};
+{
+};
 
 // Find occuptions for Fermi-Dirac, Gauss, Gaussian-Spline smearing.
 template <class SMEARING, class X, class scalar_vec_t>
 auto
-occupation_from_mvector(
-    double T,
-    const mvector<X>& x,
-    double kT,
-    double occ,
-    int Ne,
-    const scalar_vec_t& wk,
-    double tol)
+occupation_from_mvector(double T,
+                        const mvector<X>& x,
+                        double kT,
+                        double occ,
+                        int Ne,
+                        const scalar_vec_t& wk,
+                        double tol)
 {
   auto x_host = eval_threaded(tapply(
       [](auto x) {
@@ -358,12 +363,12 @@ occupation_from_mvector(
   auto wk_all = wk.allgather();
 
   double mu = find_chemical_potential(
-      [&x = x_all, &wk = wk_all, &Ne = Ne, T=T, occ=occ](double mu) {
+      [&x = x_all, &wk = wk_all, &Ne = Ne, T = T, occ = occ](double mu) {
         double sum = 0;
         for (auto& wki : wk) {
           // sum over k-points
           auto& key = wki.first;
-          //sum_fn corresponds to ∑_i f(i), for i = 0..nbnands
+          // sum_fn corresponds to ∑_i f(i), for i = 0..nbnands
           sum += wki.second * SMEARING::sum_fn(x[key], mu, T, occ);
         }
         return Ne - sum;
@@ -372,7 +377,8 @@ occupation_from_mvector(
       tol /* tolerance */);
 
   // // TODO: start Newton minimization for cold and m-p smearing.
-  // if (std::is_same<SMEARING, cold_smearing>::value || std::is_same<SMEARING, methfessel_paxton_smearing>::value) {
+  // if (std::is_same<SMEARING, cold_smearing>::value || std::is_same<SMEARING,
+  // methfessel_paxton_smearing>::value) {
   //   auto N = [&x = x_all, &wk = wk_all, kT = kT, occ = occ, T=T](double mu) {
   //     /// TODO f(..) must sum over all x[key]
   //     double sum = 0;
@@ -409,13 +415,14 @@ occupation_from_mvector(
         using memspace = typename decltype(ek)::memory_space;
         static_assert(std::is_same<memspace, Kokkos::HostSpace>::value, "must be host space");
         int n = ek.size();
-        Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), n);
+        Kokkos::View<double*, Kokkos::HostSpace> out(
+            Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), n);
 
         for (int i = 0; i < n; ++i) {
           out(i) = SMEARING::fn((mu - ek(i)) / kT, occ);
         }
         return out;
-        },
+      },
       x_host));
 
   using target_memspc = typename X::memory_space;
@@ -435,14 +442,13 @@ occupation_from_mvector(
 // Find occupations non-monotonous smearing types, i.e. Methfessel-Paxton and cold smearing.
 template <class SMEARING, class X, class scalar_vec_t>
 auto
-occupation_from_mvector_newton(
-    double T,
-    const mvector<X>& x,
-    double kT,
-    double occ,
-    int Ne,
-    const scalar_vec_t& wk,
-    double tol)
+occupation_from_mvector_newton(double T,
+                               const mvector<X>& x,
+                               double kT,
+                               double occ,
+                               int Ne,
+                               const scalar_vec_t& wk,
+                               double tol)
 {
   auto x_host = eval_threaded(tapply(
       [](auto x) {
@@ -456,12 +462,12 @@ occupation_from_mvector_newton(
 
   // find initial value for the Newton minimization using Gauss smearing
   double mu0 = find_chemical_potential(
-      [&x = x_all, &wk = wk_all, &Ne = Ne, T=T, occ=occ](double mu) {
+      [&x = x_all, &wk = wk_all, &Ne = Ne, T = T, occ = occ](double mu) {
         double sum = 0;
         for (auto& wki : wk) {
           // sum over k-points
           auto& key = wki.first;
-          //sum_fn corresponds to ∑_i f(i), for i = 0..nbnands
+          // sum_fn corresponds to ∑_i f(i), for i = 0..nbnands
           sum += wki.second * gauss_smearing::sum_fn(x[key], mu, T, occ);
         }
         return Ne - sum;
@@ -499,7 +505,8 @@ occupation_from_mvector_newton(
   try {
     mu = newton_minimization_chemical_potential(N, dN, ddN, mu0, Ne, tol);
   } catch (failed_to_converge) {
-    Logger::GetInstance() << "Warning: newton minimization for Fermi energy failed, fallback to bisection search.\n";
+    Logger::GetInstance()
+        << "Warning: newton minimization for Fermi energy failed, fallback to bisection search.\n";
     // TODO print a warning that fallback to bisection search was used
     mu = find_chemical_potential(
         [&x = x_all, &wk = wk_all, &Ne = Ne, T = T, occ = occ](double mu) {
@@ -514,7 +521,6 @@ occupation_from_mvector_newton(
         },
         0, /* mu0 */
         tol /* tolerance */);
-
   }
 
   // call eval on x_host (x_host stores only the local k-points)
@@ -523,13 +529,14 @@ occupation_from_mvector_newton(
         using memspace = typename decltype(ek)::memory_space;
         static_assert(std::is_same<memspace, Kokkos::HostSpace>::value, "must be host space");
         int n = ek.size();
-        Kokkos::View<double*, Kokkos::HostSpace> out(Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), n);
+        Kokkos::View<double*, Kokkos::HostSpace> out(
+            Kokkos::view_alloc(Kokkos::WithoutInitializing, "fn"), n);
 
         for (int i = 0; i < n; ++i) {
           out(i) = SMEARING::fn((mu - ek(i)) / kT, occ);
         }
         return out;
-        },
+      },
       x_host));
 
   using target_memspc = typename X::memory_space;
@@ -548,13 +555,15 @@ occupation_from_mvector_newton(
 }
 
 
-template<class smearing_t, class X, class scalar_vec_t>
-auto occupation_from_mvector1(double T, const mvector<X>& x, double occ, int Ne, const scalar_vec_t& wk, double tol)
+template <class smearing_t, class X, class scalar_vec_t>
+auto
+occupation_from_mvector1(
+    double T, const mvector<X>& x, double occ, int Ne, const scalar_vec_t& wk, double tol)
 {
   bool skip_newton = env::get_skip_newton_efermi();
-  std::cout << "skip newton: " << skip_newton << "\n";
 
-  // std::cout << " non-monotonous smearing? " << std::is_base_of<non_monotonous, smearing_t>::value << "\n";
+  // std::cout << " non-monotonous smearing? " << std::is_base_of<non_monotonous, smearing_t>::value
+  // << "\n";
 
   // check if newton should be ignored of env.
   double kT = physical_constants::kb * T;
@@ -569,7 +578,11 @@ auto occupation_from_mvector1(double T, const mvector<X>& x, double occ, int Ne,
 class Smearing
 {
 public:
-  Smearing(double T, int num_electrons, double max_occ, const mvector<double>& wk, enum smearing_type smearing_t)
+  Smearing(double T,
+           int num_electrons,
+           double max_occ,
+           const mvector<double>& wk,
+           enum smearing_type smearing_t)
       : T(T)
       , Ne(num_electrons)
       , occ(max_occ)
@@ -656,9 +669,8 @@ Smearing::ek(const mvector<X>& fn)
           [occ = occ, kT = kT](auto fi) {
             auto x = inverse_fermi_dirac(fi, occ);
             using exec = typename decltype(fi)::execution_space;
-            Kokkos::parallel_for(
-                Kokkos::RangePolicy<exec>(0, fi.size()),
-                [=](int i) { x(i) = x(i) * kT; });
+            Kokkos::parallel_for(Kokkos::RangePolicy<exec>(0, fi.size()),
+                                 [=](int i) { x(i) = x(i) * kT; });
             return x;
           },
           fn));
@@ -670,9 +682,8 @@ Smearing::ek(const mvector<X>& fn)
           [occ = occ, kT = kT](auto fn) {
             auto x = inverse_gaussian_spline(fn, occ);
             using exec = typename decltype(fn)::execution_space;
-            Kokkos::parallel_for(
-                Kokkos::RangePolicy<exec>(0, fn.size()),
-                [=](int i) { x(i) = x(i) * kT; });
+            Kokkos::parallel_for(Kokkos::RangePolicy<exec>(0, fn.size()),
+                                 [=](int i) { x(i) = x(i) * kT; });
             return x;
           },
           fn);
