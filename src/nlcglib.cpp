@@ -51,6 +51,7 @@ print_info(double free_energy,
            double entropy,
            double slope_x,
            double slope_eta,
+           double efermi,
            int step)
 {
   auto& logger = Logger::GetInstance();
@@ -58,8 +59,9 @@ print_info(double free_energy,
          << std::fixed << std::setprecision(13) << free_energy << "\t" << std::setw(15) << std::left
          << std::scientific << std::setprecision(13) << slope_x << " " << std::scientific
          << std::setprecision(13) << slope_eta << "\n"
-         << "\t kT * S   : " << std::fixed << std::setprecision(13) << entropy << "\n"
-         << "\t KS energy: " << std::fixed << std::setprecision(13) << ks_energy << "\n";
+         << "\t kT * S       : " << std::fixed << std::setprecision(13) << entropy << "\n"
+         << "\t Fermi energy : " << std::fixed << std::setprecision(13) << efermi << "\n"
+         << "\t KS energy    : " << std::fixed << std::setprecision(13) << ks_energy << "\n";
 
   nlcg_info info;
   info.F = free_energy;
@@ -77,6 +79,7 @@ cg_write_step_json(double free_energy,
                    double entropy,
                    double slope_x,
                    double slope_eta,
+                   double efermi,
                    T1&& ek,
                    T2&& fn,
                    std::map<std::string, double> energy_components,
@@ -89,6 +92,7 @@ cg_write_step_json(double free_energy,
   logger.log("entropy", entropy);
   logger.log("slope_x", slope_x);
   logger.log("slope_eta", slope_eta);
+  logger.log("fermi_energy", efermi);
   logger.log("ks_energy_comps", energy_components);
 
   if (step % 10 == 0) {
@@ -286,6 +290,7 @@ nlcg_us(EnergyBase& energy_base,
                         free_energy.get_entropy(),
                         slope,
                         -1,
+                        free_energy.get_chemical_potential(),
                         cg_iter);
       free_energy.ehandle().print_info();  // print magnetization
       logger << TO_STDOUT << "kT * S   : " << std::setprecision(13) << free_energy.get_entropy()
@@ -319,6 +324,7 @@ nlcg_us(EnergyBase& energy_base,
                          free_energy.get_entropy(),
                          slope,
                          -1,
+                         free_energy.get_chemical_potential(),
                          ek,
                          fn,
                          free_energy.ks_energy_components(),
@@ -332,6 +338,7 @@ nlcg_us(EnergyBase& energy_base,
                         free_energy.get_entropy(),
                         slope /* slope in X and eta, temporarily */,
                         -1 /* need to separate the two slopes first */,
+                        free_energy.get_chemical_potential(),
                         cg_iter);
       free_energy.ehandle().print_info();  // print magnetization
 

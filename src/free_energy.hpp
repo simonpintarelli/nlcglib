@@ -35,6 +35,7 @@ public:
   const auto& ehandle() const { return energy; }
 
   Smearing& get_smearing() { return smearing; }
+  double get_chemical_potential() const { return energy.get_chemical_potential(); }
 
 private:
   double T;
