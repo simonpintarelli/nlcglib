@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iomanip>
 #include <stdexcept>
+#include "utils/logger.hpp"
 
 namespace nlcglib {
 
@@ -38,10 +39,8 @@ newton_minimization_chemical_potential(Nt&& N, DNt&& dN, D2Nt&& ddN, double mu0,
         // std::printf("%d Nf: %.4f, dNf: %.4f, ddF: %.4f, mu: %.4f\n", iter, Nf, dNf, ddF, mu);
 
         if (std::abs(ddF) < 1e-10) {
-          std::stringstream s;
-          s << "Newton minimization (chemical potential) failed because 2nd derivative too close "
-               "to zero!\n";
-          std::cout << "Newton failed"  << "\n";
+          Logger::GetInstance() << "*Warning* Newton minimization failed (2nd deriv~=0) to find the Fermi energy, "
+                                   "using bisection search.\n";
           throw failed_to_converge();
           // TERMINATE(s);
         }
@@ -50,12 +49,17 @@ newton_minimization_chemical_potential(Nt&& N, DNt&& dN, D2Nt&& ddN, double mu0,
         mu = mu - dF / std::abs(ddF);
 
         if (std::abs(dF) < tol) {
-            return mu;
+          if (std::abs(N(mu) - ne) > tol) {
+            std::cout << "newton got stuck in a flat region" << "\n";
+            throw failed_to_converge();
+          }
+          return mu;
         }
 
         iter++;
         if (iter > maxstep) {
             std::stringstream s;
+            Logger::GetInstance() << "*Warning* Newton minimization failed (maxsteps) to find the Fermi energy, using bisection search.\n";
             std::cout << "Newton failed" << "\n";
             s << "Newton minimization (chemical potential) failed after 10000 steps!\n";
             throw failed_to_converge();
