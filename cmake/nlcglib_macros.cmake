@@ -1,20 +1,26 @@
 MACRO(NLCGLIB_SETUP_TARGET _target)
   add_dependencies(${_target} nlcglib_internal)
   # message("INTERNAL LIB LOC: ${nlcglib_internal_location}")
-  target_link_libraries(${_target} PRIVATE ${nlcglib_internal_location})
-  target_link_libraries(${_target} PRIVATE Kokkos::kokkos)
-  target_link_libraries(${_target} PRIVATE ${LAPACK_LIBRARIES})
-  target_link_libraries(${_target} PRIVATE MPI::MPI_CXX)
-  if(USE_OPENMP)
-    target_link_libraries(${_target} PRIVATE OpenMP::OpenMP_CXX)
-  endif()
+  target_link_libraries(
+    ${_target} PRIVATE
+    ${nlcglib_internal_location}
+    Kokkos::kokkos
+    ${LAPACK_LIBRARIES}
+    MPI::MPI_CXX
+    $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
+    $<TARGET_NAME_IF_EXISTS:nlcglib::cudalibs>
+    nlohmann_json::nlohmann_json
+    )
+
+  target_include_directories(${_target} PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/include
+    )
 
   if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
     target_compile_definitions(${_target} PRIVATE __CLANG)
   endif()
-  target_include_directories(${_target} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-  target_include_directories(${_target} PRIVATE ${CMAKE_SOURCE_DIR}/include)
-  target_link_libraries(${_target} PRIVATE ${CUDA_CUBLAS_LIBRARIES} ${CUDA_cusolver_LIBRARY})
+
   target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_OPENMP}>:__USE_OPENMP>)
   if(LAPACK_VENDOR MATCHES MKL)
     target_compile_definitions(${_target} PUBLIC __USE_MKL)
@@ -24,6 +30,5 @@ MACRO(NLCGLIB_SETUP_TARGET _target)
   endif()
   target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_OPENMP}>:__USE_OPENMP>)
   target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_CUDA}>:__NLCGLIB__CUDA>)
-  target_link_libraries(${_target} PRIVATE nlohmann_json::nlohmann_json)
   target_include_directories(${_target} PUBLIC $<TARGET_PROPERTY:Kokkos::kokkoscore,INTERFACE_INCLUDE_DIRECTORIES>)
 ENDMACRO()

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 project(nlcglib LANGUAGES CXX VERSION 0.8)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -30,6 +30,7 @@ find_package(Kokkos)
 if(USE_CUDA)
   find_package(CUDA REQUIRED)
   enable_language(CUDA)
+  include(cmake/cudalibs_target.cmake)
 endif()
 find_package(MPI REQUIRED)
 
