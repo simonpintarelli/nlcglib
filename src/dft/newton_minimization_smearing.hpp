@@ -45,12 +45,12 @@ newton_minimization_chemical_potential(Nt&& N, DNt&& dN, D2Nt&& ddN, double mu0,
           // TERMINATE(s);
         }
 
+        double step = dF / std::abs(ddF);
+        mu = mu - step;
 
-        mu = mu - dF / std::abs(ddF);
-
-        if (std::abs(dF) < tol) {
+        if (std::abs(step) < tol) {
           if (std::abs(N(mu) - ne) > tol) {
-            std::cout << "newton got stuck in a flat region" << "\n";
+            std::cout << "newton got stuck in a flat region, after niter=" << iter << ", ddF: " << ddF << "\n";
             throw failed_to_converge();
           }
           return mu;
