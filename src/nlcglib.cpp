@@ -292,6 +292,18 @@ nlcg_us(EnergyBase& energy_base,
                         -1,
                         free_energy.get_chemical_potential(),
                         cg_iter);
+      cg_write_step_json(free_energy.get_F(),
+                         free_energy.ks_energy(),
+                         free_energy.get_entropy(),
+                         slope,
+                         -1,
+                         free_energy.get_chemical_potential(),
+                         ek,
+                         fn,
+                         free_energy.ks_energy_components(),
+                         commk,
+                         cg_iter);
+
       free_energy.ehandle().print_info();  // print magnetization
       logger << TO_STDOUT << "kT * S   : " << std::setprecision(13) << free_energy.get_entropy()
              << "\n"
