@@ -29,6 +29,7 @@ class Nlcglib(CMakePackage, CudaPackage):
             values=("Debug", "Release", "RelWithDebInfo"),
             )
 
+    depends_on('mpi')
     depends_on('lapack')
     depends_on('kokkos')
     depends_on('kokkos+openmp', when='+openmp')
