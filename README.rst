@@ -15,7 +15,7 @@ package files provided in this repository (in ``./repo``), as described below.
 
    git clone -b develop https://github.com/simonpintarelli/nlcglib
    # add the spack-repo
-   spack repo add nlcglib/repo
+   spack repo add nlcglib/spack
    # build sirius/nlcglib with cuda enabled
    spack install q-e-sirius@develop-ristretto%gcc ^sirius+cuda+openmp+nlcglib
    #  build sirius/nlcglib without cuda
