@@ -307,7 +307,7 @@ template<class T, class... ARGS, class O>
 std::enable_if_t<KokkosDVector<T**>::storage_t::dimension::rank==2>
 print(const KokkosDVector<T**, ARGS...>& mat, O&& out, int precision = 4)
 {
-  double tol = 1e-14;
+  double tol = 1e-18;
   auto hmat = create_host_mirror(mat);
   auto& harr = hmat.array();
   for (int i = 0; i < harr.extent(0); ++i) {

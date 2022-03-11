@@ -225,7 +225,7 @@ struct cold_smearing : summed<cold_smearing>, non_monotonous
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 = std::sqrt(2.0);
     return mo *
-           (std::exp(-0.5 + (sqrt2 - x) * x) * sqrt2 / sqrtpi + 0.5 * std::erfc(1 / sqrt2 - x));
+           (std::exp(-0.5 + (sqrt2 - x) * x) / sqrt2 / sqrtpi + 0.5 * std::erfc(1 / sqrt2 - x));
   }
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
@@ -376,39 +376,6 @@ occupation_from_mvector(double T,
       0, /* mu0 */
       tol /* tolerance */);
 
-  // // TODO: start Newton minimization for cold and m-p smearing.
-  // if (std::is_same<SMEARING, cold_smearing>::value || std::is_same<SMEARING,
-  // methfessel_paxton_smearing>::value) {
-  //   auto N = [&x = x_all, &wk = wk_all, kT = kT, occ = occ, T=T](double mu) {
-  //     /// TODO f(..) must sum over all x[key]
-  //     double sum = 0;
-  //     for (auto& wki : wk) {
-  //       auto& key = wki.first;
-  //       sum += wki.second * SMEARING::sum_fn(x[key], mu, T, occ);
-  //     }
-  //     return sum;
-  //   };
-  //   auto dN = [&x = x_all, &wk = wk_all, T, occ](double mu) {
-
-  //     double fsum = 0;
-  //     for (auto& wki : wk) {
-  //       auto& key = wki.first;
-  //       fsum += wki.second * SMEARING::sum_delta(x[key], mu, T, occ);
-  //     }
-  //     return fsum;
-  //   };
-  //   auto ddN = [&x = x_all, &wk = wk_all, T, occ](double mu) {
-  //     double fsum = 0;
-  //     for (auto& wki : wk) {
-  //       auto& key = wki.first;
-  //       fsum += wki.second * SMEARING::sum_dxdelta(x[key], mu, T, occ);
-  //     }
-  //     return fsum;
-  //   };
-  //   // // Newton minimization using mu as initial value
-  //   double mu = newton_minimization_chemical_potential(N, dN, ddN, mu, Ne, 1e-10);
-  // }
-
   // call eval on x_host (x_host stores only the local k-points)
   auto fn_host = eval_threaded(tapply(
       [mu = mu, kT = kT, occ = occ](auto ek) {
@@ -463,7 +430,7 @@ occupation_from_mvector_newton(double T,
   // find initial value for the Newton minimization using Gauss smearing
   double mu0 = find_chemical_potential(
       [&x = x_all, &wk = wk_all, &Ne = Ne, T = T, occ = occ](double mu) {
-        double sum = 0;
+        double sum{0};
         for (auto& wki : wk) {
           // sum over k-points
           auto& key = wki.first;
@@ -476,7 +443,7 @@ occupation_from_mvector_newton(double T,
       tol /* tolerance */);
 
   auto N = [&x = x_all, &wk = wk_all, occ = occ, T = T](double mu) {
-    double sum = 0;
+    double sum{0};
     for (auto& wki : wk) {
       auto& key = wki.first;
       sum += wki.second * SMEARING::sum_fn(x[key], mu, T, occ);
@@ -484,7 +451,7 @@ occupation_from_mvector_newton(double T,
     return sum;
   };
   auto dN = [&x = x_all, &wk = wk_all, T, occ, kT](double mu) {
-    double fsum = 0;
+    double fsum{0};
     for (auto& wki : wk) {
       auto& key = wki.first;
       fsum += wki.second / kT * SMEARING::sum_delta(x[key], mu, T, occ);
@@ -492,7 +459,7 @@ occupation_from_mvector_newton(double T,
     return fsum;
   };
   auto ddN = [&x = x_all, &wk = wk_all, T, occ, kT](double mu) {
-    double fsum = 0;
+    double fsum{0};
     for (auto& wki : wk) {
       auto& key = wki.first;
       fsum += wki.second / (kT * kT) * SMEARING::sum_dxdelta(x[key], mu, T, occ);
@@ -500,7 +467,7 @@ occupation_from_mvector_newton(double T,
     return fsum;
   };
 
-  // // Newton minimization using mu as initial value
+  // // Newton minimization using mu0 as initial value
   double mu;
   try {
     mu = newton_minimization_chemical_potential(N, dN, ddN, mu0, Ne, tol);

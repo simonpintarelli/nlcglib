@@ -38,6 +38,7 @@ struct nlcg_info
   double F;
   double S;
   int iter;
+  bool converged{false};
 };
 
 

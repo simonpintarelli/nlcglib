@@ -313,6 +313,8 @@ nlcg_us(EnergyBase& energy_base,
              << "NLCG SUCCESS\n";
       logger.flush();
 
+      info.converged = true;
+
       return info;
     }
     try {
