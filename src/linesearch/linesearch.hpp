@@ -135,7 +135,9 @@ line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_resta
   // evaluate FE at predicted minimum
   auto ek_ul = G(t_min);
   double F_min = FE.get_F();
-  Logger::GetInstance() << "\t t_min = " << t_min <<  ", q line prediction error: " << std::scientific << std::setprecision(8) << (F_pred - F_min) <<  "\n";
+  Logger::GetInstance() << "\t t_min = " << t_min
+                        <<  " q line prediction error: " << std::scientific << std::setprecision(8) << (F_pred - F_min) <<  "\n"
+                        << " dE: " << std::scientific << std::setprecision(8) << (F0 - F_min) << "\n";
 
   if (F_min > F0) {
     Logger::GetInstance() << std::setprecision(13)
