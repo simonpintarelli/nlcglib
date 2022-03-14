@@ -136,14 +136,14 @@ line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_resta
   auto ek_ul = G(t_min);
   double F_min = FE.get_F();
   Logger::GetInstance() << "\t t_min = " << t_min
-                        <<  " q line prediction error: " << std::scientific << std::setprecision(8) << (F_pred - F_min) <<  "\n"
+                        << " q line prediction error: " << std::scientific << std::setprecision(8) << (F_pred - F_min)
                         << " dE: " << std::scientific << std::setprecision(8) << (F0 - F_min) << "\n";
 
   if (F_min > F0) {
     Logger::GetInstance() << std::setprecision(13)
-                          << "\t quadratic line search failed:"
+                          << "\t quadratic line search failed:\n"
                           << "\t - F_min: " << F_min << "\n"
-                          << "\t  -F0:    " << F0 << "\n\n";
+                          << "\t - F0:    " << F0 << "\n\n";
     throw StepError();
   }
 
