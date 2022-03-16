@@ -39,18 +39,17 @@ newton_minimization_chemical_potential(Nt&& N, DNt&& dN, D2Nt&& ddN, double mu0,
         // std::printf("%d Nf: %.4f, dNf: %.4f, ddF: %.4f, mu: %.4f\n", iter, Nf, dNf, ddF, mu);
 
         if (std::abs(ddF) < 1e-10) {
-          Logger::GetInstance() << "*Warning* Newton minimization failed (2nd deriv~=0) to find the Fermi energy, "
-                                   "using bisection search.\n";
+          Logger::GetInstance() << "*Warning* Efermi Newton minimization failed (2nd deriv~=0)\n";
           throw failed_to_converge();
-          // TERMINATE(s);
         }
 
         double step = dF / std::abs(ddF);
         mu = mu - step;
 
         if (std::abs(step) < tol) {
-          if (std::abs(N(mu) - ne) > tol) {
-            std::cout << "newton got stuck in a flat region, after niter=" << iter << ", ddF: " << ddF << "\n";
+          double charge_diff = N(mu) - ne;
+          if (std::abs(charge_diff) > tol) {
+            Logger::GetInstance() << "*Warning* Newton got stuck in a flat region, iteration: " << iter << ", dx: " << step << ", error: " << charge_diff << "\n";
             throw failed_to_converge();
           }
           return mu;
@@ -58,12 +57,8 @@ newton_minimization_chemical_potential(Nt&& N, DNt&& dN, D2Nt&& ddN, double mu0,
 
         iter++;
         if (iter > maxstep) {
-            std::stringstream s;
             Logger::GetInstance() << "*Warning* Newton minimization failed (maxsteps) to find the Fermi energy, using bisection search.\n";
-            std::cout << "Newton failed" << "\n";
-            s << "Newton minimization (chemical potential) failed after 10000 steps!\n";
             throw failed_to_converge();
-            // TERMINATE(s);
         }
     }
 }
