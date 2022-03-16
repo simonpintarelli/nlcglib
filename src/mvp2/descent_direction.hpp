@@ -127,7 +127,7 @@ descent_direction<SMEARING_TYPE>::conjugated(const mem_t& memspc,
   double slope = fr + gamma * slope_zp;
 
   eval_threaded(
-      // note: this operation is in-place and overwrite z_x, z_eta
+      // note: this operation is in-place and overwrites z_x, z_eta
       tapply_async(
           [gamma](auto delta_x, auto delta_eta, auto z_x, auto z_eta) {
             // Z <- gamma*Z + delta
