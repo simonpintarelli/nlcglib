@@ -410,7 +410,10 @@ nlcg_us(EnergyBase& energy_base,
       logger.flush();
     } catch (DescentError&) {
       // CG failed abort
-      logger << "WARNING: No descent direction found, nlcg didn't reach final tolerance\n";
+      logger << "[NLCG] Error: No descent direction found, nlcg didn't reach final tolerance\n";
+      return info;
+    } catch(SlopeError&) {
+      logger << "[NLCG] Error: slope > 0 after CG-restart. Abort.\n";
       return info;
     }
   }
