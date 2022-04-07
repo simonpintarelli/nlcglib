@@ -37,6 +37,7 @@ iterations to obtain a good initial guess.
    ...
    /
    &DIRECT_MINIMIZATION
+      nlcg_method = 'mvp2'
       nlcg_maxiter = 300
       nlcg_conv_thr = 1e-9
       nlcg_restart = 10
@@ -45,10 +46,9 @@ iterations to obtain a good initial guess.
       nlcg_processing_unit 'none' | 'cpu' | 'gpu' '# default=none, i.e. will run on gpu if there is cuda device
    /
 
-In most cases, only `nlcg_maxiter`, `nlcg_restart` need to be set.
-`nlcg_conv_thr` is 1e-9 by default, and is equivalent to the `conv_thr` in the Electrons section of QE.
+`nlcg_conv_thr` has the same meaning as `conv_thr` in the ELECTRONS namelist of the QE input, but note that `nlcg_conv_thr` is set to 1e-9 by default, while `conv_thr` defaults to 1e-6.
 
-In order to enable the robust optimization an empty namelist can be inserted in the QE input file after the ELECTRONS namemlist:
+The default values should work for most cases, i.e. to enable the robust optimization, simply insert an empty namelist in the QE input file after the ELECTRONS namemlist:
 
 .. code::
 
