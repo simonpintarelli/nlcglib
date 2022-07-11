@@ -18,10 +18,6 @@ MACRO(NLCGLIB_SETUP_TARGET _target)
     ${CMAKE_SOURCE_DIR}/include
     )
 
-  if(${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
-    target_compile_definitions(${_target} PRIVATE __CLANG)
-  endif()
-
   target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_OPENMP}>:__USE_OPENMP>)
   if(LAPACK_VENDOR MATCHES MKL)
     target_compile_definitions(${_target} PUBLIC __USE_MKL)
