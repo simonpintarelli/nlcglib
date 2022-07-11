@@ -23,7 +23,7 @@
   }
 
 
-#ifdef __NLCGLIB_CUDA
+#ifdef __NLCGLIB__CUDA
 namespace cusolver {
 
 void
@@ -56,4 +56,4 @@ struct cusolverDnHandle
 };
 
 }  // namespace cusolver
-#endif  // __NLCGLIB_CUDA
+#endif  // __NLCGLIB__CUDA

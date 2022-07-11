@@ -1,2 +1,3 @@
 spack-build-*
 *~undo-tree~
+__pycache__/

@@ -3,12 +3,12 @@
 #include <cuda_runtime_api.h>
 #include <Kokkos_Core.hpp>
 #include <complex>
+#include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include "backtrace.hpp"
 #include "cublas.hpp"
 #include "cusolver.hpp"
-#include <cstdlib>
-#include <cstdio>
 
 #define CALL_CUDA(func__, args__)                       \
   {                                                     \
@@ -42,7 +42,7 @@
 
 namespace nlcglib {
 namespace cuda {
-#ifdef __NLCGLIB_CUDA
+#ifdef __NLCGLIB__CUDA
 struct cusolver_base
 {
   static const cublasFillMode_t LOWER{CUBLAS_FILL_MODE_LOWER};
@@ -497,6 +497,6 @@ struct geam<Kokkos::complex<double>>
   }
 };
 
-#endif  //__NLCGLIB_CUDA
+#endif  //__NLCGLIB__CUDA
 }  // namespace cuda
 }  // namespace nlcglib

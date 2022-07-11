@@ -4,6 +4,7 @@
 #include <Kokkos_Complex.hpp>
 #include <complex>
 #include <cstdio>
+#include <cassert>
 
 namespace nlcglib {
 #define CALL_DEVICE_API(func__, args__)                      \

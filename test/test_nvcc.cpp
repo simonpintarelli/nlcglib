@@ -37,7 +37,7 @@ struct functor
 typedef Kokkos::complex<double> complex_double;
 
 
-#ifdef __NLCGLIB_CUDA
+#ifdef __NLCGLIB__CUDA
 auto run() {
 
   typedef KokkosDVector<complex_double**,
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
   Kokkos::initialize();
   Communicator::init(argc, argv);
 
-#ifdef __NLCGLIB_CUDA
+#ifdef __NLCGLIB__CUDA
   cuProfilerStart();
   run();
   cuProfilerStop();

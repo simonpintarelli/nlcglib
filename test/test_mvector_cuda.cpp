@@ -4,7 +4,7 @@
 #include "smearing.hpp"
 #include "la/mvector.hpp"
 
-#ifdef __NLCGLIB_CUDA
+#ifdef __NLCGLIB__CUDA
 void run()
 {
   int n = 10;
@@ -36,7 +36,7 @@ main(int argc, char *argv[])
 {
   Kokkos::initialize();
 
-#ifdef __NLCGLIB_CUDA
+#ifdef __NLCGLIB__CUDA
   run();
 #endif
   Kokkos::finalize();
