@@ -3,10 +3,10 @@
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-from spack import *
+from spack.package import *
 
 
-class Nlcglib(CMakePackage, CudaPackage):
+class Nlcglib(CMakePackage, CudaPackage,  ROCmPackage):
     """Nonlinear CG methods for wave-function optimization in DFT."""
 
     homepage = "https://github.com/simonpintarelli/nlcglib"
@@ -22,6 +22,7 @@ class Nlcglib(CMakePackage, CudaPackage):
     variant('wrapper', default=False, description="Use nvcc-wrapper for CUDA build")
     variant('openmp', default=True)
     variant('cuda', default=False)
+    variant('rocm', default=False)
     variant('tests', default=False)
     variant('build_type',
             default="Release",
@@ -31,14 +32,21 @@ class Nlcglib(CMakePackage, CudaPackage):
 
     depends_on('mpi')
     depends_on('lapack')
+
     depends_on('kokkos')
     depends_on('kokkos+openmp', when='+openmp')
+    # cuda dependencies
     depends_on('kokkos-nvcc-wrapper', when='+wrapper')
     depends_on('kokkos+cuda~cuda_relocatable_device_code+cuda_lambda+wrapper', when='+wrapper')
     depends_on('cmake@3.15:', type='build')
     depends_on('kokkos+cuda~cuda_relocatable_device_code+cuda_lambda+openmp+wrapper',
                when='+openmp+wrapper')
     depends_on('kokkos+cuda', when='+cuda')
+    # rocm dependencies
+    depends_on('kokkos+rocm', when='+rocm')
+    depends_on('rocblas', when='+rocm')
+    depends_on('rocsolver', when='+rocm')
+
     depends_on('googletest', type='build', when='+tests')
     depends_on('nlohmann-json')
 
@@ -74,5 +82,10 @@ class Nlcglib(CMakePackage, CudaPackage):
                 options += ['-DCMAKE_CUDA_FLAGS=-arch=sm_{0}'.format(cuda_arch[0])]
         else:
             options.append('-DUSE_CUDA=Off')
+
+        if '+rocm' in self.spec:
+            options.append('-DUSE_ROCM=On')
+            options.append(self.define(
+                'CMAKE_CXX_COMPILER', self.spec['hip'].hipcc))
 
         return options
