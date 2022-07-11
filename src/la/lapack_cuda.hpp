@@ -5,6 +5,7 @@
 
 namespace nlcglib {
 
+#ifdef __NLCGLIB_CUDA
 /// Hermitian eigenvalue problem CUDA
 template <class T, class LAYOUT, class... KOKKOS>
 std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space,
@@ -257,5 +258,5 @@ add(M0& C,
     throw std::runtime_error("not implemented.");
   }
 }
-
+#endif
 }  // namespace nlcglib

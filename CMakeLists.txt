@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 14)
 # user variables
 set(USE_OPENMP On CACHE BOOL "use OpenMP")
 set(USE_CUDA Off CACHE BOOL "use cuda")
+set(USE_ROCM Off CACHE BOOL "use amd gpus")
 
 set(BUILD_TESTS OFF CACHE BOOL "build tests")
 set(LAPACK_VENDOR "OpenBLAS" CACHE STRING "lapack vendor")
@@ -32,6 +33,13 @@ if(USE_CUDA)
   enable_language(CUDA)
   include(cmake/cudalibs_target.cmake)
 endif()
+
+if(USE_ROCM)
+  find_package(hip REQUIRED)
+  # enable_language(HIP)
+  include(cmake/rocmlibs_target.cmake)
+endif()
+
 find_package(MPI REQUIRED)
 
 if(LAPACK_VENDOR MATCHES OpenBLAS)

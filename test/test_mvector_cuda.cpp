@@ -4,7 +4,7 @@
 #include "smearing.hpp"
 #include "la/mvector.hpp"
 
-
+#ifdef __NLCGLIB_CUDA
 void run()
 {
   int n = 10;
@@ -19,7 +19,6 @@ void run()
   }
 
   Kokkos::deep_copy(a_view, host_view);
-
   vector_t copy(a_view);
 
   double foo = 1;
@@ -29,13 +28,17 @@ void run()
         a_view(i) = foo / sqrt(a_view(i));
       });
 }
+#endif
 
 
 int
 main(int argc, char *argv[])
 {
   Kokkos::initialize();
+
+#ifdef __NLCGLIB_CUDA
   run();
+#endif
   Kokkos::finalize();
   return 0;
 }

@@ -20,6 +20,9 @@ set_target_properties(nlcglib PROPERTIES
   PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/nlcglib.hpp)
 target_compile_definitions(nlcglib PUBLIC $<$<BOOL:${USE_CUDA}>:__NLCGLIB__CUDA>)
 
+# # temporary fix to get autocompletion working
+target_link_libraries(nlcglib PUBLIC nlcglib::rocmlibs)
+
 include(GNUInstallDirs)
 
 install(TARGETS nlcglib

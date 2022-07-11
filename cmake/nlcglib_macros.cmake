@@ -9,6 +9,7 @@ MACRO(NLCGLIB_SETUP_TARGET _target)
     MPI::MPI_CXX
     $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
     $<TARGET_NAME_IF_EXISTS:nlcglib::cudalibs>
+    $<TARGET_NAME_IF_EXISTS:nlcglib::rocmlibs>
     nlohmann_json::nlohmann_json
     )
 

@@ -1,16 +1,16 @@
 #pragma once
 
 #ifdef __USE_MKL
+#include <mkl.h>
 #include <mkl_cblas.h>
 #include <mkl_lapacke.h>
-#include <mkl.h>
 #else
 #include <cblas.h>
 #include <lapacke.h>
 #endif
 
-#include <complex>
 #include <Kokkos_Core.hpp>
+#include <complex>
 
 
 #ifdef __USE_MKL
@@ -25,10 +25,10 @@ namespace cblas {
 
 struct blas_base
 {
-  static const CBLAS_UPLO LOWER { CblasLower };
-  static const CBLAS_UPLO UPPER { CblasUpper };
-  static const CBLAS_TRANSPOSE H { CblasConjTrans };
-  static const CBLAS_TRANSPOSE N { CblasNoTrans };
+  static const CBLAS_UPLO LOWER{CblasLower};
+  static const CBLAS_UPLO UPPER{CblasUpper};
+  static const CBLAS_TRANSPOSE H{CblasConjTrans};
+  static const CBLAS_TRANSPOSE N{CblasNoTrans};
 };
 
 
@@ -38,21 +38,21 @@ struct lapack_base
   static const char NOVECTOR{'N'};
 };
 
-template<typename T>
+template <typename T>
 struct zheevd
 {
 };
 
-template<>
+template <>
 struct zheevd<std::complex<double>> : lapack_base
 {
   inline int static call(CBLAS_ORDER order,
                          char jobz,
                          char uplo,
                          int n,
-                         std::complex<double>* a,
+                         std::complex<double> *a,
                          const int lda,
-                         double* w)
+                         double *w)
   {
     return LAPACKE_zheevd(order, jobz, uplo, n, reinterpret_cast<CPX *>(a), lda, w);
   }
@@ -76,18 +76,16 @@ struct zheevd<Kokkos::complex<double>> : lapack_base
 
 
 template <typename T>
-struct potrf {};
+struct potrf
+{
+};
 
-template<>
+template <>
 struct potrf<std::complex<double>> : lapack_base
 {
-  inline int static call(CBLAS_ORDER order,
-                         char uplo,
-                         int n,
-                         std::complex<double>* a,
-                         int lda)
+  inline int static call(CBLAS_ORDER order, char uplo, int n, std::complex<double> *a, int lda)
   {
-     return LAPACKE_zpotrf(LAPACK_COL_MAJOR, uplo, n, reinterpret_cast<CPX *>(a), lda);
+    return LAPACKE_zpotrf(LAPACK_COL_MAJOR, uplo, n, reinterpret_cast<CPX *>(a), lda);
   }
 };
 
@@ -96,24 +94,26 @@ struct potrf<Kokkos::complex<double>> : lapack_base
 {
   inline int static call(CBLAS_ORDER order, char uplo, int n, Kokkos::complex<double> *a, int lda)
   {
-     return LAPACKE_zpotrf(LAPACK_COL_MAJOR, uplo, n, reinterpret_cast<CPX *>(a), lda);
+    return LAPACKE_zpotrf(LAPACK_COL_MAJOR, uplo, n, reinterpret_cast<CPX *>(a), lda);
   }
 };
 
 
 template <typename T>
-struct potrs {};
+struct potrs
+{
+};
 
-template<>
+template <>
 struct potrs<std::complex<double>> : lapack_base
 {
   inline int static call(CBLAS_ORDER order,
                          char uplo,
                          int n,
                          int nrhs,
-                         std::complex<double>* a,
+                         std::complex<double> *a,
                          int lda,
-                         std::complex<double>* b,
+                         std::complex<double> *b,
                          int ldb)
   {
     return LAPACKE_zpotrs(order,
@@ -151,19 +151,24 @@ struct potrs<Kokkos::complex<double>> : lapack_base
 };
 
 template <typename T>
-struct getrf {};
+struct getrf
+{
+};
 
 template <>
 struct getrf<Kokkos::complex<double>> : lapack_base
 {
-  inline int static call(CBLAS_ORDER order, int m, int n, Kokkos::complex<double>* A, int lda, int* ipiv)
+  inline int static call(
+      CBLAS_ORDER order, int m, int n, Kokkos::complex<double> *A, int lda, int *ipiv)
   {
     return LAPACKE_zgetrf(order, m, n, reinterpret_cast<CPX *>(A), lda, ipiv);
   }
 };
 
 template <typename T>
-struct getrs {};
+struct getrs
+{
+};
 
 template <>
 struct getrs<Kokkos::complex<double>> : lapack_base
@@ -270,7 +275,6 @@ struct gemm<Kokkos::complex<double>> : blas_base
 };
 
 
-
 template <>
 struct gemm<double> : blas_base
 {
@@ -295,11 +299,13 @@ struct gemm<double> : blas_base
 };
 
 
-template<class T>
-struct geam {};
+template <class T>
+struct geam
+{
+};
 
 
-template<>
+template <>
 struct geam<Kokkos::complex<double>> : blas_base
 {
   inline static void call(const CBLAS_ORDER Order,
@@ -311,7 +317,7 @@ struct geam<Kokkos::complex<double>> : blas_base
                           const Kokkos::complex<double> *A,
                           const int lda,
                           Kokkos::complex<double> beta,
-                          const Kokkos::complex<double>* B,
+                          const Kokkos::complex<double> *B,
                           const int ldb,
                           Kokkos::complex<double> *C,
                           const int ldc)
@@ -322,7 +328,7 @@ struct geam<Kokkos::complex<double>> : blas_base
     char transb{'N'};
     if (Order == CBLAS_ORDER::CblasColMajor)
       c_ordering = 'C';
-    else if(Order == CBLAS_ORDER::CblasRowMajor)
+    else if (Order == CBLAS_ORDER::CblasRowMajor)
       c_ordering = 'R';
     else
       assert(false);
@@ -364,14 +370,15 @@ struct geam<Kokkos::complex<double>> : blas_base
                  reinterpret_cast<CPX *>(C),
                  ldc);
 #else
-    auto cA = reinterpret_cast<const std::complex<double>*>(A);
-    auto cB = reinterpret_cast<const std::complex<double>*>(B);
-    auto cC = reinterpret_cast<std::complex<double>*>(C);
+    auto cA = reinterpret_cast<const std::complex<double> *>(A);
+    auto cB = reinterpret_cast<const std::complex<double> *>(B);
+    auto cC = reinterpret_cast<std::complex<double> *>(C);
 
     std::complex<double> alpha_{alpha.real(), alpha.imag()};
     std::complex<double> beta_{beta.real(), beta.imag()};
 
-    if (TransA == CBLAS_TRANSPOSE::CblasNoTrans && TransB == CBLAS_TRANSPOSE::CblasNoTrans && Order == CblasColMajor) {
+    if (TransA == CBLAS_TRANSPOSE::CblasNoTrans && TransB == CBLAS_TRANSPOSE::CblasNoTrans &&
+        Order == CblasColMajor) {
 #pragma omp parallel for
       for (auto j = 0ul; j < N; ++j) {
         for (auto i = 0ul; i < M; ++i) {
@@ -384,7 +391,6 @@ struct geam<Kokkos::complex<double>> : blas_base
 
 #endif
   }
-
 };
 
 }  // namespace cblas

@@ -2,18 +2,23 @@
 
 #include <Kokkos_Core.hpp>
 
-#include "la/utils.hpp"
 #include "la/lapack.hpp"
+#include "la/utils.hpp"
 
 namespace nlcglib {
 
 namespace local {
 struct advance_eta
 {
-  advance_eta(double t) : t(t) {}
+  advance_eta(double t)
+      : t(t)
+  {
+  }
 
   template <class eta_t, class d_eta_t>
-  KokkosDVector<Kokkos::complex<double>**, nlcglib::SlabLayoutV, Kokkos::LayoutLeft,
+  KokkosDVector<Kokkos::complex<double>**,
+                nlcglib::SlabLayoutV,
+                Kokkos::LayoutLeft,
                 typename std::remove_reference_t<eta_t>::storage_t::memory_space>
   operator()(eta_t&& eta, d_eta_t&& d_eta)
   {
@@ -26,14 +31,18 @@ struct advance_eta
   double t;
 };
 
-template<class exec_space>
+template <class exec_space>
 struct advance_x_eta
 {
   // also needs overlap operator
-  advance_x_eta(double t) : t(t) {}
+  advance_x_eta(double t)
+      : t(t)
+  {
+  }
 
-  template<class x_t, class eta_t, class g_X_t, class g_eta_t, class S_t>
-  void operator()(x_t&& X, eta_t&& eta, g_X_t&& g_X, g_eta_t&& g_eta, S_t&& S) {
+  template <class x_t, class eta_t, class g_X_t, class g_eta_t, class S_t>
+  void operator()(x_t&& X, eta_t&& eta, g_X_t&& g_X, g_eta_t&& g_eta, S_t&& S)
+  {
     // Kokko
   }
 
@@ -42,8 +51,9 @@ struct advance_x_eta
 
 struct eigvals_and_vectors
 {
-  template<class eta_t>
-  std::tuple<Kokkos::View<double*, typename eta_t::storage_t::memory_space>, to_layout_left_t<eta_t>>
+  template <class eta_t>
+  std::tuple<Kokkos::View<double*, typename eta_t::storage_t::memory_space>,
+             to_layout_left_t<eta_t>>
   operator()(const eta_t& eta)
   {
     auto Ul = empty_like()(eta);
@@ -56,12 +66,14 @@ struct eigvals_and_vectors
 
 struct advance_x
 {
-  advance_x(double t) : t(t) {}
+  advance_x(double t)
+      : t(t)
+  {
+  }
 
   // nc case
-  template<class x_t, class dx_t, class ul_t>
-  to_layout_left_t<std::remove_reference_t<dx_t>>
-  operator()(x_t&& x, dx_t&& dx, ul_t&& ul)
+  template <class x_t, class dx_t, class ul_t>
+  to_layout_left_t<std::remove_reference_t<dx_t>> operator()(x_t&& x, dx_t&& dx, ul_t&& ul)
   {
     // pp<to_layout_left_t<dx_t>>::foo;
     auto x_next = empty_like()(x);
@@ -73,8 +85,10 @@ struct advance_x
 
   // ultra-soft case
   template <class x_t, class dx_t, class ul_t, class op_t>
-  to_layout_left_t<std::remove_reference_t<dx_t>>
-  operator()(x_t&& x, dx_t&& dx, ul_t&& ul, op_t&& s)
+  to_layout_left_t<std::remove_reference_t<dx_t>> operator()(x_t&& x,
+                                                             dx_t&& dx,
+                                                             ul_t&& ul,
+                                                             op_t&& s)
   {
     // pp<to_layout_left_t<dx_t>>::foo;
     auto x_next = empty_like()(x);
@@ -87,7 +101,7 @@ struct advance_x
   double t;
 };
 
-}  // local
+}  // namespace local
 
 // template <class energy_t, class X_t, class eta_t, class g_x_t, class g_eta_t>
 // auto
@@ -113,7 +127,8 @@ struct advance_x
 
 // template <class energy_t, class X_t, class eta_t, class g_x_t, class g_eta_t, class Op_t>
 // auto
-// geodesic_us(energy_t& F, X_t& X, const eta_t& eta, const g_x_t& g_x, const g_eta_t& g_eta, const Op_t& S, double t)
+// geodesic_us(energy_t& F, X_t& X, const eta_t& eta, const g_x_t& g_x, const g_eta_t& g_eta, const
+// Op_t& S, double t)
 // {
 //   // compute eta_next <- eta + t* g_eta
 //   auto eta_next = tapply_async(local::advance_eta(t), eta, g_eta);

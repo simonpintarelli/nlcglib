@@ -1,17 +1,17 @@
 #pragma once
 
 #include <mpi.h>
-#include <vector>
-#include <numeric>
-#include "mpi_type.hpp"
 #include <cassert>
+#include <numeric>
+#include <vector>
+#include "mpi_type.hpp"
 
-#define CALL_MPI(func__, args__)                                        \
-  {                                                                     \
-    if (func__ args__ != MPI_SUCCESS) {                                 \
+#define CALL_MPI(func__, args__)                                                  \
+  {                                                                               \
+    if (func__ args__ != MPI_SUCCESS) {                                           \
       printf("error in %s at line %i of file %s\n", #func__, __LINE__, __FILE__); \
-      MPI_Abort(MPI_COMM_WORLD, -1);                                    \
-    }                                                                   \
+      MPI_Abort(MPI_COMM_WORLD, -1);                                              \
+    }                                                                             \
   }
 
 
@@ -19,7 +19,7 @@ namespace nlcglib {
 
 class Communicator
 {
- public:
+public:
   explicit Communicator(MPI_Comm mpicomm)
   {
     // duplicator communicator
@@ -27,17 +27,17 @@ class Communicator
     mpicomm_ = mpicomm;
   }
 
-  Communicator()
-  {
-    mpicomm_ = MPI_COMM_SELF;
-  }
+  Communicator() { mpicomm_ = MPI_COMM_SELF; }
 
-  Communicator(const Communicator& other) {
+  Communicator(const Communicator& other)
+  {
     // MPI_Comm_dup(other.mpicomm_, &mpicomm_);
     mpicomm_ = other.mpicomm_;
   }
 
-  Communicator(Communicator&& other) : mpicomm_(other.mpicomm_) {
+  Communicator(Communicator&& other)
+      : mpicomm_(other.mpicomm_)
+  {
     other.mpicomm_ = MPI_COMM_NULL;
   }
 
@@ -52,10 +52,8 @@ class Communicator
   {
     int result;
     // check if both or one is null
-    if (mpicomm_ == MPI_COMM_NULL && other.mpicomm_ == MPI_COMM_NULL)
-      return true;
-    if (mpicomm_ == MPI_COMM_NULL || other.mpicomm_ == MPI_COMM_NULL)
-      return false;
+    if (mpicomm_ == MPI_COMM_NULL && other.mpicomm_ == MPI_COMM_NULL) return true;
+    if (mpicomm_ == MPI_COMM_NULL || other.mpicomm_ == MPI_COMM_NULL) return false;
 
     // compare using MPI_Comm_compare (does not allow to compare MPI_COMM_NULL)
     CALL_MPI(MPI_Comm_compare, (mpicomm_, other.mpicomm_, &result));
@@ -65,15 +63,9 @@ class Communicator
       return false;
   }
 
-  bool operator<(const Communicator& other)
-  {
-    return this->size() < other.size();
-  }
+  bool operator<(const Communicator& other) { return this->size() < other.size(); }
 
-  bool operator>(const Communicator& other)
-  {
-    return this->size() > other.size();
-  }
+  bool operator>(const Communicator& other) { return this->size() > other.size(); }
 
 
   Communicator& operator=(Communicator&& other)
@@ -83,15 +75,9 @@ class Communicator
     return *this;
   }
 
-  static void init(int argc, char* argv[])
-  {
-    MPI_Init(&argc, &argv);
-  }
+  static void init(int argc, char* argv[]) { MPI_Init(&argc, &argv); }
 
-  static void finalize()
-  {
-    MPI_Finalize();
-  }
+  static void finalize() { MPI_Finalize(); }
 
   int size() const
   {
@@ -107,8 +93,10 @@ class Communicator
     return rank;
   }
 
-  template<class T>
-  void allgather(T* buffer, const std::vector<int>& recvcounts, const std::vector<int>& displs) const;
+  template <class T>
+  void allgather(T* buffer,
+                 const std::vector<int>& recvcounts,
+                 const std::vector<int>& displs) const;
 
   template <class T>
   void allgather(T* buffer, const std::vector<int>& recvcounts) const;
@@ -122,38 +110,33 @@ class Communicator
   template <class T>
   T allreduce(T val, enum mpi_op op) const;
 
-  void barrier() const
-  {
-    CALL_MPI(MPI_Barrier, (mpicomm_));
-  }
+  void barrier() const { CALL_MPI(MPI_Barrier, (mpicomm_)); }
 
-  ~Communicator() {
+  ~Communicator()
+  {
     // mpicomm_ is coming from outside
     // if (mpicomm_ != 0)
     //   MPI_Comm_free(&mpicomm_);
   }
 
-  MPI_Comm raw() const
-  {
-    return mpicomm_;
-  }
+  MPI_Comm raw() const { return mpicomm_; }
 
- private:
+private:
   MPI_Comm mpicomm_;
 };
 
 template <class T>
 void
-Communicator::allgather(T* buffer,
-                        const std::vector<int>& recvcounts) const
+Communicator::allgather(T* buffer, const std::vector<int>& recvcounts) const
 {
   int nranks = this->size();
   assert(recvcounts.size() == nranks);
   std::vector<int> displs(nranks, 0);
-  std::partial_sum(recvcounts.begin(), recvcounts.end()-1, displs.begin()+1);
+  std::partial_sum(recvcounts.begin(), recvcounts.end() - 1, displs.begin() + 1);
 
   CALL_MPI(MPI_Allgatherv,
-           (MPI_IN_PLACE, 0,
+           (MPI_IN_PLACE,
+            0,
             MPI_DATATYPE_NULL,
             buffer,
             recvcounts.data(),
@@ -169,20 +152,23 @@ Communicator::allgather(T* buffer,
                         const std::vector<int>& displs) const
 {
   // put assert statements
-  CALL_MPI(MPI_Allgatherv, (MPI_IN_PLACE,
-                            0,
-                            MPI_DATATYPE_NULL,
-                            buffer,
-                            recvcounts.data(),
-                            displs.data(),
-                            mpi_type<T>::type(),
-                            mpicomm_));
+  CALL_MPI(MPI_Allgatherv,
+           (MPI_IN_PLACE,
+            0,
+            MPI_DATATYPE_NULL,
+            buffer,
+            recvcounts.data(),
+            displs.data(),
+            mpi_type<T>::type(),
+            mpicomm_));
 }
 
 template <class T>
-void Communicator::allgather(T* buffer, int recvcount) const
+void
+Communicator::allgather(T* buffer, int recvcount) const
 {
-  CALL_MPI(MPI_Allgather, (MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, buffer, recvcount, mpi_type<T>::type(), mpicomm_));
+  CALL_MPI(MPI_Allgather,
+           (MPI_IN_PLACE, 0, MPI_DATATYPE_NULL, buffer, recvcount, mpi_type<T>::type(), mpicomm_));
 }
 
 template <class VAL>
@@ -210,7 +196,8 @@ Communicator::allgather(const std::vector<VAL>& values) const
 }
 
 template <class T>
-T Communicator::allreduce(T val, enum mpi_op op) const
+T
+Communicator::allreduce(T val, enum mpi_op op) const
 {
   T result{0};
   switch (op) {

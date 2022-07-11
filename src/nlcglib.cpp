@@ -1,6 +1,9 @@
 #include <omp.h>
 #include <Kokkos_Core.hpp>
+#include <Kokkos_HostSpace.hpp>
+#include <Kokkos_Parallel.hpp>
 #include <cfenv>
+#include <cstdio>
 #include <iomanip>
 #include <ios>
 #include <iostream>
@@ -16,6 +19,7 @@
 #include "la/mvector.hpp"
 #include "la/utils.hpp"
 #include "linesearch/linesearch.hpp"
+#include "mvp2/descent_direction.hpp"
 #include "overlap.hpp"
 #include "preconditioner.hpp"
 #include "pseudo_hamiltonian/grad_eta.hpp"
@@ -26,14 +30,13 @@
 #include "utils/logger.hpp"
 #include "utils/step_logger.hpp"
 #include "utils/timer.hpp"
-#include "mvp2/descent_direction.hpp"
-#include <cstdio>
 
 typedef std::complex<double> complex_double;
 
 namespace nlcglib {
 
-void initialize()
+void
+initialize()
 {
   Kokkos::InitArguments args;
   args.disable_warnings = true;
@@ -41,7 +44,8 @@ void initialize()
   Kokkos::initialize(args);
 }
 
-void finalize()
+void
+finalize()
 {
   Kokkos::finalize();
 }
@@ -210,7 +214,7 @@ nlcg_us(EnergyBase& energy_base,
   auto S = Overlap(overlap_base);
   auto P = USPreconditioner(us_precond_base);
 
-    Timer timer;
+  Timer timer;
   FreeEnergy free_energy(T, energy_base, smearing_t);
   std::map<smearing_type, std::string> smear_name{
       {smearing_type::FERMI_DIRAC, "Fermi-Dirac"},
@@ -375,7 +379,7 @@ nlcg_us(EnergyBase& energy_base,
         timer.start();
 
         auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
-        slope = std::get<0>(slope_zx_zeta); // no need to catch slope > 0 -> linesearch will throw
+        slope = std::get<0>(slope_zx_zeta);  // no need to catch slope > 0 -> linesearch will throw
         fr = slope;
         z_x = std::get<1>(slope_zx_zeta);
         z_eta = std::get<2>(slope_zx_zeta);
@@ -387,7 +391,7 @@ nlcg_us(EnergyBase& energy_base,
         timer.start();
 
         auto fr_slope_z_x_z_eta =
-          dd.conjugated(xspace(), fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
+            dd.conjugated(xspace(), fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
         fr = std::get<0>(fr_slope_z_x_z_eta);
         slope = std::get<1>(fr_slope_z_x_z_eta);
         z_x = std::get<2>(fr_slope_z_x_z_eta);
@@ -397,7 +401,8 @@ nlcg_us(EnergyBase& energy_base,
           // force restart
           logger << "i=" << cg_iter << ": slope > 0 detected -> restart\n";
           auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
-          slope = std::get<0>(slope_zx_zeta);  // no need to catch slope > 0 again -> linesearch will throw
+          slope = std::get<0>(
+              slope_zx_zeta);  // no need to catch slope > 0 again -> linesearch will throw
           fr = slope;
           z_x = std::get<1>(slope_zx_zeta);
           z_eta = std::get<2>(slope_zx_zeta);
@@ -413,7 +418,7 @@ nlcg_us(EnergyBase& energy_base,
       // CG failed abort
       logger << "[NLCG] Error: No descent direction found, nlcg didn't reach final tolerance\n";
       return info;
-    } catch(SlopeError&) {
+    } catch (SlopeError&) {
       logger << "[NLCG] Error: slope > 0 after CG-restart. Abort.\n";
       return info;
     }

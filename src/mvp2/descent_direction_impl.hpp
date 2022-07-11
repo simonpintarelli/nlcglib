@@ -11,20 +11,20 @@
 namespace nlcglib {
 
 template <class memspace_t, enum smearing_type smearing_t>
-class descent_direction_impl
-{
-public:
-  descent_direction_impl(
-      const memspace_t& memspc, double mu, double dFdmu, double sumfn, double T, double kappa, double mo)
-      : memspc(memspc)
-      , mu(mu)
-      , dFdmu(dFdmu)
-      , sumfn(sumfn)
-      , T(T)
-      , kappa(kappa)
-      , mo(mo)
-  {
-  }
+class descent_direction_impl {
+  public : descent_direction_impl(const memspace_t& memspc,
+                                  double mu,
+                                  double dFdmu,
+                                  double sumfn,
+                                  double T,
+                                  double kappa,
+                                  double mo) : memspc(memspc),
+  mu(mu),
+  dFdmu(dFdmu),
+  sumfn(sumfn),
+  T(T),
+  kappa(kappa),
+  mo(mo){}
 
   /* interface routine, does memory transfers if needed */
   template <class x_t,
@@ -36,20 +36,22 @@ public:
             class ul_t,
             class op_t,
             class prec_t>
-  auto operator()(x_t&& X,
-                  e_t&& en,
-                  f_t&& fn,
-                  hx_t&& hx,
-                  zxp_t&& zxp,
-                  zetap_t&& zetap,
-                  ul_t&& ul,
-                  op_t&& S,
-                  prec_t&& P,
-                  double wk);
+  auto
+  operator()(x_t&& X,
+             e_t&& en,
+             f_t&& fn,
+             hx_t&& hx,
+             zxp_t&& zxp,
+             zetap_t&& zetap,
+             ul_t&& ul,
+             op_t&& S,
+             prec_t&& P,
+             double wk);
 
   /* interface routine, does memory transfers if needed, for CG restart (steepest descent) */
   template <class x_t, class e_t, class f_t, class hx_t, class op_t, class prec_t>
-  auto operator()(x_t&& X, e_t&& en, f_t&& fn, hx_t&& hx, op_t&& S, prec_t&& P, double wk);
+  auto
+  operator()(x_t&& X, e_t&& en, f_t&& fn, hx_t&& hx, op_t&& S, prec_t&& P, double wk);
 
   template <class x_t,
             class e_t,
@@ -65,30 +67,28 @@ public:
              to_layout_left_t<zetap_t>,
              to_layout_left_t<x_t>,
              to_layout_left_t<zetap_t>,
-             double>
-  exec_spc(x_t&& x,
-           e_t&& e,
-           f_t&& f,
-           hx_t&& hx,
-           op_t&& s,
-           prec_t&& p,
-           zxp_t&& zxp,
-           zetap_t&& zetap,
-           ul_t&& ul,
-           double wk);
+             double> exec_spc(x_t && x,
+                              e_t&& e,
+                              f_t&& f,
+                              hx_t&& hx,
+                              op_t&& s,
+                              prec_t&& p,
+                              zxp_t&& zxp,
+                              zetap_t&& zetap,
+                              ul_t&& ul,
+                              double wk);
 
   /* CG conjugated direction gradients */
   template <class x_t, class sx_t, class zxp_t, class zetap_t, class ul_t, class gx_t, class geta_t>
   std::tuple<double, to_layout_left_t<zxp_t>, to_layout_left_t<zetap_t>> exec_conjugate(
-      x_t&& x, sx_t&& sx, zxp_t&& zxp, zetap_t&& zetap, ul_t&& ul, gx_t&& gx, geta_t&& geta);
+      x_t && x, sx_t&& sx, zxp_t&& zxp, zetap_t&& zetap, ul_t&& ul, gx_t&& gx, geta_t&& geta);
 
   /* CG restart gradients */
   template <class x_t, class e_t, class f_t, class hx_t, class op_t, class prec_t>
   std::tuple<double, to_layout_left_t<x_t>, to_layout_left_t<x_t>> exec_spc(
-      x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op_t&& s, prec_t&& p, double wk);
+      x_t && x, e_t&& e, f_t&& f, hx_t&& hx, op_t&& s, prec_t&& p, double wk);
 
-private:
-  memspace_t memspc;
+  private : memspace_t memspc;
   double mu;
   double dFdmu;
   double sumfn;

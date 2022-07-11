@@ -2,7 +2,7 @@
 
 #include <functional>
 #include <utility>
-#include <la/map.hpp>
+#include "la/map.hpp"
 #include "lapack_cpu.hpp"
 #ifdef __NLCGLIB__CUDA
 #include "lapack_cuda.hpp"

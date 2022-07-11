@@ -8,17 +8,18 @@ namespace nlcglib {
 /**
  * Map representing a distributed layout.
  */
-template <class LAYOUT=SlabLayoutV>
+template <class LAYOUT = SlabLayoutV>
 class Map
 {
 public:
   using layout_t = LAYOUT;
 
 public:
-  Map(const Communicator& comm, const layout_t& layout=layout_t{})
+  Map(const Communicator& comm, const layout_t& layout = layout_t{})
       : comm_(comm)
       , layout_(layout)
-  { /* empty */ }
+  { /* empty */
+  }
 
   Map(const Map& other) = default;
   Map(Map&& other) = default;

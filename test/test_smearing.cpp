@@ -1,5 +1,5 @@
-#include "smearing.hpp"
 #include <Kokkos_Core.hpp>
+#include "smearing.hpp"
 
 using namespace nlcglib;
 

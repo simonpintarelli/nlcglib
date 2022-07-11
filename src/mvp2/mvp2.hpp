@@ -11,9 +11,11 @@ namespace local {
 
 struct lmult
 {
-  template<class x_t, class sx_t, class hx_t, class prec_t>
-  to_layout_left_t<std::remove_reference_t<x_t>>
-  operator()(x_t&& x, sx_t&& sx, hx_t&& hx, prec_t&& prec)
+  template <class x_t, class sx_t, class hx_t, class prec_t>
+  to_layout_left_t<std::remove_reference_t<x_t>> operator()(x_t&& x,
+                                                            sx_t&& sx,
+                                                            hx_t&& hx,
+                                                            prec_t&& prec)
   {
     // TODO x is not used
     // Lagrange multipliers
@@ -32,8 +34,8 @@ struct lmult
 struct gradx
 {
   template <class x_t, class hx_t, class fn_t, class ll_t, class wk_t>
-  to_layout_left_t<std::remove_reference_t<x_t>>
-  operator()(x_t&& x, hx_t&& hx, fn_t&& fn, ll_t&& xll, wk_t&& wk)
+  to_layout_left_t<std::remove_reference_t<x_t>> operator()(
+      x_t&& x, hx_t&& hx, fn_t&& fn, ll_t&& xll, wk_t&& wk)
   {
     auto g_x = empty_like()(x);
     scale(g_x, hx, fn, wk);
@@ -46,8 +48,10 @@ struct precondgx
 {
   // TODO: unused variable x!
   template <class x_t, class hx_t, class prec_t, class ll_t>
-  to_layout_left_t<std::remove_reference_t<x_t>>
-  operator()(x_t&& x, hx_t&& hx, prec_t&& prec, ll_t&& xll)
+  to_layout_left_t<std::remove_reference_t<x_t>> operator()(x_t&& x,
+                                                            hx_t&& hx,
+                                                            prec_t&& prec,
+                                                            ll_t&& xll)
   {
     auto delta_x = zeros_like()(x);
     // delta_x <- -hx
@@ -81,8 +85,7 @@ struct precondgx_us
 struct rotatex
 {
   template <class x_t, class u_t>
-  to_layout_left_t<std::remove_reference_t<x_t>>
-  operator()(x_t&& x, u_t&& u)
+  to_layout_left_t<std::remove_reference_t<x_t>> operator()(x_t&& x, u_t&& u)
   {
     return transform_alloc(x, eval(u));
   }
@@ -90,9 +93,8 @@ struct rotatex
 
 struct rotateeta
 {
-  template<class eta_t, class u_t>
-  to_layout_left_t<std::remove_reference_t<eta_t>>
-  operator()(eta_t&& eta, u_t&& u)
+  template <class eta_t, class u_t>
+  to_layout_left_t<std::remove_reference_t<eta_t>> operator()(eta_t&& eta, u_t&& u)
   {
     auto etau = transform_alloc(eta, eval(u));
     return inner_()(eval(u), etau);
@@ -101,9 +103,8 @@ struct rotateeta
 
 struct slope
 {
-  template<class gx_t, class zx_t, class ge_t, class ze_t>
-  std::tuple<double, double>
-  operator()(gx_t&& gx, zx_t&& zx, ge_t&& geta, ze_t&& zeta)
+  template <class gx_t, class zx_t, class ge_t, class ze_t>
+  std::tuple<double, double> operator()(gx_t&& gx, zx_t&& zx, ge_t&& geta, ze_t&& zeta)
   {
     auto slope_eta = innerh_tr()(eval(geta), eval(zeta));
     auto slope_x = 2 * innerh_tr()(gx, zx);
@@ -126,7 +127,7 @@ struct slope_x
   template <class gx_t, class zx_t>
   Kokkos::complex<double> operator()(gx_t&& gx, zx_t&& zx)
   {
-    auto slope_x = 2*innerh_tr()(eval(gx), eval(zx));
+    auto slope_x = 2 * innerh_tr()(eval(gx), eval(zx));
     return slope_x;
   }
 };
@@ -138,8 +139,7 @@ public:
    * Overwrites zxp
    */
   template <class zxp_t, class x_t>
-  to_layout_left_t<std::remove_reference_t<zxp_t>>
-  operator()(zxp_t&& zxp, x_t&& x)
+  to_layout_left_t<std::remove_reference_t<zxp_t>> operator()(zxp_t&& zxp, x_t&& x)
   {
     // Zxp needs orthogonality updated
     auto tmp = inner_()(x, zxp);
@@ -152,8 +152,7 @@ public:
 
   /** Ultra-soft case, note that zxp is overwritten */
   template <class zxp_t, class x_t, class sx_t>
-  to_layout_left_t<std::remove_reference_t<zxp_t>>
-  operator()(zxp_t&& zxp, x_t&& x, sx_t&& sx)
+  to_layout_left_t<std::remove_reference_t<zxp_t>> operator()(zxp_t&& zxp, x_t&& x, sx_t&& sx)
   {
     // TODO x is not used!
     // Zxp needs orthogonality updated
@@ -169,20 +168,21 @@ public:
 
     return zxp;
   }
-
 };
 
 
 struct conjugateeta
 {
-  conjugateeta(double gamma) : gamma(gamma) {}
+  conjugateeta(double gamma)
+      : gamma(gamma)
+  {
+  }
 
   /**
    * Overwrites zep
    */
   template <class deta_t, class zetap_t>
-  to_layout_left_t<std::remove_reference_t<zetap_t>>
-  operator()(deta_t&& deta, zetap_t&& zep)
+  to_layout_left_t<std::remove_reference_t<zetap_t>> operator()(deta_t&& deta, zetap_t&& zep)
   {
     // zep <- 1.0 * zep + gamma * deta
     add(zep, deta, 1.0, gamma);
@@ -192,7 +192,7 @@ struct conjugateeta
   double gamma;
 };
 
-}  // local
+}  // namespace local
 
 /// Lagrange multipliers
 template <class X_t, class SX_t, class Hx_t, class Prec_t>
@@ -204,14 +204,16 @@ lagrange_multipliers(const X_t& X, const SX_t& SX, const Hx_t& Hx, const Prec_t&
 
 /// gradient
 template <class X_t, class Hx_t, class fn_t, class ll_t, class wk_t>
-auto gradX(const X_t& X, const Hx_t& Hx, const fn_t& fn, const ll_t& Xll, const wk_t& wk)
+auto
+gradX(const X_t& X, const Hx_t& Hx, const fn_t& fn, const ll_t& Xll, const wk_t& wk)
 {
   return tapply_async(local::gradx(), X, Hx, fn, Xll, wk);
 }
 
 /// delta_x
-template<class X_t, class Hx_t, class Prec_t, class ll_t>
-auto precondGradX(const X_t& X, const Hx_t& Hx, const Prec_t& Prec, const ll_t& Xll)
+template <class X_t, class Hx_t, class Prec_t, class ll_t>
+auto
+precondGradX(const X_t& X, const Hx_t& Hx, const Prec_t& Prec, const ll_t& Xll)
 {
   return tapply_async(local::precondgx(), X, Hx, Prec, Xll);
 }
@@ -226,24 +228,27 @@ precondGradX_us(const SX_t& SX, const Hx_t& Hx, const Prec_t& Prec, const ll_t& 
 
 
 /// apply subspace rotation on X
-template<class X_t, class U_t>
-auto rotateX(const X_t& X, const U_t& U)
+template <class X_t, class U_t>
+auto
+rotateX(const X_t& X, const U_t& U)
 {
   return tapply_async(local::rotatex(), X, U);
 }
 
 /// apply subpsace rotation on eta
-template<class Eta_t, class U_t>
-auto rotateEta(const Eta_t& Eta, const U_t& U)
+template <class Eta_t, class U_t>
+auto
+rotateEta(const Eta_t& Eta, const U_t& U)
 {
   return tapply_async(local::rotateeta(), Eta, U);
 }
 
 template <class gx_t, class zx_t, class ge_t, class ze_t>
 std::tuple<double, double>
-compute_slope(const gx_t& gx, const zx_t& zx, const ge_t& geta, ze_t& zeta, const Communicator& commk)
+compute_slope(
+    const gx_t& gx, const zx_t& zx, const ge_t& geta, ze_t& zeta, const Communicator& commk)
 {
-  double slope_x = sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk) .real();
+  double slope_x = sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk).real();
   double slope_eta = sum(eval_threaded(tapply(local::slope_eta(), geta, zeta)), commk).real();
   return std::make_tuple(slope_x, slope_eta);
 }
@@ -274,7 +279,8 @@ slope_x(const gx_t& gx, zx_t& zx, const Communicator& commk)
 
 /// apply lagrange multipliers for Z^{(i-1)}
 template <class zxp_t, class x_t>
-auto conjugatex(zxp_t&& zxp, x_t&& x, double gamma)
+auto
+conjugatex(zxp_t&& zxp, x_t&& x, double gamma)
 {
   return tapply_async(local::conjugatex(), zxp, x);
 }
@@ -288,10 +294,11 @@ apply_lagrange_mult_us(zxp_t&& zxp, x_t&& x, sx_t&& sx, double gamma)
 }
 
 /// zep <- deta + gamma * zep
-template<class deta_t, class zetap_t>
-auto conjugateeta(deta_t&& deta, zetap_t&& zep, double gamma)
+template <class deta_t, class zetap_t>
+auto
+conjugateeta(deta_t&& deta, zetap_t&& zep, double gamma)
 {
   return tapply_async(local::conjugateeta(gamma), deta, zep);
 }
 
-}  // nlcglib
+}  // namespace nlcglib

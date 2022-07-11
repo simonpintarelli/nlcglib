@@ -3,6 +3,7 @@
 #include <iostream>
 #include "traits.hpp"
 
+#ifdef __NLCGLIB_CUDA
 void run()
 {
   int n = 10;
@@ -87,14 +88,16 @@ run_2d()
   }
   std::cout << "\n";
 }
-
+#endif
 
 int
 main(int argc, char *argv[])
 {
   Kokkos::initialize();
+#ifdef __NLCGLIB_CUDA
   run();
   run_2d();
+#endif
   Kokkos::finalize();
   return 0;
 }
