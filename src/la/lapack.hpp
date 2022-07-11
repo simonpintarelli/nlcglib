@@ -7,10 +7,10 @@
 #ifdef __NLCGLIB__CUDA
 #include "lapack_cuda.hpp"
 #endif
+#include "exec_space.hpp"
 #include "mvector.hpp"
 #include "traits.hpp"
 #include "utils.hpp"
-#include "exec_space.hpp"
 
 namespace nlcglib {
 
@@ -124,16 +124,9 @@ struct make_diag
  * x is vector valued
  * alpha, beta are scalars
  */
-template <class M0,
-          class M1,
-          class T2,
-          class... KOKKOS2>
+template <class M0, class M1, class T2, class... KOKKOS2>
 M0&
-scale(M0& dst,
-      const M1& src,
-      const Kokkos::View<T2*, KOKKOS2...>& x,
-      double alpha,
-      double beta = 0)
+scale(M0& dst, const M1& src, const Kokkos::View<T2*, KOKKOS2...>& x, double alpha, double beta = 0)
 {
   auto mDST = dst.array();
   auto mSRC = src.array();
@@ -171,10 +164,7 @@ scale(M0& dst,
  */
 template <class M1, class M2>
 M1&
-scale(M1& dst,
-      const M2& src,
-      double alpha,
-      double beta)
+scale(M1& dst, const M2& src, double alpha, double beta)
 {
   auto mDST = dst.array();
   auto mSRC = src.array();
@@ -188,7 +178,7 @@ scale(M1& dst,
     if (beta == 0)
       Kokkos::parallel_for(
           "scale", mdrange_policy({{0, 0}}, {{m, n}}), KOKKOS_LAMBDA(int i, int j) {
-            mDST(i, j) =  alpha * mSRC(i, j);
+            mDST(i, j) = alpha * mSRC(i, j);
           });
 
     else
@@ -212,9 +202,7 @@ scale(M1& dst,
  */
 template <class M1, class M2>
 M1&
-scale(M1& dst,
-      const M2& src,
-      double alpha)
+scale(M1& dst, const M2& src, double alpha)
 {
   auto mDST = dst.array();
   auto mSRC = src.array();
@@ -246,9 +234,7 @@ scale(M1& dst,
  */
 template <class T, class M1, class LAYOUT, class... KOKKOS1>
 to_layout_left_t<M1>
-scale_alloc(const M1& src,
-            const Kokkos::View<double*, KOKKOS1...>& x,
-            double alpha = 1)
+scale_alloc(const M1& src, const Kokkos::View<double*, KOKKOS1...>& x, double alpha = 1)
 {
   auto mSRC = src.array();
   int n = src.map().nrows();
@@ -268,13 +254,12 @@ scale_alloc(const M1& src,
 template <class T1, class M2, class LAYOUT0, class... KOKKOS0>
 void
 _add(KokkosDVector<T1**, LAYOUT0, KOKKOS0...>& dst,
-    M2& src,
-    const identity_t<T1>& alpha,
-    const identity_t<T1>& beta = T1{1.0})
+     M2& src,
+     const identity_t<T1>& alpha,
+     const identity_t<T1>& beta = T1{1.0})
 {
   using T = decltype(std::declval<T1>() + std::declval<typename M2::numeric_t>());
-  using vector_t =
-      KokkosDVector<T**, LAYOUT0, KOKKOS0...>;
+  using vector_t = KokkosDVector<T**, LAYOUT0, KOKKOS0...>;
   using memspace = typename vector_t::storage_t::memory_space;
 
   auto mDST = dst.array();
@@ -296,14 +281,14 @@ _add(KokkosDVector<T1**, LAYOUT0, KOKKOS0...>& dst,
         });
 }
 
-struct inner_ {
+struct inner_
+{
   /// Inner product allocating the returned matrix
   template <class T, class M1, class... KOKKOS2>
-  to_layout_left_t<M1>
-  operator()(const M1& A,
-             const KokkosDVector<T**, SlabLayoutV, KOKKOS2...>& B,
-             const identity_t<T>& alpha = T{1.0},
-             const identity_t<T>& beta = T{0.})
+  to_layout_left_t<M1> operator()(const M1& A,
+                                  const KokkosDVector<T**, SlabLayoutV, KOKKOS2...>& B,
+                                  const identity_t<T>& alpha = T{1.0},
+                                  const identity_t<T>& beta = T{0.})
   {
     int n = A.map().ncols();
     int m = B.map().ncols();
@@ -320,8 +305,8 @@ struct innerh_tr
 #ifdef __NLCGLIB__CUDA
   template <class M1, class M2>
   std::enable_if_t<
-    Kokkos::SpaceAccessibility<Kokkos::Cuda, typename M1::storage_t::memory_space>::accessible,
-    typename M1::numeric_t>
+      Kokkos::SpaceAccessibility<Kokkos::Cuda, typename M1::storage_t::memory_space>::accessible,
+      typename M1::numeric_t>
   operator()(const M1& X, const M2& Y)
   {
     int nrows = X.array().extent(0);
@@ -352,7 +337,7 @@ struct innerh_tr
         Kokkos::RangePolicy<Kokkos::Cuda>(0, nrows),
         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
         sum);
-      return sum;
+    return sum;
   }
 #endif
 
@@ -403,8 +388,10 @@ innerh_reduce(const mvector<X>& x, const mvector<Y>& y)
 }
 
 
-template<class X>
-double l2norm(const mvector<X>& x) {
+template <class X>
+double
+l2norm(const mvector<X>& x)
+{
   auto tmp = eval_threaded(tapply(innerh_tr(), x, x));
   auto z = sum(tmp);
   // if (std::abs(Kokkos::imag(z)) > 1e-10) {
@@ -414,7 +401,7 @@ double l2norm(const mvector<X>& x) {
 }
 
 #ifdef __NLCGLIB__CUDA
-template<class memspace>
+template <class memspace>
 std::enable_if_t<Kokkos::SpaceAccessibility<Kokkos::Cuda, memspace>::accessible>
 loewdin_aux(Kokkos::View<double*, memspace>& w)
 {
