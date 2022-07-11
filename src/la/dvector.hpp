@@ -2,11 +2,11 @@
 
 #include <Kokkos_Core.hpp>
 #include <Kokkos_View.hpp>
+#include <complex>
+#include <iomanip>
 #include <string>
 #include <type_traits>
 #include <utility>
-#include <complex>
-#include <iomanip>
 #include "map.hpp"
 #include "nlcglib.hpp"
 
@@ -17,14 +17,16 @@ namespace _local {
 using view_alloc_no_init_t =
     decltype(Kokkos::view_alloc(Kokkos::WithoutInitializing, std::string{}));
 
-}  // _local
+}  // namespace _local
 
 // forward declaration
 template <class T, class LAYOUT, class... X>
 class KokkosDVector;
 
-template<class X>
-class memory_space {};
+template <class X>
+class memory_space
+{
+};
 
 template <class... X>
 struct memory_space<KokkosDVector<X...>>
@@ -38,23 +40,26 @@ struct memory_space<Kokkos::View<X...>>
   using memspace = typename Kokkos::View<X...>::memory_space;
 };
 
-template<class X>
+template <class X>
 using memory_t = typename memory_space<std::remove_cv_t<std::remove_reference_t<X>>>::memspace;
 
 template <class T>
-struct is_on_host : std::integral_constant<bool, Kokkos::SpaceAccessibility<Kokkos::HostSpace, memory_t<T>>::accessible>
-{};
+struct is_on_host
+    : std::integral_constant<bool,
+                             Kokkos::SpaceAccessibility<Kokkos::HostSpace, memory_t<T>>::accessible>
+{
+};
 
 #ifdef __NLCGLIB__CUDA
 template <class T>
 struct is_on_device
-    : std::integral_constant<bool, Kokkos::SpaceAccessibility<Kokkos::CudaSpace, memory_t<T>>::accessible>
+    : std::integral_constant<bool,
+                             Kokkos::SpaceAccessibility<Kokkos::CudaSpace, memory_t<T>>::accessible>
 {
 };
 #else
 template <class T>
-struct is_on_device
-  : std::integral_constant<bool, false>
+struct is_on_device : std::integral_constant<bool, false>
 {
 };
 #endif
@@ -90,11 +95,13 @@ as_buffer_protocol(const KokkosDVector<T**, ARGS...>& kokkosdvec)
 
 
 template <class T, class... ARGS>
-buffer_protocol<std::complex<double>, 2> as_buffer_protocol(KokkosDVector<T**, ARGS...>& kokkosdvec)
+buffer_protocol<std::complex<double>, 2>
+as_buffer_protocol(KokkosDVector<T**, ARGS...>& kokkosdvec)
 {
   using vector_t = KokkosDVector<T, ARGS...>;
   using numeric_t = typename vector_t::storage_t::value_type;
-  static_assert(std::is_same<numeric_t, Kokkos::complex<double>>::value, "todo: remove this limitation");
+  static_assert(std::is_same<numeric_t, Kokkos::complex<double>>::value,
+                "todo: remove this limitation");
 
   auto mem_t = get_mem_type(kokkosdvec);
   std::array<int, 2> strides;
@@ -106,9 +113,12 @@ buffer_protocol<std::complex<double>, 2> as_buffer_protocol(KokkosDVector<T**, A
   sizes[1] = kokkosdvec.array().extent(1);
 
   // TODO: is MPI_COMM_SELF always correct here?
-  return buffer_protocol<std::complex<double>, 2>(strides, sizes,
-                                                  reinterpret_cast<std::complex<double>*>(kokkosdvec.array().data()),
-                                                  mem_t, MPI_COMM_SELF);
+  return buffer_protocol<std::complex<double>, 2>(
+      strides,
+      sizes,
+      reinterpret_cast<std::complex<double>*>(kokkosdvec.array().data()),
+      mem_t,
+      MPI_COMM_SELF);
 }
 
 /// Distributed vector based on Kokkos
@@ -158,7 +168,7 @@ public:
   KokkosDVector& operator=(KokkosDVector&& other) = default;
 
   /// initialize from pointers
-  template<class NUMERIC_T>
+  template <class NUMERIC_T>
   KokkosDVector(const Map<layout_t>& map, const buffer_protocol<NUMERIC_T, 2>& buffer);
 
   /// local number of elements
@@ -176,18 +186,20 @@ private:
 };
 
 
-template<class T1, class T2>
-struct numeric {
-  static_assert(std::is_same<T1,T2>::value, "requires same type");
-  template<typename T>
-  static T* map(T* x) {
-    static_assert(std::is_same<std::remove_cv_t<T>*,T1*>::value, "invalid type");
+template <class T1, class T2>
+struct numeric
+{
+  static_assert(std::is_same<T1, T2>::value, "requires same type");
+  template <typename T>
+  static T* map(T* x)
+  {
+    static_assert(std::is_same<std::remove_cv_t<T>*, T1*>::value, "invalid type");
     return x;
   }
 };
 
 
-template<>
+template <>
 struct numeric<std::complex<double>, Kokkos::complex<double>>
 {
   static Kokkos::complex<double>* map(std::complex<double>* x)
@@ -197,7 +209,7 @@ struct numeric<std::complex<double>, Kokkos::complex<double>>
 
   static const Kokkos::complex<double>* map(const std::complex<double>* x)
   {
-   return reinterpret_cast<const Kokkos::complex<double>*>(x);
+    return reinterpret_cast<const Kokkos::complex<double>*>(x);
   }
 };
 
@@ -208,26 +220,27 @@ KokkosDVector<T, LAYOUT, KOKKOS_ARGS...>::KokkosDVector(const Map<LAYOUT>& map,
                                                         const buffer_protocol<NUMERIC_T, 2>& buffer)
     : map_(map)
     , kokkos_(
-        numeric<NUMERIC_T, numeric_t>::map(buffer.data),
-        Kokkos::LayoutStride(buffer.size[0], buffer.stride[0], buffer.size[1], buffer.stride[1]))
+          numeric<NUMERIC_T, numeric_t>::map(buffer.data),
+          Kokkos::LayoutStride(buffer.size[0], buffer.stride[0], buffer.size[1], buffer.stride[1]))
 {
-  static_assert(std::is_same<typename storage_t::memory_traits, Kokkos::MemoryUnmanaged>::value, "must be unmanaged");
+  static_assert(std::is_same<typename storage_t::memory_traits, Kokkos::MemoryUnmanaged>::value,
+                "must be unmanaged");
   static_assert(dim == 2, "constructor is only valid for a 2-dimensional array");
 }
 
 template <class T, class LAYOUT, class... KOKKOS_ARGS>
-KokkosDVector<T, LAYOUT, KOKKOS_ARGS...>::KokkosDVector(const Map<LAYOUT>& map,
-                                                        storage_t array)
-    : map_(map), kokkos_(array)
+KokkosDVector<T, LAYOUT, KOKKOS_ARGS...>::KokkosDVector(const Map<LAYOUT>& map, storage_t array)
+    : map_(map)
+    , kokkos_(array)
 {
-
 }
 
-    template <class T, class LAYOUT, class... KOKKOS_ARGS>
-    KokkosDVector<T, LAYOUT, KOKKOS_ARGS...> KokkosDVector<T, LAYOUT, KOKKOS_ARGS...>::copy(
-        std::string label) const
+template <class T, class LAYOUT, class... KOKKOS_ARGS>
+KokkosDVector<T, LAYOUT, KOKKOS_ARGS...>
+KokkosDVector<T, LAYOUT, KOKKOS_ARGS...>::copy(std::string label) const
 {
-  static_assert(!std::is_same<typename storage_t::memory_traits, Kokkos::MemoryUnmanaged>::value, "not yet implemented");
+  static_assert(!std::is_same<typename storage_t::memory_traits, Kokkos::MemoryUnmanaged>::value,
+                "not yet implemented");
 
   KokkosDVector Result(this->map_, Kokkos::view_alloc(Kokkos::WithoutInitializing, label));
 
@@ -256,8 +269,9 @@ create_mirror_view_and_copy(const KokkosSpace& Space, const KokkosDVector<T2, L2
 }
 
 template <class... T>
-struct to_kokkos_dvector {};
-
+struct to_kokkos_dvector
+{
+};
 
 template <class T, class LAYOUT, class... KOKKOS_ARGS>
 struct to_kokkos_dvector<T, LAYOUT, Kokkos::View<T, KOKKOS_ARGS...>>
@@ -267,7 +281,8 @@ struct to_kokkos_dvector<T, LAYOUT, Kokkos::View<T, KOKKOS_ARGS...>>
 
 
 template <class T, class LAYOUT, class... KOKKOS_ARGS>
-using to_kokkos_dvector_t = typename to_kokkos_dvector<T, LAYOUT, Kokkos::View<T, KOKKOS_ARGS...>>::type;
+using to_kokkos_dvector_t =
+    typename to_kokkos_dvector<T, LAYOUT, Kokkos::View<T, KOKKOS_ARGS...>>::type;
 
 
 template <class T, class LAYOUT, class... KOKKOS_ARGS>
@@ -303,8 +318,8 @@ create_mirror_view_and_copy(const KokkosDVector<T*, LAYOUT, KOKKOS_ARGS...>& oth
 }
 
 
-template<class T, class... ARGS, class O>
-std::enable_if_t<KokkosDVector<T**>::storage_t::dimension::rank==2>
+template <class T, class... ARGS, class O>
+std::enable_if_t<KokkosDVector<T**>::storage_t::dimension::rank == 2>
 print(const KokkosDVector<T**, ARGS...>& mat, O&& out, int precision = 4)
 {
   double tol = 1e-18;
@@ -312,10 +327,10 @@ print(const KokkosDVector<T**, ARGS...>& mat, O&& out, int precision = 4)
   auto& harr = hmat.array();
   for (int i = 0; i < harr.extent(0); ++i) {
     for (int j = 0; j < harr.extent(1); ++j) {
-      if (Kokkos::abs(harr(i,j)) > tol)
+      if (Kokkos::abs(harr(i, j)) > tol)
         out << std::setprecision(precision) << harr(i, j) << " ";
       else
-        out << T{0,0} << " ";
+        out << T{0, 0} << " ";
     }
     out << "\n";
   }

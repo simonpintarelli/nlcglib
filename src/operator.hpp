@@ -1,7 +1,7 @@
 #pragma once
 
-#include "la/mvector.hpp"
 #include "la/dvector.hpp"
+#include "la/mvector.hpp"
 
 namespace nlcglib {
 
@@ -80,4 +80,4 @@ private:
 };
 
 
-}  // nlcglib
+}  // namespace nlcglib
