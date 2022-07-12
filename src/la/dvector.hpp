@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
+#include <Kokkos_HIP_Space.hpp>
 #include <Kokkos_View.hpp>
 #include <complex>
 #include <iomanip>
@@ -50,11 +51,20 @@ struct is_on_host
 {
 };
 
+// TODO: this can be improved
 #ifdef __NLCGLIB__CUDA
 template <class T>
 struct is_on_device
     : std::integral_constant<bool,
                              Kokkos::SpaceAccessibility<Kokkos::CudaSpace, memory_t<T>>::accessible>
+{
+};
+#elif defined __NLCGLIB__ROCM
+template <class T>
+struct is_on_device
+    : std::integral_constant<
+          bool,
+          Kokkos::SpaceAccessibility<Kokkos::Experimental::HIPSpace, memory_t<T>>::accessible>
 {
 };
 #else
@@ -63,6 +73,7 @@ struct is_on_device : std::integral_constant<bool, false>
 {
 };
 #endif
+
 
 /// get memory_type enum of x
 template <typename X>

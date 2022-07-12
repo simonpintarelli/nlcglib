@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
+#include <Kokkos_HIP_Space.hpp>
 
 namespace nlcglib {
 
@@ -14,6 +15,14 @@ template <>
 struct exec<Kokkos::CudaSpace>
 {
   using type = Kokkos::Cuda;
+};
+#endif
+
+#ifdef __NLCGLIB__ROCM
+template <>
+struct exec<Kokkos::Experimental::HIPSpace>
+{
+  using type = Kokkos::Experimental::HIP;
 };
 #endif
 
