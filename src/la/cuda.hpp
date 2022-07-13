@@ -218,9 +218,7 @@ potrs<Kokkos::complex<double>>::call(cublasFillMode_t uplo,
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
   cusolverStatus_t stat =
       cusolverDnZpotrs(cusolver_handle, uplo, n, nrhs, cA, lda, cB, ldb, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
-
   if (stat != CUSOLVER_STATUS_SUCCESS) {
     std::cerr << "Something went wrong\n"
               << "return value: " << stat << "\n"

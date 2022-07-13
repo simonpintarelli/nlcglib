@@ -7,6 +7,9 @@
 #ifdef __NLCGLIB__CUDA
 #include "lapack_cuda.hpp"
 #endif
+#ifdef __NLCGLIB__ROCM
+#include "lapack_rocm.hpp"
+#endif
 #include "exec_space.hpp"
 #include "mvector.hpp"
 #include "traits.hpp"
