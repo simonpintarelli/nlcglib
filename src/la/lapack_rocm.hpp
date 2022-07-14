@@ -4,6 +4,8 @@
 // #include <rocsolver.h>
 
 #include "rocm.hpp"
+#include "rocblas.hpp"
+#include "rocsolver.hpp"
 
 namespace nlcglib {
 namespace rocm {

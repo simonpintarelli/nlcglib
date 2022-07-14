@@ -20,3 +20,15 @@ struct rocblasHandle
     return handle;
   }
 };
+
+
+namespace nlcglib {
+
+namespace rocm {
+
+
+
+}  // rocm
+
+
+}  // nlcglib
