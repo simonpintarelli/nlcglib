@@ -110,7 +110,7 @@ TEST_F(CPUKokkosVectors, TransformCPU)
   std::cout << "\n";
 }
 
-
+#ifdef __NLCGLIB__CUDA
 class GPUKokkosVectors : public ::testing::Test
 {
 public:
@@ -268,7 +268,7 @@ TEST(EigenValues, EigHermitian)
     EXPECT_NEAR(wh(i), eigs[i], 1e-8);
   }
 }
-
+#endif /* CUDA */
 
 int
 main(int argc, char *argv[])

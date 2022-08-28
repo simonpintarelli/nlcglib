@@ -7,12 +7,6 @@ NLCGLIB_SETUP_TARGET(test3)
 add_executable(test_traits test_traits.cpp)
 NLCGLIB_SETUP_TARGET(test_traits)
 
-add_executable(test_kokkos test_kokkos.cpp)
-NLCGLIB_SETUP_TARGET(test_kokkos)
-
-add_executable(test_view test_view.cpp)
-NLCGLIB_SETUP_TARGET(test_view)
-
 add_executable(test_gpu test_gpu.cpp)
 NLCGLIB_SETUP_TARGET(test_gpu)
 
@@ -28,14 +22,14 @@ NLCGLIB_SETUP_TARGET(test_solver)
 add_executable(test_mvector_cuda test_mvector_cuda.cpp)
 NLCGLIB_SETUP_TARGET(test_mvector_cuda)
 
-add_executable(test_deep_copy test_deep_copy.cpp)
-NLCGLIB_SETUP_TARGET(test_deep_copy)
-
 add_executable(test_smearing test_smearing.cpp)
 NLCGLIB_SETUP_TARGET(test_smearing)
 
-add_executable(test_nvcc test_nvcc.cpp)
-NLCGLIB_SETUP_TARGET(test_nvcc)
-
-add_executable(test_check_alignment test_check_alignment.cpp)
-NLCGLIB_SETUP_TARGET(test_check_alignment)
+if(USE_CUDA)
+  add_executable(test_deep_copy test_deep_copy.cpp)
+  NLCGLIB_SETUP_TARGET(test_deep_copy)
+  add_executable(test_view test_view.cpp)
+  NLCGLIB_SETUP_TARGET(test_view)
+  add_executable(test_nvcc test_nvcc.cpp)
+  NLCGLIB_SETUP_TARGET(test_nvcc)
+endif()

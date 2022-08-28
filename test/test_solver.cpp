@@ -71,9 +71,11 @@ int main(int argc, char *argv[])
   std::cout << "run on HOST" << "\n";
   run_unmanaged<Kokkos::HostSpace>();
 
+#ifdef __NLCGLIB__CUDA
   std::cout << "run on DEVICE"
             << "\n";
   run_unmanaged<Kokkos::CudaSpace>();
+#endif
 
   // std::cout << "run non GPU" << "\n";
   // run_unmanaged<Kokkos::CudaSpace>();

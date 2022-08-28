@@ -6,6 +6,7 @@
 #include <iostream>
 #include <random>
 
+#ifdef __NLCGLIB__CUDA
 #include "cudaProfiler.h"
 
 using namespace nlcglib;
@@ -71,3 +72,11 @@ int main(int argc, char *argv[])
   Communicator::finalize();
   return 0;
 }
+#else
+int main(int argc, char *argv[])
+{
+
+  return 0;
+}
+
+#endif
