@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
-project(nlcglib LANGUAGES CXX VERSION 0.8)
+project(nlcglib LANGUAGES CXX VERSION 0.9.1)
 
 set(CMAKE_CXX_STANDARD 14)
 

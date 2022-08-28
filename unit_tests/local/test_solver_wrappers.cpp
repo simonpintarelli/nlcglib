@@ -47,7 +47,13 @@ void TestSymSolve<T>::SetUp()
 }
 
 // https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#typed-tests
+
+#ifdef __NLCGLIB__CUDA
 using KokkosMemTypes = ::testing::Types<Kokkos::CudaSpace, Kokkos::HostSpace>;
+#else
+using KokkosMemTypes = ::testing::Types<Kokkos::HostSpace>;
+#endif
+
 // TYPED_TEST_SUITE_P(TestSymSolve);
 TYPED_TEST_CASE(TestSymSolve, KokkosMemTypes);
 

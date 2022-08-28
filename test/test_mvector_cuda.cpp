@@ -4,7 +4,7 @@
 #include "smearing.hpp"
 #include "la/mvector.hpp"
 
-
+#ifdef __NLCGLIB__CUDA
 void run()
 {
   int n = 10;
@@ -22,14 +22,18 @@ void run()
 
   vector_t copy(a_view);
 
-  double foo = 1;
+  double f = 1;
 
   Kokkos::parallel_for(
       "scale", Kokkos::RangePolicy<Kokkos::Cuda>(0, a_view.size()), KOKKOS_LAMBDA(int i) {
-        a_view(i) = foo / sqrt(a_view(i));
+        a_view(i) = f / sqrt(a_view(i));
       });
 }
-
+#else
+void run()
+{
+}
+#endif
 
 int
 main(int argc, char *argv[])
