@@ -1,5 +1,6 @@
 #include <omp.h>
 #include <Kokkos_Core.hpp>
+#include <Kokkos_HIP_Space.hpp>
 #include <Kokkos_HostSpace.hpp>
 #include <Kokkos_Parallel.hpp>
 #include <cfenv>
@@ -12,6 +13,7 @@
 #include "exec_space.hpp"
 #include "free_energy.hpp"
 #include "geodesic.hpp"
+#include "interface.hpp"
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
 #include "la/layout.hpp"
@@ -513,6 +515,38 @@ nlcg_us_device(EnergyBase& energy_base,
     default:
       throw std::runtime_error("invalid smearing type given");
   }
+#elif __NLCGLIB__ROCM
+  switch (smearing) {
+    case smearing_type::FERMI_DIRAC: {
+      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::FERMI_DIRAC>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+    case smearing_type::GAUSSIAN_SPLINE: {
+      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::GAUSSIAN_SPLINE>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+    case smearing_type::GAUSS: {
+      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::GAUSS>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+    case smearing_type::METHFESSEL_PAXTON: {
+      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::METHFESSEL_PAXTON>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+    case smearing_type::COLD: {
+      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::COLD>(
+          energy_base, us_precond_base, overlap_base, temp, maxiter, tol, kappa, tau, restart);
+      return info;
+    }
+
+    default:
+      throw std::runtime_error("invalid smearing type given");
+  }
+
 #else
   throw std::runtime_error("recompile nlcglib with CUDA.");
 #endif
