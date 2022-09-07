@@ -250,7 +250,8 @@ add(M0& C,
 
     // using geam = rocm::geam<numeric_t>;
     auto N = rocblas_operation::rocblas_operation_none;
-    rocm::geam(N, N, m, n, alpha, A_ptr, lda, beta, C_ptr, ldc);
+    // rocm::geam(N, N, m, n, alpha, A_ptr, lda, beta, B_ptr, ldb, C, ldc);
+    rocm::geam(N, N, m, n, alpha, A_ptr, lda, beta, C_ptr, ldc, C_ptr, ldc);
   } else {
     throw std::runtime_error("not implemented.");
   }
