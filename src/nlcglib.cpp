@@ -515,7 +515,7 @@ nlcg_us_device(EnergyBase& energy_base,
     default:
       throw std::runtime_error("invalid smearing type given");
   }
-#elif __NLCGLIB__ROCM
+#elif defined __NLCGLIB__ROCM
   switch (smearing) {
     case smearing_type::FERMI_DIRAC: {
       auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::FERMI_DIRAC>(
@@ -548,7 +548,7 @@ nlcg_us_device(EnergyBase& energy_base,
   }
 
 #else
-  throw std::runtime_error("recompile nlcglib with CUDA.");
+  throw std::runtime_error("recompile nlcglib with CUDA or ROCM.");
 #endif
 }
 

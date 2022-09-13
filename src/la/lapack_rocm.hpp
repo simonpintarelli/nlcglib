@@ -3,8 +3,6 @@
 // #include <rocblas.h>
 // #include <rocsolver.h>
 
-#include <rocblas/internal/rocblas-types.h>
-#include <rocsolver/rocsolver-extra-types.h>
 #include "rocm.hpp"
 #include "rocblas.hpp"
 #include "rocsolver.hpp"

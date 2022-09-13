@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include <Kokkos_HIP_Space.hpp>
 #include <iostream>
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
@@ -86,7 +87,7 @@ TEST_F(CPUKokkosVectors, TransformCPU)
   int n = a_.map().ncols();
   int m = a_.map().nrows();
   vector_t c(Map<>(Communicator(), SlabLayoutV({{0, 0, m, n}})));
-  /* TODO call transform */
+
   transform(c, 0., 1., a_, u_);
   // host vector type
 
@@ -110,6 +111,13 @@ TEST_F(CPUKokkosVectors, TransformCPU)
   std::cout << "\n";
 }
 
+#if defined __NLCGLIB__ROCM || defined __NLCGLIB__CUDA
+
+#ifdef __NLCGLIB__ROCM
+using device_space_t = Kokkos::Experimental::HIPSpace;
+#else
+using device_space_t = Kokkos::CudaSpace;
+#endif
 
 class GPUKokkosVectors : public ::testing::Test
 {
@@ -151,7 +159,7 @@ public:
   }
 
 protected:
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::CudaSpace>
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t>
       vector_t;
 
   vector_t a_;
@@ -163,7 +171,7 @@ protected:
 
 TEST_F(GPUKokkosVectors, InnerProductGPU)
 {
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::CudaSpace>
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t>
       vector_t;
   int n = 5;
   vector_t c(Map<>(Communicator(), SlabLayoutV({{0, 0, n, n}})));
@@ -190,7 +198,7 @@ TEST_F(GPUKokkosVectors, InnerProductGPU)
 
 TEST_F(GPUKokkosVectors, TransformGPU)
 {
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::CudaSpace>
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t>
       vector_t;
   int n = a_.map().ncols();
   int m = a_.map().nrows();
@@ -217,7 +225,7 @@ TEST(EigenValues, EigHermitian)
 {
   // Poisson matrix: n =5, ones on diagonal, -2 on first off-diagonals
   typedef std::complex<double> numeric_t;
-  typedef KokkosDVector<numeric_t **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::CudaSpace>
+  typedef KokkosDVector<numeric_t **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t>
       vector_t;
 
   const std::vector<numeric_t> _Varr = {
@@ -249,7 +257,7 @@ TEST(EigenValues, EigHermitian)
   Kokkos::deep_copy(A_host, A_array);
 
   vector_t V(Map<>(Communicator(), SlabLayoutV({{0, 0, n, n}})));
-  Kokkos::View<double *, Kokkos::CudaSpace> w("w", n);
+  Kokkos::View<double *, device_space_t> w("w", n);
   eigh(V, w, A);
 
   // copy to host
@@ -268,7 +276,7 @@ TEST(EigenValues, EigHermitian)
     EXPECT_NEAR(wh(i), eigs[i], 1e-8);
   }
 }
-
+#endif
 
 int
 main(int argc, char *argv[])

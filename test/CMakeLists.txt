@@ -10,12 +10,6 @@ NLCGLIB_SETUP_TARGET(test_traits)
 add_executable(test_kokkos test_kokkos.cpp)
 NLCGLIB_SETUP_TARGET(test_kokkos)
 
-add_executable(test_view test_view.cpp)
-NLCGLIB_SETUP_TARGET(test_view)
-
-add_executable(test_gpu test_gpu.cpp)
-NLCGLIB_SETUP_TARGET(test_gpu)
-
 add_executable(test_stride_dvector test_stride_dvector.cpp)
 NLCGLIB_SETUP_TARGET(test_stride_dvector)
 
@@ -34,17 +28,22 @@ NLCGLIB_SETUP_TARGET(test_deep_copy)
 add_executable(test_smearing test_smearing.cpp)
 NLCGLIB_SETUP_TARGET(test_smearing)
 
-add_executable(test_nvcc test_nvcc.cpp)
-NLCGLIB_SETUP_TARGET(test_nvcc)
-
 # add_executable(test_check_alignment test_check_alignment.cpp)
 # NLCGLIB_SETUP_TARGET(test_check_alignment)
 
 add_executable(test_buffer test_buffer.cpp)
 NLCGLIB_SETUP_TARGET(test_buffer)
 
+if(USE_CUDA OR USE_ROCM)
 add_executable(test_dvector_mirror_view_and_copy test_dvector_mirror_view_and_copy.cpp)
 NLCGLIB_SETUP_TARGET(test_dvector_mirror_view_and_copy)
+
+add_executable(test_lambda_device test_lambda_device.cpp)
+NLCGLIB_SETUP_TARGET(test_lambda_device)
+
+add_executable(test_gpu test_gpu.cpp)
+NLCGLIB_SETUP_TARGET(test_gpu)
+endif()
 
 add_executable(test_utils test_utils.cpp)
 NLCGLIB_SETUP_TARGET(test_utils)

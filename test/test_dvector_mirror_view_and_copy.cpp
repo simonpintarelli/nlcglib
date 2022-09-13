@@ -3,9 +3,14 @@
 #include "la/lapack.hpp"
 
 #include <mpi.h>
+#include <Kokkos_HIP_Space.hpp>
 #include <iostream>
 
-#include "cudaProfiler.h"
+#ifdef __NLCGLIB__ROCM
+using device_space_t = Kokkos::Experimental::HIPSpace;
+#elif defined __NLCGLIB__CUDA
+using device_space_t = Kokkos::CudaSpace;
+#endif
 
 using namespace nlcglib;
 
@@ -20,10 +25,10 @@ run()
   int n = 4000;
   int m = 400;
 
-  KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::CudaSpace> X(
+  KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t> X(
       Map<>(Communicator(), SlabLayoutV({{0, 0, n, m}})));
 
-  auto Y = create_mirror_view_and_copy(Kokkos::CudaSpace(), X);
+  auto Y = create_mirror_view_and_copy(device_space_t(), X);
 
   if (Y.array().data() == X.array().data())
   {
@@ -44,7 +49,7 @@ run_copy_to_host()
   int n = 4000;
   int m = 400;
 
-  KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::CudaSpace> X(
+  KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t> X(
       Map<>(Communicator(), SlabLayoutV({{0, 0, n, m}})));
 
   auto Y = create_mirror_view_and_copy(Kokkos::HostSpace(), X);
@@ -54,20 +59,10 @@ run_copy_to_host()
 void
 test2()
 {
-  using matrix_t = Kokkos::View<double **, Kokkos::LayoutLeft ,Kokkos::CudaSpace>;
+  using matrix_t = Kokkos::View<double **, Kokkos::LayoutLeft ,device_space_t>;
 
   int n = 10;
   matrix_t A("foo", n, n);
-
-  // Kokkos::parallel_for(const ExecPolicy &policy, const FunctorType &functor)
-  // for (int i = 0; i < n; ++i) {
-  //   for (int j = 0; j < n; ++j) {
-  //     if (i > j)
-  //       A(i,j) = i+j;
-  //     else
-  //       A(i, j) = i + j + 100;
-  //   }
-  // }
 
   matrix_t B("bar", 10, 10);
 
@@ -80,7 +75,6 @@ test2()
   }
 
   auto C = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), A);
-  // print_type<decltype(C)>::info;
 }
 
 int
@@ -88,13 +82,11 @@ main(int argc, char *argv[])
 {
   Kokkos::initialize();
   Communicator::init(argc, argv);
-  cuProfilerStart();
 
   run();
   test2();
   run_copy_to_host();
 
-  cuProfilerStop();
   Kokkos::finalize();
   Communicator::finalize();
   return 0;

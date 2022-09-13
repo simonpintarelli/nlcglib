@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rocblas/internal/rocblas-functions.h>
 #include <Kokkos_Core.hpp>
 #include <cstdio>
 #include <cstdlib>
@@ -28,6 +27,24 @@
     }                                                       \
   }
 
+
+#define CALL_HIP(func__, args__)                        \
+  {                                                     \
+    hipError_t status = func__ args__;                  \
+    if (status != hipSuccess) {                         \
+      char nm[1024];                                    \
+      gethostname(nm, 1024);                            \
+      printf("hostname: %s\n", nm);                     \
+      printf("Error in %s at line %i of file %s: %s\n", \
+             #func__,                                   \
+             __LINE__,                                  \
+             __FILE__,                                  \
+             hipGetErrorString(status));                \
+      stack_backtrace();                                \
+    }                                                   \
+  }
+
+
 namespace nlcglib {
 namespace rocm {
 
@@ -40,6 +57,7 @@ template <class T>
 inline void
 potrf(rocblas_fill uplo, int n, T* A, int lda, int& Info)
 {
+  std::printf("entering potrf (rocm)\n");
   static_assert(std::is_same<T, std::complex<double>>::value ||
                 std::is_same<T, Kokkos::complex<double>>::value);
   auto handle = rocblasHandle::get();
@@ -47,6 +65,7 @@ potrf(rocblas_fill uplo, int n, T* A, int lda, int& Info)
   rocblas_double_complex* A_ptr = reinterpret_cast<rocblas_double_complex*>(A);
 
   rocblas_int* dev_info{nullptr};
+  CALL_HIP(hipMalloc, (&dev_info, sizeof(rocblas_int)));
   CALL_ROCBLAS(rocsolver_zpotrf, (handle, uplo, n, A_ptr, lda, dev_info));
 }
 
@@ -59,6 +78,7 @@ potrs(rocblas_fill uplo, int n, int nrhs, T* A, int lda, T* B, int ldb)
                 std::is_same<T, Kokkos::complex<double>>::value);
 
   auto handle = rocblasHandle::get();
+
 
   rocblas_double_complex* A_ptr = reinterpret_cast<rocblas_double_complex*>(A);
   rocblas_double_complex* B_ptr = reinterpret_cast<rocblas_double_complex*>(B);
@@ -81,18 +101,17 @@ heevd(rocblas_evect mode, rocblas_fill uplo, int n, T* A, int lda, double* w)
 
   rocblas_double_complex* A_ptr = reinterpret_cast<rocblas_double_complex*>(A);
 
-  int* dev_info;
+  int* dev_info{nullptr};
+  CALL_HIP(hipMalloc, (&dev_info, sizeof(rocblas_int)));
 
   double* E;
-
-  // TODO: make a wrapper for hipMalloc
-  hipError_t res = hipMalloc(&E, n);
+  CALL_HIP(hipMalloc, (&E, n*sizeof(double)));
 
   CALL_ROCBLAS(rocsolver_zheevd, (handle, mode, uplo, n, A_ptr, lda, w, E, dev_info));
 
   int info;
-  hipMemcpyDtoH(&info, dev_info, sizeof(int));
-  hipFree(E);
+  CALL_HIP(hipMemcpyDtoH, (&info, dev_info, sizeof(int)));
+  CALL_HIP(hipFree, (E));
 }
 
 inline void
@@ -128,6 +147,28 @@ gemm(rocblas_operation transa,
                 reinterpret_cast<rocblas_double_complex*>(C),
                 ldc));
 }
+
+inline void
+gemm(rocblas_operation transa,
+     rocblas_operation transb,
+     int m,
+     int n,
+     int k,
+     double alpha,
+     const double* A,
+     int lda,
+     const double* B,
+     int ldb,
+     double beta,
+     double* C,
+     int ldc)
+{
+  auto handle = rocblasHandle::get();
+
+  CALL_ROCBLAS(rocblas_dgemm,
+               (handle, transa, transb, m, n, k, &alpha, A, lda, B, ldb, &beta, C, ldc));
+}
+
 
 template <class T>
 inline void

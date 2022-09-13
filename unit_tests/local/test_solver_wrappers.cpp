@@ -1,13 +1,17 @@
 #include <gtest/gtest.h>
+#include <Kokkos_HIP_Space.hpp>
+#include <Kokkos_HostSpace.hpp>
 #include <iomanip>
 #include <iostream>
+#include "gtest/gtest.h"
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
 #include <random>
 
 using namespace nlcglib;
 
-using complex_double = std::complex<double>;
+// using complex_double = std::complex<double>;
+using complex_double = Kokkos::complex<double>;
 
 int nrows = 200;
 int ncols = 20;
@@ -47,9 +51,16 @@ void TestSymSolve<T>::SetUp()
 }
 
 // https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#typed-tests
+#ifdef __NLCGLIB__CUDA
 using KokkosMemTypes = ::testing::Types<Kokkos::CudaSpace, Kokkos::HostSpace>;
-// TYPED_TEST_SUITE_P(TestSymSolve);
-TYPED_TEST_CASE(TestSymSolve, KokkosMemTypes);
+#endif
+
+#ifdef __NLCGLIB__ROCM
+using KokkosMemTypes = ::testing::Types<Kokkos::Experimental::HIPSpace, Kokkos::HostSpace>;
+#endif
+
+TYPED_TEST_SUITE_P(TestSymSolve);
+TYPED_TEST_SUITE(TestSymSolve, KokkosMemTypes);
 
 TYPED_TEST(TestSymSolve, PotrfPotrs)
 {
