@@ -1,0 +1,10 @@
+spack:
+  view: True
+  concretization: together
+  specs:
+    - q-e-sirius@nlcg-rocm ^sirius@nlcg-rocm+nlcglib+cuda+openmp ^nlcglib@feature/rocm
+  packages:
+    all:
+      variants: amdgpu_target=gfx90a:xnack- amdgpu_target_sram_ecc=gfx90a:xnack- target=zen3
+  repos:
+    - ../../spack # path to the nlcglib spack repo
