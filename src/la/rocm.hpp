@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Kokkos_Complex.hpp>
 #include <Kokkos_Core.hpp>
 #include <cstdio>
 #include <cstdlib>
@@ -57,7 +58,6 @@ template <class T>
 inline void
 potrf(rocblas_fill uplo, int n, T* A, int lda, int& Info)
 {
-  std::printf("entering potrf (rocm)\n");
   static_assert(std::is_same<T, std::complex<double>>::value ||
                 std::is_same<T, Kokkos::complex<double>>::value);
   auto handle = rocblasHandle::get();
@@ -105,7 +105,7 @@ heevd(rocblas_evect mode, rocblas_fill uplo, int n, T* A, int lda, double* w)
   CALL_HIP(hipMalloc, (&dev_info, sizeof(rocblas_int)));
 
   double* E;
-  CALL_HIP(hipMalloc, (&E, n*sizeof(double)));
+  CALL_HIP(hipMalloc, (&E, n * sizeof(double)));
 
   CALL_ROCBLAS(rocsolver_zheevd, (handle, mode, uplo, n, A_ptr, lda, w, E, dev_info));
 
@@ -187,12 +187,27 @@ geam(rocblas_operation transa,
 {
   auto handle = rocblasHandle::get();
 
-  if constexpr (std::is_same<T,std::complex<double>>::value) {
-    CALL_ROCBLAS(rocblas_zgeam, (handle, transa, transb, m, n, &alpha, A, lda, &beta, B, ldb, C, ldc));
+  if constexpr (std::is_same<T, std::complex<double>>::value ||
+                std::is_same<T, Kokkos::complex<double>>::value) {
+    CALL_ROCBLAS(rocblas_zgeam,
+                 (handle,
+                  transa,
+                  transb,
+                  m,
+                  n,
+                  reinterpret_cast<rocblas_double_complex*>(&alpha),
+                  reinterpret_cast<const rocblas_double_complex*>(A),
+                  lda,
+                  reinterpret_cast<rocblas_double_complex*>(&beta),
+                  reinterpret_cast<const rocblas_double_complex*>(B),
+                  ldb,
+                  reinterpret_cast<rocblas_double_complex*>(C),
+                  ldc));
   } else if constexpr (std::is_same<T, double>::value) {
-    CALL_ROCBLAS(rocblas_dgeam, (handle, transa, transb, m, n, &alpha, A, lda, &beta, B, ldb, C, ldc));
+    CALL_ROCBLAS(rocblas_dgeam,
+                 (handle, transa, transb, m, n, &alpha, A, lda, &beta, B, ldb, C, ldc));
   } else {
-    throw std::runtime_error("wrong type");
+    throw std::runtime_error("wrong type in rocblas::geam");
   }
 }
 
