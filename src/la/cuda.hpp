@@ -86,7 +86,6 @@ potrf<std::complex<double>>::call(
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
   cusolverStatus_t ret_cusolver =
       cusolverDnZpotrf(cusolver_handle, uplo, n, cA, lda, work_ptr, lwork, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
   CALL_CUDA(cudaFree, (work_ptr));
   if (ret_cusolver != CUSOLVER_STATUS_SUCCESS) {
@@ -127,7 +126,6 @@ potrf<Kokkos::complex<double>>::call(
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
   cusolverStatus_t ret_cusolver =
       cusolverDnZpotrf(cusolver_handle, uplo, n, cA, lda, work_ptr, lwork, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
   CALL_CUDA(cudaFree, (work_ptr));
   if (ret_cusolver != CUSOLVER_STATUS_SUCCESS) {
@@ -175,7 +173,6 @@ potrs<std::complex<double>>::call(cublasFillMode_t uplo,
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
   cusolverStatus_t stat =
       cusolverDnZpotrs(cusolver_handle, uplo, n, nrhs, cA, lda, cB, ldb, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
 
   if (stat != CUSOLVER_STATUS_SUCCESS) {
@@ -273,7 +270,6 @@ zheevd<std::complex<double>>::call(cusolverEigMode_t jobz,
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
   cusolverStatus_t ret_cusolver =
       cusolverDnZheevd(cusolver_handle, jobz, uplo, n, cA, lda, w, work_ptr, lwork, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
   CALL_CUDA(cudaFree, (work_ptr));
   if (ret_cusolver != CUSOLVER_STATUS_SUCCESS) {
@@ -325,7 +321,6 @@ zheevd<Kokkos::complex<double>>::call(cusolverEigMode_t jobz,
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
   cusolverStatus_t ret_cusolver =
       cusolverDnZheevd(cusolver_handle, jobz, uplo, n, cA, lda, w, work_ptr, lwork, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
   CALL_CUDA(cudaFree, (work_ptr));
   if (ret_cusolver != CUSOLVER_STATUS_SUCCESS) {
