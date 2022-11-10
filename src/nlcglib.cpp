@@ -1,4 +1,3 @@
-#include <omp.h>
 #include <Kokkos_Core.hpp>
 #include <Kokkos_HIP_Space.hpp>
 #include <Kokkos_HostSpace.hpp>
