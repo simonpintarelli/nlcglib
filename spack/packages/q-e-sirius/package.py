@@ -22,6 +22,7 @@ class QESirius(CMakePackage):
     variant('elpa', default=False, description='Uses ELPA as an eigenvalue solver')
     variant('libxc', default=False, description='Support functionals through libxc')
     variant('hdf5', default=False, description='Enables HDF5 support')
+    variant("sirius_apps", default=False, description="Build SIRIUS standalone binaries")
     variant('trace', default=False, description='Enable traces for debugging')
     variant('ptrace', default=False, description='Enable traces for debugging')
 

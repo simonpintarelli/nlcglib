@@ -15,77 +15,61 @@ class Nlcglib(CMakePackage, CudaPackage,  ROCmPackage):
 
     maintainers = ["simonpintarelli"]
 
-    version('master', branch="master")
-    version('develop', branch="develop")
-    version('0.9', sha256="8d5bc6b85ee714fb3d6480f767e7f43e5e7d569116cf60e48f533a7f50a37a08")
+    version("develop", branch="develop")
 
-    variant('wrapper', default=False, description="Use nvcc-wrapper for CUDA build")
-    variant('openmp', default=True)
-    variant('cuda', default=False)
-    variant('rocm', default=False)
-    variant('tests', default=False)
-    variant('build_type',
+    variant("openmp", default=True)
+    variant("tests", default=False)
+    variant("build_type",
             default="Release",
             description="CMake build type",
             values=("Debug", "Release", "RelWithDebInfo"),
             )
 
-    depends_on('mpi')
-    depends_on('lapack')
+    depends_on("cmake@3.18:", type="build")
+    depends_on("mpi")
+    depends_on("lapack")
 
-    depends_on('kokkos')
-    depends_on('kokkos+openmp', when='+openmp')
-    # cuda dependencies
-    depends_on('kokkos-nvcc-wrapper', when='+wrapper')
-    depends_on('kokkos+cuda~cuda_relocatable_device_code+cuda_lambda+wrapper', when='+wrapper')
-    depends_on('cmake@3.15:', type='build')
-    depends_on('kokkos+cuda~cuda_relocatable_device_code+cuda_lambda+openmp+wrapper',
-               when='+openmp+wrapper')
-    depends_on('kokkos+cuda', when='+cuda')
+    depends_on("kokkos")
+    depends_on("kokkos+openmp", when="+openmp")
+
+    depends_on("kokkos+cuda+cuda_lambda+wrapper", when="+cuda%gcc")
+    depends_on("kokkos+cuda", when="+cuda")
+
     # rocm dependencies
-    depends_on('kokkos+rocm', when='+rocm')
-    depends_on('rocblas', when='+rocm')
-    depends_on('rocsolver', when='+rocm')
+    depends_on("kokkos+rocm", when="+rocm")
+    depends_on("rocblas", when="+rocm")
+    depends_on("rocsolver", when="+rocm")
 
-    depends_on('googletest', type='build', when='+tests')
-    depends_on('nlohmann-json')
+    depends_on("googletest", type="build", when="+tests")
+    depends_on("nlohmann-json")
 
     def cmake_args(self):
-        options = []
+        options = [
+            self.define_from_variant("USE_OPENMP", "openmp"),
+            self.define_from_variant("BUILD_TESTS", "tests"),
+            self.define_from_variant("USE_ROCM", "rocm"),
+            self.define_from_variant("USE_CUDA", "cuda"),
+        ]
 
-        if '+openmp' in self.spec:
-            options.append('-DUSE_OPENMP=On')
+        if self.spec["blas"].name in ["intel-mkl", "intel-parallel-studio"]:
+            options.append("-DLAPACK_VENDOR=MKL")
+        elif self.spec["blas"].name in ["openblas"]:
+            options.append("-DLAPACK_VENDOR=OpenBLAS")
         else:
-            options.append('-DUSE_OPENMP=Off')
+            raise Exception("blas/lapack must be either openblas or mkl.")
 
-        if self.spec['blas'].name in ['intel-mkl', 'intel-parallel-studio']:
-            options.append('-DLAPACK_VENDOR=MKL')
-        elif self.spec['blas'].name in ['openblas']:
-            options.append('-DLAPACK_VENDOR=OpenBLAS')
-        else:
-            raise Exception('blas/lapack must be either openblas or mkl.')
-
-        if '+tests' in self.spec:
-            options.append('-DBUILD_TESTS=On')
-        else:
-            options.append('-DBUILD_TESTS=Off')
-
-        if '+wrapper' in self.spec:
+        if "+cuda%gcc" in self.spec:
             options.append(
-                '-DCMAKE_CXX_COMPILER=%s' % self.spec['kokkos-nvcc-wrapper'].kokkos_cxx
+                "-DCMAKE_CXX_COMPILER=%s" % self.spec["kokkos-nvcc-wrapper"].kokkos_cxx
             )
 
-        if '+cuda' in self.spec:
-            options.append('-DUSE_CUDA=On')
-            cuda_arch = self.spec.variants['cuda_arch'].value
-            if cuda_arch[0] != 'none':
-                options += ['-DCMAKE_CUDA_FLAGS=-arch=sm_{0}'.format(cuda_arch[0])]
-        else:
-            options.append('-DUSE_CUDA=Off')
+        if "+cuda" in self.spec:
+            cuda_arch = self.spec.variants["cuda_arch"].value
+            if cuda_arch[0] != "none":
+                options += ["-DCMAKE_CUDA_FLAGS=-arch=sm_{0}".format(cuda_arch[0])]
 
-        if '+rocm' in self.spec:
-            options.append('-DUSE_ROCM=On')
+        if "+rocm" in self.spec:
             options.append(self.define(
-                'CMAKE_CXX_COMPILER', self.spec['hip'].hipcc))
+                "CMAKE_CXX_COMPILER", self.spec["hip"].hipcc))
 
         return options
