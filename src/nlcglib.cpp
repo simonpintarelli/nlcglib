@@ -1,14 +1,13 @@
 #include <Kokkos_Core.hpp>
 #include <Kokkos_HIP_Space.hpp>
 #include <Kokkos_HostSpace.hpp>
-#include <Kokkos_Parallel.hpp>
+// #include <Kokkos_Parallel.hpp>
 #include <cfenv>
 #include <cstdio>
 #include <iomanip>
 #include <ios>
 #include <iostream>
 #include <nlcglib.hpp>
-#include <set>
 #include "exec_space.hpp"
 #include "free_energy.hpp"
 #include "geodesic.hpp"
@@ -41,7 +40,9 @@ initialize()
 {
   Kokkos::InitArguments args;
   args.disable_warnings = true;
+#ifdef USE_OPENMP
   args.num_threads = omp_get_max_threads();
+#endif
   Kokkos::initialize(args);
 }
 
