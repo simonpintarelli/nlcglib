@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(USE_OPENMP On CACHE BOOL "use OpenMP")
 set(USE_CUDA Off CACHE BOOL "use cuda")
 set(USE_ROCM Off CACHE BOOL "use amd gpus")
+set(USE_MAGMA Off CACHE BOOL "use magma eigensolver for amd gpus")
 
 set(BUILD_TESTS OFF CACHE BOOL "build tests")
 set(LAPACK_VENDOR "OpenBLAS" CACHE STRING "lapack vendor")
@@ -39,6 +40,10 @@ if(USE_ROCM)
   include(cmake/rocmlibs_target.cmake)
 endif()
 
+if(USE_MAGMA)
+  find_package(MAGMA REQUIRED)
+endif()
+
 find_package(MPI REQUIRED)
 
 if(LAPACK_VENDOR MATCHES OpenBLAS)
@@ -64,7 +69,6 @@ endif()
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
 add_subdirectory(src)
-set(nlcglib_internal_location $<TARGET_FILE:nlcglib_internal>)
 
 if(BUILD_TESTS)
   add_subdirectory(test)
