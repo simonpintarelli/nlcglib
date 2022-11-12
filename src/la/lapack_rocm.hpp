@@ -8,6 +8,10 @@
 #include "rocsolver.hpp"
 #include "la/dvector.hpp"
 
+#ifdef __NLCGLIB__MAGMA
+#include "magma.hpp"
+#endif
+
 namespace nlcglib {
 
 #ifdef __NLCGLIB__ROCM
@@ -26,7 +30,10 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
 
     int n = U.map().nrows();
     int lda = U.array().stride(1);
-    rocm::heevd(rocblas_evect::rocblas_evect_original, rocblas_fill::rocblas_fill_upper, n, U.array().data(), lda, w.data());
+
+    // performance of Hermitian eigensolver in rocm is bad! use magma instead.
+    zheevd_magma(n, U.array().data(), lda, w.data());
+    // rocm::heevd(rocblas_evect::rocblas_evect_original, rocblas_fill::rocblas_fill_upper, n, U.array().data(), lda, w.data());
   } else {
     throw std::runtime_error("distributed eigh not implemented");
   }

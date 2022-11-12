@@ -4,6 +4,7 @@
 // #include <Kokkos_Parallel.hpp>
 #include <cfenv>
 #include <cstdio>
+#include <impl/Kokkos_InitializationSettings.hpp>
 #include <iomanip>
 #include <ios>
 #include <iostream>
@@ -38,8 +39,9 @@ namespace nlcglib {
 void
 initialize()
 {
-  Kokkos::InitArguments args;
-  args.disable_warnings = true;
+  // Kokkos::InitArguments args;
+  Kokkos::InitializationSettings args;
+  args.set_disable_warnings(true);
 #ifdef USE_OPENMP
   args.num_threads = omp_get_max_threads();
 #endif
