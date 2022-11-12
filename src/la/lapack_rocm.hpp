@@ -49,9 +49,11 @@ cholesky(KokkosDVector<T, LAYOUT, KOKKOS...>& A)
     int n = A.map().nrows();
     int lda = A.array().stride(1);
     auto ptr_A = A.array().data();
-    auto uplo = rocblas_fill::rocblas_fill_upper;
-    int info_potrf;
-    rocm::potrf(uplo, n, ptr_A, lda, info_potrf);
+    // auto uplo = rocblas_fill::rocblas_fill_upper;
+    // int info_potrf;
+    // rocm::potrf(uplo, n, ptr_A, lda, info_potrf);
+
+    zpotrf_magma(n, ptr_A, lda);
   } else {
     throw std::runtime_error("distributed cholesky not implemented");
   }
@@ -72,12 +74,16 @@ solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A,
     auto ptr_B = RHS.array().data();
     auto ptr_A = A.array().data();
 
-    auto uplo = rocblas_fill::rocblas_fill_upper;
-    int info_potrf;
-    rocm::potrf(uplo, n, ptr_A, lda, info_potrf);
-    int nrhs = RHS.array().extent(1);
+    // auto uplo = rocblas_fill::rocblas_fill_upper;
+    // int info_potrf;
+    // rocm::potrf(uplo, n, ptr_A, lda, info_potrf);
+    // int nrhs = RHS.array().extent(1);
 
-    rocm::potrs(uplo, n, nrhs, ptr_A, lda, ptr_B, ldb);
+    // rocm::potrs(uplo, n, nrhs, ptr_A, lda, ptr_B, ldb);
+
+    zpotrf_magma(n, ptr_A, lda);
+    int nrhs = RHS.array().extent(1);
+    zpotrs_magma(n, nrhs, ptr_A, lda, ptr_B, ldb);
   } else {
     throw std::runtime_error("distributed solve_sym not implemented");
   }
