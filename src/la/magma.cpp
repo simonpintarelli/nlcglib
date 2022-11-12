@@ -1,13 +1,15 @@
 #include <magma_types.h>
 #ifdef __NLCGLIB__MAGMA
-#include <Kokkos_Core.hpp>
-#include <magma_v2.h>
 #include <magma_auxiliary.h>
+#include <magma_v2.h>
+#include <Kokkos_Core.hpp>
 #include <complex>
 
 /// Wrapper around `magma_zheevd_gpu`
+
+template <class COMPLEX>
 void
-zheevd_magma(int n, Kokkos::complex<double>* dA, int lda, double* w)
+zheevd_magma(int n, COMPLEX* dA, int lda, double* w)
 {
   // allocate workspace arrays according to magma doxygen
   const int magma_align = 32;
@@ -15,18 +17,17 @@ zheevd_magma(int n, Kokkos::complex<double>* dA, int lda, double* w)
   int ldwa = magma_roundup(lda, magma_align);
   magma_zmalloc_pinned(&wA, n * ldwa);
 
-
   magmaDoubleComplex* work;
   int nb = magma_get_zhetrd_nb(n);
-  int lwork = std::max(n + n*nb, 2*n + n*n);
+  int lwork = std::max(n + n * nb, 2 * n + n * n);
   magma_zmalloc(&work, n);
 
   double* rwork;
-  int lrwork = 1 + 5 * n + 2 * n *n;
+  int lrwork = 1 + 5 * n + 2 * n * n;
   magma_dmalloc(&rwork, lrwork);
 
-  int * iwork;
-  int liwork = 3 + 5*n;
+  int* iwork;
+  int liwork = 3 + 5 * n;
   magma_imalloc(&iwork, liwork);
 
   int info{0};
@@ -36,7 +37,8 @@ zheevd_magma(int n, Kokkos::complex<double>* dA, int lda, double* w)
   magma_zheevd_gpu(magma_vec_t::MagmaVec,
                    magma_uplo_t::MagmaLower,
                    n,
-                   reinterpret_cast<magmaDoubleComplex_ptr>(dA),    // overwritten, if info=0, A contains the eigenvalues
+                   reinterpret_cast<magmaDoubleComplex_ptr>(
+                       dA),  // overwritten, if info=0, A contains the eigenvalues
                    lda,
                    w,                                               // eigenvalues
                    reinterpret_cast<magmaDoubleComplex_ptr>(wA),    // workspace
@@ -59,5 +61,10 @@ zheevd_magma(int n, Kokkos::complex<double>* dA, int lda, double* w)
   magma_free(rwork);
   magma_free(iwork);
 }
+
+template void
+zheevd_magma(int, Kokkos::complex<double>*, int, double*);
+template void
+zheevd_magma(int, std::complex<double>*, int, double*);
 
 #endif /*__NLCGLIB__MAGMA*/
