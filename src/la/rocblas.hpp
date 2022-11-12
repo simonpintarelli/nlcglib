@@ -16,7 +16,6 @@ struct rocblasHandle
   {
     auto& handle = _get();
     if (!handle) {
-      std::printf("rreate rocblas handle\n");
       rocblas_create_handle(&handle);
     }
     return handle;
