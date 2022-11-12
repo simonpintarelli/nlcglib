@@ -1,5 +1,5 @@
-#include <magma_types.h>
 #ifdef __NLCGLIB__MAGMA
+#include <magma_types.h>
 #include <magma_auxiliary.h>
 #include <magma_v2.h>
 #include <Kokkos_Core.hpp>
