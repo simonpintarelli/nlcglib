@@ -16,6 +16,7 @@
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
 #include "la/layout.hpp"
+#include "la/magma.hpp"
 #include "la/map.hpp"
 #include "la/mvector.hpp"
 #include "la/utils.hpp"
@@ -45,6 +46,11 @@ initialize()
 #ifdef USE_OPENMP
   args.num_threads = omp_get_max_threads();
 #endif
+
+#ifdef __NLCGLIB__MAGMA
+  nlcg_init_magma();
+#endif
+
   Kokkos::initialize(args);
 }
 
@@ -52,6 +58,9 @@ void
 finalize()
 {
   Kokkos::finalize();
+#ifdef __NLCGLIB__MAGMA
+  nlcg_finalize_magma();
+#endif
 }
 
 auto

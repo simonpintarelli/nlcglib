@@ -3,6 +3,7 @@
 #include <iostream>
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
+#include "la/magma.hpp"
 #include <iomanip>
 
 using namespace nlcglib;
@@ -285,11 +286,21 @@ main(int argc, char *argv[])
   // make sure initializers are called
   ::testing::InitGoogleTest(&argc, argv);
   Communicator::init(argc, argv);
+
   Kokkos::initialize();
+
+  #ifdef __NLCGLIB__MAGMA
+  nlcg_init_magma();
+  #endif
 
   result = RUN_ALL_TESTS();
 
   Kokkos::finalize();
+
+  #ifdef __NLCGLIB__MAGMA
+  nlcg_finalize_magma();
+  #endif
+
   Communicator::finalize();
 
   return result;

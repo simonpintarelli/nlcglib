@@ -5,9 +5,35 @@
 #include <Kokkos_Core.hpp>
 #include <complex>
 #include <stdexcept>
+#include "la/magma.hpp"
+
+#define TESTING_CHECK(err)                                    \
+  do {                                                        \
+    magma_int_t err_ = (err);                                 \
+    if (err_ != 0) {                                          \
+      fprintf(stderr,                                         \
+              "Error: %s\nfailed at %s:%d: error %lld: %s\n", \
+              #err,                                           \
+              __FILE__,                                       \
+              __LINE__,                                       \
+              (long long)err_,                                \
+              magma_strerror(err_));                          \
+      exit(1);                                                \
+    }                                                         \
+  } while (0)
 
 
-/// Wrapper around `magma_zheevd_gpu`
+void nlcg_init_magma()
+{
+  TESTING_CHECK(magma_init());
+  // magma_print_environment();
+}
+
+
+void nlcg_finalize_magma()
+{
+  TESTING_CHECK(magma_finalize());
+}
 
 template <class COMPLEX>
 void
