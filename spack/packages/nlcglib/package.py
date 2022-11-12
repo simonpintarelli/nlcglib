@@ -25,6 +25,10 @@ class Nlcglib(CMakePackage, CudaPackage,  ROCmPackage):
             values=("Debug", "Release", "RelWithDebInfo"),
             )
 
+    with when('+rocm'):
+        variant("magma", default=True, description="Use magma eigenvalue solver (AMDGPU)")
+        depends_on("magma+rocm", when="+magma+rocm")
+
     depends_on("cmake@3.18:", type="build")
     depends_on("mpi")
     depends_on("lapack")
@@ -48,6 +52,7 @@ class Nlcglib(CMakePackage, CudaPackage,  ROCmPackage):
             self.define_from_variant("USE_OPENMP", "openmp"),
             self.define_from_variant("BUILD_TESTS", "tests"),
             self.define_from_variant("USE_ROCM", "rocm"),
+            self.define_from_variant("USE_MAGMA", "magma"),
             self.define_from_variant("USE_CUDA", "cuda"),
         ]
 
