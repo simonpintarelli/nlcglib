@@ -76,5 +76,8 @@ class Nlcglib(CMakePackage, CudaPackage,  ROCmPackage):
         if "+rocm" in self.spec:
             options.append(self.define(
                 "CMAKE_CXX_COMPILER", self.spec["hip"].hipcc))
+            archs = ",".join(self.spec.variants['amdgpu_target'].value)
+            options.append("-DHIP_HCC_FLAGS=--amdgpu-target={0}".format(archs))
+            options.append("-DCMAKE_CXX_FLAGS=--amdgpu-target={0} --offload-arch={0}".format(archs))
 
         return options

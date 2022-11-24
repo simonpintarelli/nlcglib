@@ -88,7 +88,7 @@ class Sirius(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("spla+openmp", when="+openmp ^spla")
 
     depends_on("nlcglib@develop", when="+nlcglib")
-    depends_on("nlcglib+rocm@develop", when="+rocm")
+    depends_on("nlcglib+rocm@develop", when="+nlcglib+rocm")
     depends_on("nlcglib~cuda@develop", when="+nlcglib~cuda")
 
     depends_on("libvdwxc@0.3.0:+mpi", when="+vdwxc")
