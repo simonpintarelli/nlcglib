@@ -229,10 +229,10 @@ find_package_handle_standard_args(MKL REQUIRED_VARS MKL_INCLUDE_DIR
 #
 set(_mkl_dep_found_SEQ TRUE)
 set(_mkl_dep_found_TBB TRUE)
-if (TARGET OpenMP::OpenMP_CXX)
-  set(_mkl_dep_OMP OpenMP::OpenMP_CXX)
-  set(_mkl_dep_found_OMP TRUE)
-endif()
+# if (TARGET OpenMP::OpenMP_CXX)
+#   set(_mkl_dep_OMP OpenMP::OpenMP_CXX)
+#   set(_mkl_dep_found_OMP TRUE)
+# endif()
 
 # Define all blas, blacs and scalapack
 #
