@@ -35,7 +35,7 @@ if(USE_CUDA)
 endif()
 
 if(USE_ROCM)
-  find_package(hip REQUIRED)
+  # find_package(hip REQUIRED)
   # enable_language(HIP)
   include(cmake/rocmlibs_target.cmake)
 endif()
