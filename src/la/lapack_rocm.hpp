@@ -3,10 +3,13 @@
 // #include <rocblas.h>
 // #include <rocsolver.h>
 
+#include "la/cblas.hpp"
 #include "rocm.hpp"
 #include "rocblas.hpp"
 #include "rocsolver.hpp"
 #include "la/dvector.hpp"
+#include "la/utils.hpp"
+#include "la/lapack_cpu.hpp"
 
 #ifdef __NLCGLIB__MAGMA
 #include "magma.hpp"
@@ -28,11 +31,35 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
 
     deep_copy(U, S);
 
-    int n = U.map().nrows();
-    int lda = U.array().stride(1);
+    // int n = U.map().nrows();
+    // int lda = U.array().stride(1);
 
+    auto w_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), w);
+    auto S_host = create_mirror_view_and_copy(Kokkos::HostSpace(), S);
+
+    auto U_host = empty_like()(S_host);
+
+    // eigh(U_host, w_host, S_host);
+
+    {
+      int lda = U_host.array().stride(1);
+      int n = U_host.map().ncols();
+      Kokkos::deep_copy(U_host.array(), S_host.array());
+      lapack_int info = LAPACKE_zheevd(
+          LAPACK_COL_MAJOR,                                           /* matrix layout */
+          'V',                                                        /* jobz */
+          'U',                                                        /* uplot */
+          n,                                                          /* matrix size */
+          reinterpret_cast<lapack_complex_double*>(U_host.array().data()), /* Complex double */
+          lda,                                                        /* lda */
+          w_host.data()                                                    /* eigenvalues */
+      );
+    }
+    // cblas::zheevd<typename T>
     // performance of Hermitian eigensolver in rocm is bad! use magma instead.
-    zheevd_magma(n, U.array().data(), lda, w.data());
+    // zheevd_magma(n, U.array().data(), lda, w_host.data());
+    Kokkos::deep_copy(w, w_host);
+    deep_copy(U, U_host);
     // rocm::heevd(rocblas_evect::rocblas_evect_original, rocblas_fill::rocblas_fill_upper, n, U.array().data(), lda, w.data());
   } else {
     throw std::runtime_error("distributed eigh not implemented");
@@ -66,27 +93,34 @@ std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::stor
 solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A,
           KokkosDVector<T, LAYOUT, KOKKOS...>& RHS)
 {
-  if (A.map().is_local() && RHS.map().is_local()) {
-    // first call potrf
-    int n = A.map().nrows();
-    int lda = A.array().stride(1);
-    int ldb = RHS.array().stride(1);
-    auto ptr_B = RHS.array().data();
-    auto ptr_A = A.array().data();
+  auto A_host = create_mirror_view_and_copy(Kokkos::HostSpace(), A);
+  auto RHS_host = create_mirror_view_and_copy(Kokkos::HostSpace(), RHS);
 
-    // auto uplo = rocblas_fill::rocblas_fill_upper;
-    // int info_potrf;
-    // rocm::potrf(uplo, n, ptr_A, lda, info_potrf);
-    // int nrhs = RHS.array().extent(1);
+  solve_sym(A_host, RHS_host);
+  deep_copy(A, A_host);
+  deep_copy(RHS, RHS_host);
 
-    // rocm::potrs(uplo, n, nrhs, ptr_A, lda, ptr_B, ldb);
+  // if (A.map().is_local() && RHS.map().is_local()) {
+  //   // first call potrf
+  //   int n = A.map().nrows();
+  //   int lda = A.array().stride(1);
+  //   int ldb = RHS.array().stride(1);
+  //   auto ptr_B = RHS.array().data();
+  //   auto ptr_A = A.array().data();
 
-    zpotrf_magma(n, ptr_A, lda);
-    int nrhs = RHS.array().extent(1);
-    zpotrs_magma(n, nrhs, ptr_A, lda, ptr_B, ldb);
-  } else {
-    throw std::runtime_error("distributed solve_sym not implemented");
-  }
+  //   // auto uplo = rocblas_fill::rocblas_fill_upper;
+  //   // int info_potrf;
+  //   // rocm::potrf(uplo, n, ptr_A, lda, info_potrf);
+  //   // int nrhs = RHS.array().extent(1);
+
+  //   // rocm::potrs(uplo, n, nrhs, ptr_A, lda, ptr_B, ldb);
+
+  //   zpotrf_magma(n, ptr_A, lda);
+  //   int nrhs = RHS.array().extent(1);
+  //   zpotrs_magma(n, nrhs, ptr_A, lda, ptr_B, ldb);
+  // } else {
+  //   throw std::runtime_error("distributed solve_sym not implemented");
+  // }
 }
 
 /// Inner product c = a^H * b, on GPU

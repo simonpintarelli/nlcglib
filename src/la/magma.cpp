@@ -104,7 +104,7 @@ zpotrf_magma(int n, COMPLEX* dA, int lda)
       magma_uplo_t::MagmaLower, n, reinterpret_cast<magmaDoubleComplex_ptr>(dA), lda, &info);
 
   if (info != 0) {
-    throw std::runtime_error("magma_zpotrf_gpu failed with" + std::to_string(info));
+    throw std::runtime_error("magma_zpotrf_gpu failed with " + std::to_string(info));
   }
 }
 
