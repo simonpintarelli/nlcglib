@@ -25,15 +25,15 @@ MACRO(NLCGLIB_SETUP_TARGET _target)
     ${CMAKE_SOURCE_DIR}/include
     )
 
-    target_compile_options(${_target} PUBLIC --offload-arch=gfx90a)
-
-  if(LAPACK_VENDOR MATCHES MKL)
+  if(LAPACK_VENDOR STREQUAL MKL)
     target_compile_definitions(${_target} PUBLIC __USE_MKL)
     # if(USE_OPENMP)
     target_link_libraries(${_target}  PUBLIC mkl::mkl_intel_32bit_omp_dyn)
     # else()
     #   target_link_libraries(${_target}  PUBLIC mkl::mkl_intel_32bit_seq_dyn)
     # endif()
+  elseif(LAPACK_VENDOR STREQUAL MKLONEAPI)
+    target_link_libraries(${_target}  PUBLIC MKL::MKL)
   else()
     target_link_libraries(${_target} PRIVATE my_lapack)
   endif()

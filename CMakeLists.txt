@@ -10,7 +10,7 @@ set(USE_MAGMA Off CACHE BOOL "use magma eigensolver for amd gpus")
 
 set(BUILD_TESTS OFF CACHE BOOL "build tests")
 set(LAPACK_VENDOR "OpenBLAS" CACHE STRING "lapack vendor")
-set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS "OpenBLAS" "MKL")
+set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS "OpenBLAS" "MKL" "MKLONEAPI")
 
 find_package(MPI REQUIRED COMPONENTS CXX)
 
@@ -46,16 +46,19 @@ endif()
 
 find_package(MPI REQUIRED)
 
-if(LAPACK_VENDOR MATCHES OpenBLAS)
+if(LAPACK_VENDOR STREQUAL OpenBLAS)
   find_package(OpenBLAS REQUIRED)
   add_library(my_lapack INTERFACE IMPORTED)
   set_target_properties(my_lapack PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${OpenBLAS_INCLUDE_DIRS}"
     INTERFACE_LINK_LIBRARIES "${OpenBLAS_LIBRARIES}")
-elseif(LAPACK_VENDOR MATCHES MKL)
+elseif(LAPACK_VENDOR STREQUAL MKL)
   message("LAPACK VENDOR MKL")
   find_package(MKL REQUIRED)
-elseif(LAPACK_VENDOR MATCHES CRAY_LIBSCI)
+elseif(LAPACK_VENDOR STREQUAL MKLONEAPI)
+  # set(MKL_THREADING gnu_thread)
+  find_package(MKL REQUIRED NO_MODULE)
+elseif(LAPACK_VENDOR STREQUAL CRAY_LIBSCI)
   message("LAPACK VENDOR Cray Libsci")
   find_package(SCI REQUIRED)
   add_library(my_lapack INTERFACE IMPORTED)

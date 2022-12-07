@@ -58,6 +58,8 @@ class Nlcglib(CMakePackage, CudaPackage,  ROCmPackage):
 
         if self.spec["blas"].name in ["intel-mkl", "intel-parallel-studio"]:
             options.append("-DLAPACK_VENDOR=MKL")
+        elif self.spec["blas"].name in ["intel-oneapi-mkl"]:
+            options.append("-DLAPACK_VENDOR=MKLONEAPI")
         elif self.spec["blas"].name in ["openblas"]:
             options.append("-DLAPACK_VENDOR=OpenBLAS")
         else:
