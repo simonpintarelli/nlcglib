@@ -41,6 +41,10 @@ class QESirius(CMakePackage):
 
     conflicts('~mpi', when='+scalapack', msg='SCALAPACK requires MPI support')
     conflicts('~scalapack', when='+elpa', msg='ELPA requires SCALAPACK support')
+    
+    patch_url = "https://raw.githubusercontent.com/matt-chan/q-e-sirius/offline/offline.patch"
+    patch_checksum = "3dec7410f0f6706765870da6d2bcf40ed9a847f2c5a789aef71e71003f1eca59"
+    patch(patch_url, sha256=patch_checksum)
 
     def cmake_args(self):
         args = [
