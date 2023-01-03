@@ -341,8 +341,7 @@ nlcg_us(EnergyBase& energy_base,
     }
     try {
       // line search
-
-      // TODO: capture variables explicitly here
+      // TODO: capture variables explicitly
       auto g = [&](double t) {
         auto ek_ul_xnext = geodesic(xspace(), X, eta, z_x, z_eta, S, t);
         auto ek = std::get<0>(ek_ul_xnext);
@@ -394,7 +393,6 @@ nlcg_us(EnergyBase& energy_base,
       if ((cg_iter % restart == 0) || force_restart) {
         /* compute directions for steepest descent */
         timer.start();
-
         auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
         slope = std::get<0>(slope_zx_zeta);  // no need to catch slope > 0 -> linesearch will throw
         fr = slope;
