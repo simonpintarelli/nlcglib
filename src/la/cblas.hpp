@@ -380,8 +380,8 @@ struct geam<Kokkos::complex<double>> : blas_base
     if (TransA == CBLAS_TRANSPOSE::CblasNoTrans && TransB == CBLAS_TRANSPOSE::CblasNoTrans &&
         Order == CblasColMajor) {
 #pragma omp parallel for
-      for (auto j = 0ul; j < N; ++j) {
-        for (auto i = 0ul; i < M; ++i) {
+      for (int j = 0; j < N; ++j) {
+        for (int i = 0; i < M; ++i) {
           cC[i + ldc * j] = alpha_ * (cA[i + lda * j]) + beta_ * cB[i + ldb * j];
         }
       }
