@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
-#include <Kokkos_View.hpp>
 #include <string>
 #include <type_traits>
 #include <utility>

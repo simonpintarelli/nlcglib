@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Kokkos_View.hpp>
+#include <Kokkos_Core.hpp>
 #include <iostream>
 #include <functional>
 #include <utility>
