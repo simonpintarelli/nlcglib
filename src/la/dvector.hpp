@@ -1,10 +1,6 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
-#include <Kokkos_HIP_Space.hpp>
-#include <Kokkos_View.hpp>
-#include <complex>
-#include <iomanip>
 #include <string>
 #include <type_traits>
 #include <utility>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Kokkos_HIP_Space.hpp>
+#include <Kokkos_Core.hpp>
 #include <functional>
 #include <utility>
 #include "la/map.hpp"

@@ -1,6 +1,4 @@
 #include <Kokkos_Core.hpp>
-#include <Kokkos_HIP_Space.hpp>
-#include <Kokkos_HostSpace.hpp>
 // #include <Kokkos_Parallel.hpp>
 #include <cfenv>
 #include <cstdio>
