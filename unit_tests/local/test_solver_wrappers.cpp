@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
-#include <Kokkos_HIP_Space.hpp>
-#include <Kokkos_HostSpace.hpp>
+#include "hip/hip_space.hpp"
 #include <iomanip>
 #include <iostream>
 #include "gtest/gtest.h"

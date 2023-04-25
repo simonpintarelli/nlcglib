@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <Kokkos_HIP_Space.hpp>
+#include "hip/hip_space.hpp"
 #include <iostream>
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"

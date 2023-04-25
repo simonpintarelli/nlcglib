@@ -1,6 +1,9 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
+#include "hip/hip_space.hpp"
+#include <complex>
+#include <iomanip>
 #include <string>
 #include <type_traits>
 #include <utility>

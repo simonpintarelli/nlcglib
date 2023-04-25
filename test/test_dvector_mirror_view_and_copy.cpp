@@ -1,10 +1,9 @@
+#include <mpi.h>
 #include <Kokkos_Core.hpp>
+#include <iostream>
+#include "hip/hip_space.hpp"
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
-
-#include <mpi.h>
-#include <Kokkos_HIP_Space.hpp>
-#include <iostream>
 
 #ifdef __NLCGLIB__ROCM
 using device_space_t = Kokkos::Experimental::HIPSpace;
