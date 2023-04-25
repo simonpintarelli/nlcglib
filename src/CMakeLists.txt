@@ -11,6 +11,18 @@ add_library(nlcglib SHARED nlcglib.cpp)
 target_include_directories(nlcglib PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
 target_link_libraries(nlcglib PRIVATE nlcglib_core)
 
+if(LAPACK_VENDOR MATCHES MKL)
+  target_compile_definitions(nlcglib PRIVATE __USE_MKL)
+  if(USE_OPENMP)
+    target_link_libraries(nlcglib PRIVATE mkl::mkl_intel_32bit_omp_dyn)
+  else()
+    target_link_libraries(nlcglib PRIVATE mkl::mkl_intel_32bit_seq_st)
+  endif()
+else()
+  target_link_libraries(nlcglib PRIVATE nlcg::cpu_lapack)
+endif()
+
+
 set_target_properties(nlcglib PROPERTIES PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/nlcglib.hpp)
 
 include(GNUInstallDirs)
