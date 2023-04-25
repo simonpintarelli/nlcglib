@@ -10,6 +10,10 @@
 
 namespace nlcglib {
 
+/** Helper class for CG algorithm.
+    @param memspace_t     execution memory space
+    @param smearing_type  Smearing type
+ */
 template <class memspace_t, enum smearing_type smearing_t>
 class descent_direction_impl {
   public : descent_direction_impl(const memspace_t& memspc,
@@ -53,35 +57,38 @@ class descent_direction_impl {
   auto
   operator()(x_t&& X, e_t&& en, f_t&& fn, hx_t&& hx, op_t&& S, prec_t&& P, double wk);
 
-  template <class x_t,
-            class e_t,
-            class f_t,
-            class hx_t,
-            class op_t,
-            class prec_t,
-            class zxp_t,
-            class zetap_t,
-            class ul_t>
-  std::tuple<double,
-             to_layout_left_t<x_t>,
-             to_layout_left_t<zetap_t>,
-             to_layout_left_t<x_t>,
-             to_layout_left_t<zetap_t>,
-             double> exec_spc(x_t && x,
-                              e_t&& e,
-                              f_t&& f,
-                              hx_t&& hx,
-                              op_t&& s,
-                              prec_t&& p,
-                              zxp_t&& zxp,
-                              zetap_t&& zetap,
-                              ul_t&& ul,
-                              double wk);
+  private :
+      /* computations in execution space for conjugated gradients  */
+      template <class x_t,
+                class e_t,
+                class f_t,
+                class hx_t,
+                class op_t,
+                class prec_t,
+                class zxp_t,
+                class zetap_t,
+                class ul_t>
+      std::tuple<double,
+                 to_layout_left_t<x_t>,
+                 to_layout_left_t<zetap_t>,
+                 to_layout_left_t<x_t>,
+                 to_layout_left_t<zetap_t>,
+                 double> exec_spc(x_t && x,
+                                  e_t&& e,
+                                  f_t&& f,
+                                  hx_t&& hx,
+                                  op_t&& s,
+                                  prec_t&& p,
+                                  zxp_t&& zxp,
+                                  zetap_t&& zetap,
+                                  ul_t&& ul,
+                                  double wk);
 
   /* CG conjugated direction gradients */
   template <class x_t, class sx_t, class zxp_t, class zetap_t, class ul_t, class gx_t, class geta_t>
   std::tuple<double, to_layout_left_t<zxp_t>, to_layout_left_t<zetap_t>> exec_conjugate(
       x_t && x, sx_t&& sx, zxp_t&& zxp, zetap_t&& zetap, ul_t&& ul, gx_t&& gx, geta_t&& geta);
+
 
   /* CG restart gradients */
   template <class x_t, class e_t, class f_t, class hx_t, class op_t, class prec_t>
@@ -216,6 +223,9 @@ descent_direction_impl<memspc_t, smearing_t>::operator()(x_t&& X_h,
                                                          prec_t&& P,
                                                          double wk)
 {
+  // namespace of input an result
+  using input_memspc = typename std::remove_reference_t<x_t>::storage_t::memory_space;
+
   auto X = create_mirror_view_and_copy(memspc, X_h);
   auto en = Kokkos::create_mirror_view_and_copy(memspc, en_h);
   auto fn = Kokkos::create_mirror_view_and_copy(memspc, fn_h);
@@ -239,12 +249,12 @@ descent_direction_impl<memspc_t, smearing_t>::operator()(x_t&& X_h,
   double slope_zp = std::get<5>(res);
 
   // copy Δ to host
-  auto delta_x_h = create_mirror_view_and_copy(Kokkos::HostSpace(), delta_x);
-  auto delta_eta_h = create_mirror_view_and_copy(Kokkos::HostSpace(), delta_eta);
+  auto delta_x_h = create_mirror_view_and_copy(input_memspc(), delta_x);
+  auto delta_eta_h = create_mirror_view_and_copy(input_memspc(), delta_eta);
 
   // copy Z to host
-  auto z_x_h = create_mirror_view_and_copy(Kokkos::HostSpace(), z_x);
-  auto z_eta_h = create_mirror_view_and_copy(Kokkos::HostSpace(), z_eta);
+  auto z_x_h = create_mirror_view_and_copy(input_memspc(), z_x);
+  auto z_eta_h = create_mirror_view_and_copy(input_memspc(), z_eta);
 
   /// return slopes and Δ, Z (host memeory)
   return std::make_tuple(fr, delta_x_h, delta_eta_h, z_x_h, z_eta_h, slope_zp);
@@ -256,6 +266,9 @@ auto
 descent_direction_impl<memspc_t, smearing_t>::operator()(
     x_t&& X_h, e_t&& en_h, f_t&& fn_h, hx_t&& hx_h, op_t&& S, prec_t&& P, double wk)
 {
+  // namespace of input an result
+  using input_memspc = typename std::remove_reference_t<x_t>::storage_t::memory_space;
+
   auto X = create_mirror_view_and_copy(memspc, X_h);
   auto en = Kokkos::create_mirror_view_and_copy(memspc, en_h);
   auto fn = Kokkos::create_mirror_view_and_copy(memspc, fn_h);
@@ -269,8 +282,8 @@ descent_direction_impl<memspc_t, smearing_t>::operator()(
   auto delta_eta = std::get<2>(res);
 
   // copy Δ to host
-  auto delta_x_h = create_mirror_view_and_copy(Kokkos::HostSpace(), delta_x);
-  auto delta_eta_h = create_mirror_view_and_copy(Kokkos::HostSpace(), delta_eta);
+  auto delta_x_h = create_mirror_view_and_copy(input_memspc(), delta_x);
+  auto delta_eta_h = create_mirror_view_and_copy(input_memspc(), delta_eta);
 
   /// return slopes and Δ, Z (host memeory)
   return std::make_tuple(fr, delta_x_h, delta_eta_h);
