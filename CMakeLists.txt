@@ -29,7 +29,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 find_package(Kokkos)
 if(USE_CUDA)
-  find_package(CUDA REQUIRED)
+  find_package(CUDAToolkit REQUIRED)
   enable_language(CUDA)
   include(cmake/cudalibs_target.cmake)
 endif()
@@ -49,14 +49,6 @@ find_package(MPI REQUIRED)
 if(LAPACK_VENDOR MATCHES OpenBLAS)
   message("find package openblas")
   find_package(OpenBLAS REQUIRED)
-<<<<<<< variant A
-  add_library(my_lapack INTERFACE IMPORTED)
-  set_target_properties(my_lapack PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${OpenBLAS_INCLUDE_DIRS}"
-    INTERFACE_LINK_LIBRARIES "${OpenBLAS_LIBRARIES}")
-elseif(LAPACK_VENDOR STREQUAL MKL)
->>>>>>> variant B
-  message("oblas includes: ${OpenBLAS_INCLUDE_DIRS}")
   if(NOT TARGET nlcg::cpu_lapack)
     add_library(nlcg::cpu_lapack INTERFACE IMPORTED)
     set_target_properties(nlcg::cpu_lapack PROPERTIES
@@ -64,7 +56,6 @@ elseif(LAPACK_VENDOR STREQUAL MKL)
       INTERFACE_LINK_LIBRARIES "${OpenBLAS_LIBRARIES}")
   endif()
 elseif(LAPACK_VENDOR MATCHES MKL)
-======= end
   message("LAPACK VENDOR MKL")
   find_package(MKL REQUIRED)
 elseif(LAPACK_VENDOR STREQUAL MKLONEAPI)
@@ -75,7 +66,7 @@ elseif(LAPACK_VENDOR STREQUAL CRAY_LIBSCI)
   find_package(SCI REQUIRED)
   if(NOT TARGET nlcg::cpu_lapack)
     add_library(nlcg::cpu_lapack INTERFACE IMPORTED)
-    set_target_properties(my_lapack PROPERTIES
+    set_target_properties(nlcg::cpu_lapack PROPERTIES
       INTERFACE_INCLUDE_DIRECTORIES "${SCI_INCLUDE_DIRS}"
       INTERFACE_LINK_LIBRARIES "${SCI_LIBRARIES}")
   endif()
