@@ -12,7 +12,7 @@ set(BUILD_TESTS OFF CACHE BOOL "build tests")
 set(LAPACK_VENDOR "OpenBLAS" CACHE STRING "lapack vendor")
 set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS "OpenBLAS" "MKL" "MKLONEAPI")
 
-find_package(MPI REQUIRED COMPONENTS CXX)
+find_package(MPI REQUIRED)
 
 if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
