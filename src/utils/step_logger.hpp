@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 #include <Kokkos_Complex.hpp>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <type_traits>
 #include <type_traits>

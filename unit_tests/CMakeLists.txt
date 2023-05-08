@@ -6,6 +6,6 @@ endif()
 
 if(BUILD_TESTS)
   add_executable(gtest local/test_la_wrappers.cpp local/test_solver_wrappers.cpp)
-  nlcglib_setup_target(gtest)
+  target_link_libraries(gtest PUBLIC nlcglib_core)
   target_link_libraries(gtest PRIVATE GTest::GTest GTest::Main)
 endif()

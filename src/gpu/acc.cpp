@@ -2,11 +2,11 @@
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <Kokkos_Complex.hpp>
-#include <cassert>
 #include <complex>
+#include <cstdio>
+#include <cassert>
 
 namespace nlcglib {
-
 #define CALL_DEVICE_API(func__, args__)                      \
   {                                                          \
     cudaError_t error;                                       \
@@ -43,7 +43,7 @@ copy(std::complex<double>*, const std::complex<double>*, size_t);
 template void
 copy(Kokkos::complex<double>*, const std::complex<double>*, size_t);
 
-
 }  // namespace acc
+
 }  // namespace nlcglib
 #endif

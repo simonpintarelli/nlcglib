@@ -3,12 +3,13 @@
 #include <iostream>
 #include "traits.hpp"
 
+#ifdef __NLCGLIB__CUDA
 void run()
 {
   int n = 10;
   double arr[10];
 
-  Kokkos::View<double*, Kokkos::HostSpace, Kokkos::MemoryUnmanaged>
+  Kokkos::View<double*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryUnmanaged>
     c(arr, n);
   Kokkos::View<double*, Kokkos::HostSpace>
     a("A",  n);
@@ -49,7 +50,7 @@ run_2d()
   int n = 3;
   double arr[n*n];
 
-  Kokkos::View<double **, Kokkos::Serial, Kokkos::MemoryUnmanaged> c(arr, n, n);
+  Kokkos::View<double **, Kokkos::LayoutLeft, Kokkos::MemoryUnmanaged> c(arr, n, n);
   Kokkos::View<double **, Kokkos::HostSpace> a("A", n, n);
   Kokkos::View<double **, Kokkos::CudaSpace> a_device("A", n, n);
   Kokkos::View<double **, Kokkos::HostSpace> b("b", n, n);
@@ -84,18 +85,19 @@ run_2d()
     for (int j = 0; j < n; ++j) {
       std::cout << c(i, j) << ", ";
     }
-
   }
   std::cout << "\n";
 }
-
+#endif
 
 int
 main(int argc, char *argv[])
 {
   Kokkos::initialize();
+#ifdef __NLCGLIB__CUDA
   run();
   run_2d();
+#endif
   Kokkos::finalize();
   return 0;
 }

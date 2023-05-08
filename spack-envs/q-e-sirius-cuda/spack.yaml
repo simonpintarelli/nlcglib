@@ -1,0 +1,10 @@
+spack:
+  view: True
+  concretization: together
+  specs:
+    - q-e-sirius@develop-ristretto ^sirius@develop+nlcglib+cuda+openmp
+  packages:
+    all:
+      variants: cuda_arch=60 # TODO: set the right sm version of your gpu
+  repos:
+    - ../../spack # path to the nlcglib spack repo

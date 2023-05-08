@@ -1,24 +1,30 @@
 #pragma once
 
-#include <iostream>
 #include <cuda_runtime_api.h>
-#include <complex>
-#include "cusolver.hpp"
-#include "cublas.hpp"
-#include "backtrace.hpp"
 #include <Kokkos_Core.hpp>
+#include <complex>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include "backtrace.hpp"
+#include "cublas.hpp"
+#include "cusolver.hpp"
 
-#define CALL_CUDA(func__, args__)                                                                                  \
-{                                                                                                                  \
-    cudaError_t error = func__ args__;                                                                             \
-    if (error != cudaSuccess) {                                                                                    \
-        char nm[1024];                                                                                             \
-        gethostname(nm, 1024);                                                                                     \
-        printf("hostname: %s\n", nm);                                                                              \
-        printf("Error in %s at line %i of file %s: %s\n", #func__, __LINE__, __FILE__, cudaGetErrorString(error)); \
-        stack_backtrace();                                                                                         \
-    }                                                                                                              \
-}
+#define CALL_CUDA(func__, args__)                       \
+  {                                                     \
+    cudaError_t error = func__ args__;                  \
+    if (error != cudaSuccess) {                         \
+      char nm[1024];                                    \
+      gethostname(nm, 1024);                            \
+      printf("hostname: %s\n", nm);                     \
+      printf("Error in %s at line %i of file %s: %s\n", \
+             #func__,                                   \
+             __LINE__,                                  \
+             __FILE__,                                  \
+             cudaGetErrorString(error));                \
+      stack_backtrace();                                \
+    }                                                   \
+  }
 
 #define CALL_CUSOLVER(func__, args__)                                                  \
   {                                                                                    \
@@ -36,7 +42,7 @@
 
 namespace nlcglib {
 namespace cuda {
-
+#ifdef __NLCGLIB__CUDA
 struct cusolver_base
 {
   static const cublasFillMode_t LOWER{CUBLAS_FILL_MODE_LOWER};
@@ -47,31 +53,27 @@ struct cusolver_base
 };
 
 template <typename T>
-struct potrf {};
+struct potrf
+{
+};
 
-template<>
+template <>
 struct potrf<std::complex<double>> : cusolver_base
 {
-  inline static cusolverStatus_t call(cublasFillMode_t uplo,
-                                      int n,
-                                      std::complex<double>* A,
-                                      int lda,
-                                      int& Info);
+  inline static cusolverStatus_t call(
+      cublasFillMode_t uplo, int n, std::complex<double>* A, int lda, int& Info);
 };
 
 cusolverStatus_t
-potrf<std::complex<double>>::call(cublasFillMode_t uplo,
-                                  int n,
-                                  std::complex<double>* A,
-                                  int lda,
-                                  int& Info)
+potrf<std::complex<double>>::call(
+    cublasFillMode_t uplo, int n, std::complex<double>* A, int lda, int& Info)
 {
   using numeric_t = std::complex<double>;
   cuDoubleComplex* cA = reinterpret_cast<cuDoubleComplex*>(A);
   int lwork = 0;
   cusolverDnHandle_t cusolver_handle = cusolver::cusolverDnHandle::get();
   cusolverStatus_t ret_buffer_size =
-    cusolverDnZpotrf_bufferSize(cusolver_handle, uplo, n, cA, lda, &lwork);
+      cusolverDnZpotrf_bufferSize(cusolver_handle, uplo, n, cA, lda, &lwork);
   if (ret_buffer_size != CUSOLVER_STATUS_SUCCESS) {
     std::cerr << "Something went wrong\n"
               << "return value: " << ret_buffer_size << "\n";
@@ -84,7 +86,6 @@ potrf<std::complex<double>>::call(cublasFillMode_t uplo,
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
   cusolverStatus_t ret_cusolver =
       cusolverDnZpotrf(cusolver_handle, uplo, n, cA, lda, work_ptr, lwork, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
   CALL_CUDA(cudaFree, (work_ptr));
   if (ret_cusolver != CUSOLVER_STATUS_SUCCESS) {
@@ -96,29 +97,23 @@ potrf<std::complex<double>>::call(cublasFillMode_t uplo,
   return ret_cusolver;
 }
 
-template<>
+template <>
 struct potrf<Kokkos::complex<double>> : cusolver_base
 {
-  inline static cusolverStatus_t call(cublasFillMode_t uplo,
-                                      int n,
-                                      Kokkos::complex<double>* A,
-                                      int lda,
-                                      int& Info);
+  inline static cusolverStatus_t call(
+      cublasFillMode_t uplo, int n, Kokkos::complex<double>* A, int lda, int& Info);
 };
 
 cusolverStatus_t
-potrf<Kokkos::complex<double>>::call(cublasFillMode_t uplo,
-                                  int n,
-                                  Kokkos::complex<double>* A,
-                                  int lda,
-                                  int& Info)
+potrf<Kokkos::complex<double>>::call(
+    cublasFillMode_t uplo, int n, Kokkos::complex<double>* A, int lda, int& Info)
 {
   using numeric_t = Kokkos::complex<double>;
   cuDoubleComplex* cA = reinterpret_cast<cuDoubleComplex*>(A);
   int lwork = 0;
   cusolverDnHandle_t cusolver_handle = cusolver::cusolverDnHandle::get();
   cusolverStatus_t ret_buffer_size =
-    cusolverDnZpotrf_bufferSize(cusolver_handle, uplo, n, cA, lda, &lwork);
+      cusolverDnZpotrf_bufferSize(cusolver_handle, uplo, n, cA, lda, &lwork);
   if (ret_buffer_size != CUSOLVER_STATUS_SUCCESS) {
     std::cerr << "Something went wrong\n"
               << "return value: " << ret_buffer_size << "\n";
@@ -131,7 +126,6 @@ potrf<Kokkos::complex<double>>::call(cublasFillMode_t uplo,
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
   cusolverStatus_t ret_cusolver =
       cusolverDnZpotrf(cusolver_handle, uplo, n, cA, lda, work_ptr, lwork, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
   CALL_CUDA(cudaFree, (work_ptr));
   if (ret_cusolver != CUSOLVER_STATUS_SUCCESS) {
@@ -144,11 +138,12 @@ potrf<Kokkos::complex<double>>::call(cublasFillMode_t uplo,
 }
 
 
-
 template <typename T>
-struct potrs {};
+struct potrs
+{
+};
 
-template<>
+template <>
 struct potrs<std::complex<double>> : cusolver_base
 {
   inline static cusolverStatus_t call(cublasFillMode_t uplo,
@@ -160,13 +155,14 @@ struct potrs<std::complex<double>> : cusolver_base
                                       int ldb);
 };
 
-cusolverStatus_t potrs<std::complex<double>>::call(cublasFillMode_t uplo,
-                                                   int n,
-                                                   int nrhs,
-                                                   const std::complex<double> *A,
-                                                   int lda,
-                                                   std::complex<double> *B,
-                                                   int ldb)
+cusolverStatus_t
+potrs<std::complex<double>>::call(cublasFillMode_t uplo,
+                                  int n,
+                                  int nrhs,
+                                  const std::complex<double>* A,
+                                  int lda,
+                                  std::complex<double>* B,
+                                  int ldb)
 {
   const cuDoubleComplex* cA = reinterpret_cast<const cuDoubleComplex*>(A);
   cuDoubleComplex* cB = reinterpret_cast<cuDoubleComplex*>(B);
@@ -175,8 +171,8 @@ cusolverStatus_t potrs<std::complex<double>>::call(cublasFillMode_t uplo,
   int* dev_Info;
   int Info;
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
-  cusolverStatus_t stat = cusolverDnZpotrs(cusolver_handle, uplo, n, nrhs, cA, lda, cB, ldb, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
+  cusolverStatus_t stat =
+      cusolverDnZpotrs(cusolver_handle, uplo, n, nrhs, cA, lda, cB, ldb, dev_Info);
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
 
   if (stat != CUSOLVER_STATUS_SUCCESS) {
@@ -189,7 +185,7 @@ cusolverStatus_t potrs<std::complex<double>>::call(cublasFillMode_t uplo,
   return stat;
 }
 
-template<>
+template <>
 struct potrs<Kokkos::complex<double>> : cusolver_base
 {
   inline static cusolverStatus_t call(cublasFillMode_t uplo,
@@ -201,13 +197,14 @@ struct potrs<Kokkos::complex<double>> : cusolver_base
                                       int ldb);
 };
 
-cusolverStatus_t potrs<Kokkos::complex<double>>::call(cublasFillMode_t uplo,
-                                                   int n,
-                                                   int nrhs,
-                                                   const Kokkos::complex<double> *A,
-                                                   int lda,
-                                                   Kokkos::complex<double> *B,
-                                                   int ldb)
+cusolverStatus_t
+potrs<Kokkos::complex<double>>::call(cublasFillMode_t uplo,
+                                     int n,
+                                     int nrhs,
+                                     const Kokkos::complex<double>* A,
+                                     int lda,
+                                     Kokkos::complex<double>* B,
+                                     int ldb)
 {
   const cuDoubleComplex* cA = reinterpret_cast<const cuDoubleComplex*>(A);
   cuDoubleComplex* cB = reinterpret_cast<cuDoubleComplex*>(B);
@@ -216,10 +213,9 @@ cusolverStatus_t potrs<Kokkos::complex<double>>::call(cublasFillMode_t uplo,
   int* dev_Info;
   int Info;
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
-  cusolverStatus_t stat = cusolverDnZpotrs(cusolver_handle, uplo, n, nrhs, cA, lda, cB, ldb, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
+  cusolverStatus_t stat =
+      cusolverDnZpotrs(cusolver_handle, uplo, n, nrhs, cA, lda, cB, ldb, dev_Info);
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
-
   if (stat != CUSOLVER_STATUS_SUCCESS) {
     std::cerr << "Something went wrong\n"
               << "return value: " << stat << "\n"
@@ -232,9 +228,10 @@ cusolverStatus_t potrs<Kokkos::complex<double>>::call(cublasFillMode_t uplo,
 
 template <typename T>
 struct zheevd : cusolver_base
-{ };
+{
+};
 
-template<>
+template <>
 struct zheevd<std::complex<double>> : cusolver_base
 {
   inline static cusolverStatus_t call(cusolverEigMode_t jobz,
@@ -260,7 +257,7 @@ zheevd<std::complex<double>>::call(cusolverEigMode_t jobz,
   int lwork = 0;
   cusolverDnHandle_t cusolver_handle = cusolver::cusolverDnHandle::get();
   cusolverStatus_t ret_buffer_size =
-    cusolverDnZheevd_bufferSize(cusolver_handle, jobz, uplo, n, cA, lda, w, &lwork);
+      cusolverDnZheevd_bufferSize(cusolver_handle, jobz, uplo, n, cA, lda, w, &lwork);
   if (ret_buffer_size != CUSOLVER_STATUS_SUCCESS) {
     std::cerr << "Something went wrong\n"
               << "return value: " << ret_buffer_size << "\n";
@@ -273,7 +270,6 @@ zheevd<std::complex<double>>::call(cusolverEigMode_t jobz,
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
   cusolverStatus_t ret_cusolver =
       cusolverDnZheevd(cusolver_handle, jobz, uplo, n, cA, lda, w, work_ptr, lwork, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
   CALL_CUDA(cudaFree, (work_ptr));
   if (ret_cusolver != CUSOLVER_STATUS_SUCCESS) {
@@ -286,7 +282,7 @@ zheevd<std::complex<double>>::call(cusolverEigMode_t jobz,
   return ret_cusolver;
 }
 
-template<>
+template <>
 struct zheevd<Kokkos::complex<double>> : cusolver_base
 {
   inline static cusolverStatus_t call(cusolverEigMode_t jobz,
@@ -300,19 +296,19 @@ struct zheevd<Kokkos::complex<double>> : cusolver_base
 
 cusolverStatus_t
 zheevd<Kokkos::complex<double>>::call(cusolverEigMode_t jobz,
-                                   cublasFillMode_t uplo,
-                                   int n,
-                                   Kokkos::complex<double>* A,
-                                   int lda,
-                                   double* w,
-                                   int& Info)
+                                      cublasFillMode_t uplo,
+                                      int n,
+                                      Kokkos::complex<double>* A,
+                                      int lda,
+                                      double* w,
+                                      int& Info)
 {
   using numeric_t = Kokkos::complex<double>;
   cuDoubleComplex* cA = reinterpret_cast<cuDoubleComplex*>(A);
   int lwork = 0;
   cusolverDnHandle_t cusolver_handle = cusolver::cusolverDnHandle::get();
   cusolverStatus_t ret_buffer_size =
-    cusolverDnZheevd_bufferSize(cusolver_handle, jobz, uplo, n, cA, lda, w, &lwork);
+      cusolverDnZheevd_bufferSize(cusolver_handle, jobz, uplo, n, cA, lda, w, &lwork);
   if (ret_buffer_size != CUSOLVER_STATUS_SUCCESS) {
     std::cerr << "Something went wrong\n"
               << "return value: " << ret_buffer_size << "\n";
@@ -325,11 +321,10 @@ zheevd<Kokkos::complex<double>>::call(cusolverEigMode_t jobz,
   CALL_CUDA(cudaMalloc, ((void**)&dev_Info, sizeof(int)));
   cusolverStatus_t ret_cusolver =
       cusolverDnZheevd(cusolver_handle, jobz, uplo, n, cA, lda, w, work_ptr, lwork, dev_Info);
-  CALL_CUDA(cudaDeviceSynchronize, ());
   CALL_CUDA(cudaMemcpy, (&Info, dev_Info, sizeof(int), cudaMemcpyDeviceToHost));
   CALL_CUDA(cudaFree, (work_ptr));
   if (ret_cusolver != CUSOLVER_STATUS_SUCCESS) {
-    std::cerr << "Something went wrong\n"
+    std::cerr << "Error in DnZheevd\n"
               << "return value: " << ret_cusolver << "\n"
               << "info: " << Info << "\n";
 
@@ -340,7 +335,8 @@ zheevd<Kokkos::complex<double>>::call(cusolverEigMode_t jobz,
 
 template <class T>
 struct gemm
-{ };
+{
+};
 
 template <>
 struct gemm<std::complex<double>>
@@ -362,7 +358,12 @@ struct gemm<std::complex<double>>
                           std::complex<double>* C,
                           int ldc)
   {
-    cublasZgemm_v2(cublas::cublasHandle::get(), transa, transb, m, n, k,
+    cublasZgemm_v2(cublas::cublasHandle::get(),
+                   transa,
+                   transb,
+                   m,
+                   n,
+                   k,
                    reinterpret_cast<const cuDoubleComplex*>(&alpha),
                    reinterpret_cast<const cuDoubleComplex*>(A),
                    lda,
@@ -374,7 +375,7 @@ struct gemm<std::complex<double>>
   }
 };
 
-template<>
+template <>
 struct gemm<Kokkos::complex<double>>
 {
   static const cublasOperation_t H = cublasOperation_t::CUBLAS_OP_HERMITAN;
@@ -394,7 +395,12 @@ struct gemm<Kokkos::complex<double>>
                           Kokkos::complex<double>* C,
                           int ldc)
   {
-    cublasZgemm_v2(cublas::cublasHandle::get(), transa, transb, m, n, k,
+    cublasZgemm_v2(cublas::cublasHandle::get(),
+                   transa,
+                   transb,
+                   m,
+                   n,
+                   k,
                    reinterpret_cast<const cuDoubleComplex*>(&alpha),
                    reinterpret_cast<const cuDoubleComplex*>(A),
                    lda,
@@ -426,14 +432,28 @@ struct gemm<double>
                           double* C,
                           int ldc)
   {
-    cublasDgemm_v2(cublas::cublasHandle::get(), transa, transb, m, n, k, &alpha, A, lda, B, ldb, &beta, C, ldc);
+    cublasDgemm_v2(cublas::cublasHandle::get(),
+                   transa,
+                   transb,
+                   m,
+                   n,
+                   k,
+                   &alpha,
+                   A,
+                   lda,
+                   B,
+                   ldb,
+                   &beta,
+                   C,
+                   ldc);
   }
 };
 
 
 template <class T>
 struct geam
-{ };
+{
+};
 
 template <>
 struct geam<Kokkos::complex<double>>
@@ -470,8 +490,6 @@ struct geam<Kokkos::complex<double>>
   }
 };
 
-
-
-
+#endif  //__NLCGLIB__CUDA
 }  // namespace cuda
 }  // namespace nlcglib

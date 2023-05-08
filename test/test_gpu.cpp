@@ -6,9 +6,16 @@
 #include <iostream>
 #include <random>
 
-#include "cudaProfiler.h"
-
 using namespace nlcglib;
+
+#ifdef __NLCGLIB__ROCM
+using memory_space_t = Kokkos::Experimental::HIPSpace;
+#elif defined __NLCGLIB__CUDA
+using memory_space_t = Kokkos::CudaSpace;
+#else
+static_assert(false);
+#endif
+
 
 std::uniform_real_distribution<double> unif01(0, 1);
 std::mt19937 gen(0);
@@ -34,7 +41,7 @@ void run() {
 
   for (int rep = 0; rep < 1000; ++rep) {
     std::cout << "rep " << rep << "\n";
-    KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::CudaSpace> X(
+    KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, memory_space_t> X(
         Map<>(Communicator(), SlabLayoutV({{0, 0, n, m}})));
 
     auto host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), X.array());
@@ -63,10 +70,8 @@ int main(int argc, char *argv[])
 {
   Kokkos::initialize();
   Communicator::init(argc, argv);
-  cuProfilerStart();
   run();
 
-  cuProfilerStop();
   Kokkos::finalize();
   Communicator::finalize();
   return 0;

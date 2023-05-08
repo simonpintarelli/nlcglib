@@ -1,17 +1,18 @@
-cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 project(nlcglib LANGUAGES CXX VERSION 0.8)
 
-set(CMAKE_CXX_STANDARD 14)
-
+set(CMAKE_CXX_STANDARD 17)
 # user variables
 set(USE_OPENMP On CACHE BOOL "use OpenMP")
-set(USE_CUDA On CACHE BOOL "use cuda")
+set(USE_CUDA Off CACHE BOOL "use cuda")
+set(USE_ROCM Off CACHE BOOL "use amd gpus")
+set(USE_MAGMA Off CACHE BOOL "use magma eigensolver for amd gpus")
 
 set(BUILD_TESTS OFF CACHE BOOL "build tests")
 set(LAPACK_VENDOR "OpenBLAS" CACHE STRING "lapack vendor")
-set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS "OpenBLAS" "MKL")
+set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS "OpenBLAS" "MKL" "MKLONEAPI")
 
-find_package(MPI COMPONENTS CXX REQUIRED)
+find_package(MPI REQUIRED COMPONENTS CXX)
 
 if(USE_OPENMP)
   find_package(OpenMP REQUIRED)
@@ -28,20 +29,47 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
 find_package(Kokkos)
 if(USE_CUDA)
-  find_package(CUDA REQUIRED)
+  find_package(CUDAToolkit REQUIRED)
   enable_language(CUDA)
+  include(cmake/cudalibs_target.cmake)
 endif()
+
+if(USE_ROCM)
+  # find_package(hip REQUIRED)
+  # enable_language(HIP)
+  include(cmake/rocmlibs_target.cmake)
+endif()
+
+if(USE_MAGMA)
+  find_package(MAGMA REQUIRED)
+endif()
+
 find_package(MPI REQUIRED)
 
 if(LAPACK_VENDOR MATCHES OpenBLAS)
+  message("find package openblas")
   find_package(OpenBLAS REQUIRED)
-  add_library(my_lapack INTERFACE IMPORTED)
-  set_target_properties(my_lapack PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${OpenBLAS_INCLUDE_DIRS}"
-    INTERFACE_LINK_LIBRARIES "${OpenBLAS_LIBRARIES}")
+  if(NOT TARGET nlcg::cpu_lapack)
+    add_library(nlcg::cpu_lapack INTERFACE IMPORTED)
+    set_target_properties(nlcg::cpu_lapack PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${OpenBLAS_INCLUDE_DIRS}"
+      INTERFACE_LINK_LIBRARIES "${OpenBLAS_LIBRARIES}")
+  endif()
 elseif(LAPACK_VENDOR MATCHES MKL)
   message("LAPACK VENDOR MKL")
   find_package(MKL REQUIRED)
+elseif(LAPACK_VENDOR STREQUAL MKLONEAPI)
+  # set(MKL_THREADING gnu_thread)
+  find_package(MKL REQUIRED NO_MODULE)
+elseif(LAPACK_VENDOR STREQUAL CRAY_LIBSCI)
+  message("LAPACK VENDOR Cray Libsci")
+  find_package(SCI REQUIRED)
+  if(NOT TARGET nlcg::cpu_lapack)
+    add_library(nlcg::cpu_lapack INTERFACE IMPORTED)
+    set_target_properties(nlcg::cpu_lapack PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${SCI_INCLUDE_DIRS}"
+      INTERFACE_LINK_LIBRARIES "${SCI_LIBRARIES}")
+  endif()
 else()
   message(FATAL_ERROR "must specify a LAPACK_VENDOR")
 endif()
@@ -49,7 +77,6 @@ endif()
 find_package(nlohmann_json 3.2.0 REQUIRED)
 
 add_subdirectory(src)
-set(nlcglib_internal_location $<TARGET_FILE:nlcglib_internal>)
 
 if(BUILD_TESTS)
   add_subdirectory(test)

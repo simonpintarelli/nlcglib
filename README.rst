@@ -1,42 +1,66 @@
-NLCGLIB
-=======
+Nlcglib is a plugin for sirius providing robust wave-function optimization to q-e-sirius_.
 
-nlcglib is relying on kokkos_ and is thus needs to be compiled with clang or nvcc_wrapper from kokkos.
+.. _q-e-sirius: https://github.com/electronic-structure/q-e-sirius
 
-.. _kokkos: https://www.github.com/kokkos/kokkos
+Installation
+============
+
+Q-e-sirius with the nlcglib plugin can be installed via spack_. Please use the
+package files provided in this repository (in ``./repo``), as described below.
+
+.. _spack: https://github.com/spack/spack
+
 
 .. code:: bash
 
-          git clone https://github.com/simonpintarelli/nlcglib.git
-          mkdir -p build && cd build
-          CXX=nvcc_wrapper cmake ../build
+   git clone -b develop https://github.com/simonpintarelli/nlcglib
+   # add the spack-repo
+   spack repo add nlcglib/spack
+   # build sirius/nlcglib with cuda enabled
+   spack install q-e-sirius@develop-ristretto%gcc ^sirius+cuda+openmp+nlcglib
+   #  build sirius/nlcglib without cuda
+   spack install q-e-sirius@develop-ristretto%gcc ^sirius~cuda+openmp+nlcglib
+
 
 Input parameters
 ================
 
-Parameters for the robust wave-function optimization are passed using the
-sirius.json. The algorithm will first perform a couple of scf steps and then
-start the direct solver (usually between 5 and 10).
+Nlcglib specific settings are specified in the namelist `DIRECT_MINIMIZATION` in the QuantumESPRESSO input
+file. It must be specified after the ELECTRONS namelist. The robust
+wave-function optimization is run after the SCF loop, taking the last iteration
+as starting guess. It is recommended to do at least 10 scf (=electron_maxstep)
+iterations to obtain a good initial guess.
 
-.. code:: json
+.. code::
 
-          {
-              "nlcg": {
-                  "T": 300,
-                  "tol": 1e-9,
-                  "restart": 10,
-                  "maxiter": 300,
-                  "processing_unit": "gpu"
-              },
-              "parameters": {"num_dft_iter": 5}
-          }
+   &ELECTRONS
+   ...
+   /
+   &DIRECT_MINIMIZATION
+      nlcg_method = 'mvp2'
+      nlcg_maxiter = 300
+      nlcg_conv_thr = 1e-9
+      nlcg_restart = 10
+      nlcg_bt_step_length = 0.1
+      nlcg_pseudo_precond = 0.3
+      nlcg_processing_unit 'none' | 'cpu' | 'gpu' '# default=none, i.e. will run on gpu if there is cuda device
+   /
 
-`processing_unit` is either `gpu` or `cpu`, if not set, the SIRIUS default (`gpu` in QE-SIRIUS) will be used.
+`nlcg_conv_thr` has the same meaning as `conv_thr` in the ELECTRONS namelist of the QE input, but note that `nlcg_conv_thr` is set to 1e-9 by default, while `conv_thr` defaults to 1e-6.
 
-The minimization will stop if the tolerance (tol) is reached, e.g. when the
-modulus of the descent (slope) along the search direction is less than tol. It's
-roughly proportional to the error in the total energy.
+The default values should work for most cases, i.e. to enable the robust optimization, simply insert an empty namelist in the QE input file after the ELECTRONS namemlist:
 
+.. code::
+
+   &ELECTRONS
+   ...
+   /
+   &DIRECT_MINIMIZATION
+   /
+
+In this case the default settings will be used (300 iterations max, cg-restart 10, threshold 1e-9).
+
+Currently Gaussian, Fermi-Dirac broadening is supported. The support for Methfessel-Paxton and Marzari-Vanderbilt smearing is experimental.
 
 References
 ==========

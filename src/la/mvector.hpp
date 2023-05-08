@@ -257,9 +257,12 @@ mvector<T>::allgather(Communicator comm) const
     for (auto block_id = 0ul; block_id < offsets[rank].size(); ++block_id) {
       int lsize = global_number_of_elements[rank][block_id];
       int offset = offsets[rank][block_id];
-      Kokkos::View<numeric_t*, Kokkos::HostSpace> tmp(Kokkos::ViewAllocateWithoutInitializing(""), lsize);
+      Kokkos::View<numeric_t*, Kokkos::HostSpace> tmp(
+          Kokkos::view_alloc(Kokkos::WithoutInitializing, ""),
+          lsize);
       std::copy(send_recv_buffer.data() + offset, send_recv_buffer.data() + offset + lsize, tmp.data());
-      T dst(Kokkos::ViewAllocateWithoutInitializing(""), lsize);
+      T dst(Kokkos::view_alloc(Kokkos::WithoutInitializing, ""),
+            lsize);
       Kokkos::deep_copy(dst, tmp);
       auto key = global_keys[rank][block_id];
       result[key] = dst;
@@ -521,6 +524,66 @@ template <class X>
 auto copy(const mvector<X>& x)
 {
   return eval_threaded(tapply(do_copy(), x));
+}
+
+
+template <class... T>
+auto unzip(const mvector<std::tuple<T...>>& V) {
+  std::tuple<mvector<T>...> U;
+
+  for (auto& elem : V) {
+    auto key = elem.first;
+    unzip(elem.second, U, key);
+  }
+
+  return U;
+}
+
+
+template <class... T>
+auto
+unzip(const mvector<std::tuple<T...>>& V, const Communicator& commk)
+{
+  std::tuple<mvector<T>...> U = std::make_tuple(mvector<T>{commk}...);
+
+  for (auto& elem : V) {
+    auto key = elem.first;
+    unzip(elem.second, U, key);
+  }
+
+  return U;
+}
+
+
+template <int POS>
+struct unzip_impl
+{
+  template <class key_t, class... T>
+  static auto apply(const std::tuple<T...>& src, std::tuple<mvector<T>...>& dst, const key_t& key)
+  {
+    auto& dsti = std::get<POS>(dst);
+    dsti[key] = std::get<POS>(src);
+    unzip_impl<POS - 1>::apply(src, dst, key);
+  }
+};
+
+template <>
+struct unzip_impl<0>
+{
+  template <class key_t, class... T>
+  static auto apply(const std::tuple<T...>& src, std::tuple<mvector<T>...>& dst, const key_t& key)
+  {
+    auto& dsti = std::get<0>(dst);
+    dsti[key] = std::get<0>(src);
+  }
+};
+
+template <class key_t, class... T>
+auto
+unzip(const std::tuple<T...>& src, std::tuple<mvector<T>...>& dst, const key_t& key)
+{
+  using tuple_t = std::tuple<T...>;
+  unzip_impl<std::tuple_size<tuple_t>::value-1>::apply(src, dst , key);
 }
 
 

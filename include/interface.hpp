@@ -25,7 +25,10 @@ static std::map<memory_type, std::string> memory_names = {{memory_type::none, "n
 enum class smearing_type
 {
   FERMI_DIRAC,
-  GAUSSIAN_SPLINE
+  GAUSSIAN_SPLINE,
+  GAUSS,
+  METHFESSEL_PAXTON,
+  COLD
 };
 
 
@@ -35,6 +38,7 @@ struct nlcg_info
   double F;
   double S;
   int iter;
+  bool converged{false};
 };
 
 
@@ -132,14 +136,16 @@ public:
   virtual int occupancy() = 0;
   virtual double get_total_energy() = 0;
   virtual std::map<std::string, double> get_energy_components() = 0;
-  virtual std::shared_ptr<MatrixBaseZ> get_hphi() = 0;
-  virtual std::shared_ptr<MatrixBaseZ> get_sphi() = 0;
+  virtual std::shared_ptr<MatrixBaseZ> get_hphi(memory_type) = 0;
+  virtual std::shared_ptr<MatrixBaseZ> get_sphi(memory_type) = 0;
   virtual std::shared_ptr<MatrixBaseZ> get_C(memory_type) = 0;
   virtual std::shared_ptr<VectorBaseZ> get_fn() = 0;
   virtual void set_fn(const std::vector<std::pair<int, int>>&, const std::vector<std::vector<double>>&) = 0;
   virtual std::shared_ptr<VectorBaseZ> get_ek() = 0;
   virtual std::shared_ptr<VectorBaseZ> get_gkvec_ekin() = 0;
   virtual std::shared_ptr<ScalarBaseZ> get_kpoint_weights() = 0;
+  virtual void set_chemical_potential(double) = 0;
+  virtual double get_chemical_potential() = 0;
   virtual void print_info() const = 0;
 };
 

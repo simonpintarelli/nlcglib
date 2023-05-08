@@ -7,8 +7,8 @@
 #endif
 
 #include <type_traits>
-#include "la/dvector.hpp"
 #include "la/cblas.hpp"
+#include "la/dvector.hpp"
 
 #ifdef __USE_MKL
 #define CPX MKL_Complex16
@@ -21,9 +21,9 @@ namespace nlcglib {
 
 /// Hermitian eigenvalue problem on CPU
 template <class T, class LAYOUT, class... KOKKOS>
-std::enable_if_t<
-  std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space,
-               Kokkos::HostSpace>::value, void>
+std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space,
+                              Kokkos::HostSpace>::value,
+                 void>
 eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
      Kokkos::View<double*, Kokkos::HostSpace>& w,
      const KokkosDVector<T, LAYOUT, KOKKOS...>& S)
@@ -36,16 +36,16 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
   if (S.map().is_local()) {
     int n = U.map().ncols();
     Kokkos::deep_copy(U.array(), S.array());
-    lapack_int info = LAPACKE_zheevd(LAPACK_COL_MAJOR,                                     /* matrix layout */
-                                     'V',                                                  /* jobz */
-                                     'U',                                                  /* uplot */
-                                     n,                                                    /* matrix size */
-                                     reinterpret_cast<lapack_complex_double*>(U.array().data()), /* Complex double */
-                                     lda,                                                    /* lda */
-                                     w.data()                                              /* eigenvalues */
+    lapack_int info = LAPACKE_zheevd(
+        LAPACK_COL_MAJOR,                                           /* matrix layout */
+        'V',                                                        /* jobz */
+        'U',                                                        /* uplot */
+        n,                                                          /* matrix size */
+        reinterpret_cast<lapack_complex_double*>(U.array().data()), /* Complex double */
+        lda,                                                        /* lda */
+        w.data()                                                    /* eigenvalues */
     );
-    if (info != 0)
-      throw std::runtime_error("cblas zheevd failed");
+    if (info != 0) throw std::runtime_error("cblas zheevd failed");
   } else {
     throw std::runtime_error("not yet implemented");
   }
@@ -54,9 +54,9 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
 
 /// stores result in RHS, after the call A will contain the cholesky factorization of a
 template <class T, class LAYOUT, class... KOKKOS>
-std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space, Kokkos::HostSpace>::value>
-solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A,
-          KokkosDVector<T, LAYOUT, KOKKOS...>& RHS)
+std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space,
+                              Kokkos::HostSpace>::value>
+solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A, KokkosDVector<T, LAYOUT, KOKKOS...>& RHS)
 {
   if (A.map().is_local() && RHS.map().is_local()) {
     typedef KokkosDVector<T**, LAYOUT, KOKKOS...> vector_t;
@@ -167,12 +167,13 @@ template <class T0,
           class... KOKKOS2>
 std::enable_if_t<
     std::is_same<typename KokkosDVector<T0, LAYOUT0, KOKKOS0...>::storage_t::memory_space,
-                  Kokkos::HostSpace>::value,
-    void> outer(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
-                const KokkosDVector<T1**, LAYOUT1, KOKKOS1...>& A,
-                const KokkosDVector<T2**, LAYOUT2, KOKKOS2...>& B,
-                const T0& alpha = T0{1.0},
-                const T0& beta = T0{0.0})
+                 Kokkos::HostSpace>::value,
+    void>
+outer(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
+      const KokkosDVector<T1**, LAYOUT1, KOKKOS1...>& A,
+      const KokkosDVector<T2**, LAYOUT2, KOKKOS2...>& B,
+      const T0& alpha = T0{1.0},
+      const T0& beta = T0{0.0})
 {
   typedef KokkosDVector<T0**, LAYOUT0, KOKKOS0...> vector0_t;
   typedef KokkosDVector<T1**, LAYOUT1, KOKKOS1...> vector1_t;
@@ -224,12 +225,19 @@ std::enable_if_t<
 }
 
 /// C <- beta * C + alpha * A @ B
-template <class T0, class LAYOUT0, class... KOKKOS0,
-          class T1, class LAYOUT1, class... KOKKOS1,
-          class T2, class LAYOUT2, class... KOKKOS2>
+template <class T0,
+          class LAYOUT0,
+          class... KOKKOS0,
+          class T1,
+          class LAYOUT1,
+          class... KOKKOS1,
+          class T2,
+          class LAYOUT2,
+          class... KOKKOS2>
 std::enable_if_t<
     std::is_same<typename KokkosDVector<T0, LAYOUT0, KOKKOS0...>::storage_t::memory_space,
-                 Kokkos::HostSpace>::value, void>
+                 Kokkos::HostSpace>::value,
+    void>
 transform(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
           T0 beta,
           T0 alpha,
@@ -258,7 +266,7 @@ transform(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
     numeric_t* B_ptr = B.array().data();
     numeric_t* C_ptr = C.array().data();
 
-    if(A.array().stride(0) != 1 || B.array().stride(0) != 1 || C.array().stride(0) != 1) {
+    if (A.array().stride(0) != 1 || B.array().stride(0) != 1 || C.array().stride(0) != 1) {
       throw std::runtime_error("expecting column major layout");
     }
     int lda = A.array().stride(1);

@@ -1,5 +1,5 @@
-#include "smearing.hpp"
 #include <Kokkos_Core.hpp>
+#include "smearing.hpp"
 
 using namespace nlcglib;
 
@@ -55,7 +55,8 @@ run(smearing_type smearing_t)
             << "\n";
   print(wk_all);
 
-  Smearing smearing(50000., num_electrons, 1, wk, smearing_t);
+  double T{50000};
+  Smearing smearing(T, num_electrons, 1, wk, smearing_t);
 
   using vec_t = Kokkos::View<double *, Kokkos::HostSpace>;
 
@@ -76,8 +77,8 @@ run(smearing_type smearing_t)
     print(ek);
   }
 
-  auto fn = smearing.fn(ek);
-  double S = smearing.entropy(fn);
+  auto mu_fn = smearing.fn(ek);
+  double S = smearing.entropy(std::get<1>(mu_fn), ek, std::get<0>(mu_fn));
   double smax = comm.allreduce(S, mpi_op::max);
   if ( S != smax) {
     throw std::runtime_error("entropy differs");

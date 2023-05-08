@@ -1,24 +1,29 @@
-add_library(nlcglib_internal STATIC la/cusolver.cpp gpu/acc.cpp)
-target_link_libraries(nlcglib_internal PUBLIC Kokkos::kokkoscore)
-target_link_libraries(nlcglib_internal INTERFACE "${LAPACK_LIBRARIES}")
-target_link_libraries(nlcglib_internal INTERFACE MPI::MPI_CXX)
-target_link_libraries(nlcglib_internal INTERFACE my_lapack)
-target_include_directories(nlcglib_internal PUBLIC ${CMAKE_SOURCE_DIR}/src)
-target_include_directories(nlcglib_internal PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_include_directories(nlcglib_internal PUBLIC ${CUDA_INCLUDE_DIRS})
-target_compile_definitions(nlcglib_internal PUBLIC $<$<BOOL:${USE_CUDA}>:__NLCGLIB__CUDA>)
-set(nlcglib_internal_location $<TARGET_FILE:nlcglib_internal>)
+set(SOURCES
+  la/cusolver.cpp
+  gpu/acc.cpp
+  la/magma.cpp
+)
 
+add_library(nlcglib_core ${SOURCES})
+nlcglib_setup_target(nlcglib_core)
 
 add_library(nlcglib SHARED nlcglib.cpp)
-target_include_directories(nlcglib
-  PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+target_include_directories(nlcglib PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+target_link_libraries(nlcglib PRIVATE nlcglib_core)
 
-nlcglib_setup_target(nlcglib)
-set_target_properties(nlcglib PROPERTIES
-  PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/nlcglib.hpp)
-target_compile_definitions(nlcglib PUBLIC $<$<BOOL:${USE_CUDA}>:__NLCGLIB__CUDA>)
+if(LAPACK_VENDOR MATCHES MKL)
+  target_compile_definitions(nlcglib PRIVATE __USE_MKL)
+  if(USE_OPENMP)
+    target_link_libraries(nlcglib PRIVATE mkl::mkl_intel_32bit_omp_dyn)
+  else()
+    target_link_libraries(nlcglib PRIVATE mkl::mkl_intel_32bit_seq_st)
+  endif()
+else()
+  target_link_libraries(nlcglib PRIVATE nlcg::cpu_lapack)
+endif()
+
+
+set_target_properties(nlcglib PROPERTIES PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/nlcglib.hpp)
 
 include(GNUInstallDirs)
 
@@ -26,4 +31,5 @@ install(TARGETS nlcglib
   EXPORT nlcglib_targets
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
   INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

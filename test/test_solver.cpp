@@ -5,9 +5,17 @@
 #include <iostream>
 #include <random>
 
+#ifdef __NLCGLIB__ROCM
+using device_space_t = Kokkos::Experimental::HIPSpace;
+#elif defined __NLCGLIB__CUDA
+using device_space_t = Kokkos::CudaSpace;
+#endif
+
+
 using namespace nlcglib;
 
-typedef std::complex<double> complex_double;
+// typedef std::complex<double> complex_double;
+typedef Kokkos::complex<double> complex_double;
 
 std::uniform_real_distribution<double> unif01(0, 1);
 std::mt19937 gen(0);
@@ -38,7 +46,7 @@ run_unmanaged()
   auto S = H.copy();
 
   solve_sym(H /* will be overwritten by Cholesky factorization */,
-                S /* will be overwritten by solution */);
+            S /* will be overwritten by solution */);
 
   std::cout <<  "extent " << S.array().extent(0) << "\n";
   std::cout <<  "extent " << S.array().extent(1) << "\n";
@@ -73,7 +81,7 @@ int main(int argc, char *argv[])
 
   std::cout << "run on DEVICE"
             << "\n";
-  run_unmanaged<Kokkos::CudaSpace>();
+  run_unmanaged<device_space_t>();
 
   // std::cout << "run non GPU" << "\n";
   // run_unmanaged<Kokkos::CudaSpace>();

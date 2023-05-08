@@ -1,9 +1,12 @@
+#pragma once
+
 #include <vector>
 
 namespace nlcglib {
 
-template<typename T>
-auto flatten(const std::vector<std::vector<T>>& in)
+template <typename T>
+auto
+flatten(const std::vector<std::vector<T>>& in)
 {
   std::vector<T> out;
   for (auto& vec : in) {
@@ -14,4 +17,4 @@ auto flatten(const std::vector<std::vector<T>>& in)
   return out;
 }
 
-}  // nlcglib
+}  // namespace nlcglib
