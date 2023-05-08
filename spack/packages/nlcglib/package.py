@@ -75,6 +75,9 @@ class Nlcglib(CMakePackage, CudaPackage,  ROCmPackage):
             if cuda_arch[0] != "none":
                 options += ["-DCMAKE_CUDA_FLAGS=-arch=sm_{0}".format(cuda_arch[0])]
 
+        if "^cuda+allow-unsupported-compilers" in self.spec:
+            options += ["-DCMAKE_CUDA_FLAGS=--allow-unsupported-compiler"]
+
         if "+rocm" in self.spec:
             options.append(self.define(
                 "CMAKE_CXX_COMPILER", self.spec["hip"].hipcc))
