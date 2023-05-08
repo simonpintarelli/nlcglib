@@ -20,7 +20,7 @@ public:
 
   auto get_X();
   auto get_HX();
-  auto get_SX();
+  // auto get_SX();
   auto get_fn();
   auto get_ek();
   auto get_wk();
@@ -122,11 +122,11 @@ FreeEnergy::get_HX()
 }
 
 
-auto
-FreeEnergy::get_SX()
-{
-  return make_mmatrix<Kokkos::HostSpace>(this->energy.get_sphi(memory_type::host));
-}
+// auto
+// FreeEnergy::get_SX()
+// {
+//   return make_mmatrix<Kokkos::HostSpace>(this->energy.get_sphi(memory_type::host));
+// }
 
 auto
 FreeEnergy::get_ek()
