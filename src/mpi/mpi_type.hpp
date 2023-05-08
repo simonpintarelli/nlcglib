@@ -57,13 +57,13 @@ struct mpi_type<double>
 template <>
 struct mpi_type<std::complex<double>>
 {
-  static MPI_Datatype type() { return MPI_CXX_DOUBLE_COMPLEX; }
+  static MPI_Datatype type() { return MPI_C_DOUBLE_COMPLEX; }
 };
 
 template <>
 struct mpi_type<Kokkos::complex<double>>
 {
-  static MPI_Datatype type() { return MPI_CXX_DOUBLE_COMPLEX; }
+  static MPI_Datatype type() { return MPI_C_DOUBLE_COMPLEX; }
 };
 
 
