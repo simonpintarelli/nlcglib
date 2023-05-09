@@ -22,27 +22,25 @@ class Nlcglib(CMakePackage, CudaPackage,  ROCmPackage):
     variant("build_type",
             default="Release",
             description="CMake build type",
-            values=("Debug", "Release", "RelWithDebInfo"),
-            )
+            values=("Debug", "Release", "RelWithDebInfo"))
 
-    with when('+rocm'):
+    with when("+rocm"):
         variant("magma", default=True, description="Use magma eigenvalue solver (AMDGPU)")
-        depends_on("magma+rocm", when="+magma+rocm")
+        depends_on("magma+rocm", when="+magma")
+        depends_on("kokkos+rocm")
+        depends_on("rocblas")
+        depends_on("rocsolver")
 
-    depends_on("cmake@3.18:", type="build")
+    with when("+cuda"):
+        depends_on("kokkos+cuda+cuda_lambda+wrapper", when="%gcc")
+        depends_on("kokkos+cuda")
+
+    depends_on("cmake@3.21:", type="build")
     depends_on("mpi")
     depends_on("lapack")
 
     depends_on("kokkos")
     depends_on("kokkos+openmp", when="+openmp")
-
-    depends_on("kokkos+cuda+cuda_lambda+wrapper", when="+cuda%gcc")
-    depends_on("kokkos+cuda", when="+cuda")
-
-    # rocm dependencies
-    depends_on("kokkos+rocm", when="+rocm")
-    depends_on("rocblas", when="+rocm")
-    depends_on("rocsolver", when="+rocm")
 
     depends_on("googletest", type="build", when="+tests")
     depends_on("nlohmann-json")
@@ -81,7 +79,7 @@ class Nlcglib(CMakePackage, CudaPackage,  ROCmPackage):
         if "+rocm" in self.spec:
             options.append(self.define(
                 "CMAKE_CXX_COMPILER", self.spec["hip"].hipcc))
-            archs = ",".join(self.spec.variants['amdgpu_target'].value)
+            archs = ",".join(self.spec.variants["amdgpu_target"].value)
             options.append("-DHIP_HCC_FLAGS=--amdgpu-target={0}".format(archs))
             options.append("-DCMAKE_CXX_FLAGS=--amdgpu-target={0} --offload-arch={0}".format(archs))
 
