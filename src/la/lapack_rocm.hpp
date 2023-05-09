@@ -45,7 +45,7 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
       int lda = U_host.array().stride(1);
       int n = U_host.map().ncols();
       Kokkos::deep_copy(U_host.array(), S_host.array());
-      lapack_int info = LAPACKE_zheevd(
+      LAPACKE_zheevd(
           LAPACK_COL_MAJOR,                                           /* matrix layout */
           'V',                                                        /* jobz */
           'U',                                                        /* uplot */
