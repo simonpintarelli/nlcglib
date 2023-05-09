@@ -123,9 +123,3 @@ install(
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/nlcglib/nlcglibConfigVersion.cmake
   DESTINATION
   ${CMAKE_INSTALL_LIBDIR}/cmake/nlcglib)
-install(
-  FILES
-  ${PROJECT_SOURCE_DIR}/include/nlcglib.hpp
-  ${PROJECT_SOURCE_DIR}/include/interface.hpp
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/include/nlcglib"
-  )

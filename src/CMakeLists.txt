@@ -22,8 +22,9 @@ else()
   target_link_libraries(nlcglib PRIVATE nlcg::cpu_lapack)
 endif()
 
-
-set_target_properties(nlcglib PROPERTIES PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/nlcglib.hpp)
+set_target_properties(nlcglib PROPERTIES PUBLIC_HEADER
+  ${CMAKE_SOURCE_DIR}/include/nlcglib.hpp
+)
 
 include(GNUInstallDirs)
 
@@ -31,5 +32,10 @@ install(TARGETS nlcglib
   EXPORT nlcglib_targets
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
-  INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
+  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nlcglib"
+  INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nlcglib")
+install(
+  FILES
+  ${PROJECT_SOURCE_DIR}/include/interface.hpp
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/include/nlcglib"
+)
