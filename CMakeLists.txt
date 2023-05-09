@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 project(nlcglib LANGUAGES CXX VERSION 0.8)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -35,8 +35,6 @@ if(USE_CUDA)
 endif()
 
 if(USE_ROCM)
-  # find_package(hip REQUIRED)
-  # enable_language(HIP)
   include(cmake/rocmlibs_target.cmake)
 endif()
 
@@ -125,9 +123,3 @@ install(
   ${CMAKE_CURRENT_BINARY_DIR}/cmake/nlcglib/nlcglibConfigVersion.cmake
   DESTINATION
   ${CMAKE_INSTALL_LIBDIR}/cmake/nlcglib)
-install(
-  FILES
-  ${PROJECT_SOURCE_DIR}/include/nlcglib.hpp
-  ${PROJECT_SOURCE_DIR}/include/interface.hpp
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/include/nlcglib"
-  )
