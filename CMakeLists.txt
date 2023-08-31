@@ -30,7 +30,6 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 find_package(Kokkos)
 if(USE_CUDA)
   find_package(CUDAToolkit REQUIRED)
-  enable_language(CUDA)
   include(cmake/cudalibs_target.cmake)
 endif()
 
