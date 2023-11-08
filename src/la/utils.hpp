@@ -205,11 +205,6 @@ tapply(FUNCTOR&& fun, const ARG& arg0, const ARGS&... args)
   return result;
 }
 
-template <class T>
-class find_type
-{
-  using t = typename T::fjsadlfjasf;
-};
 
 /// tapply for packed operators
 template <class OP, class ARG0, class... ARGS>
@@ -223,7 +218,6 @@ tapply_op(OP&& op, const ARG0& arg0, const ARGS&... args)
   mvector<std::function<R()>> result(arg0.commk());
   for (auto& elem : arg0) {
     auto key = elem.first;
-    // find_type<decltype(key)>::t;
     auto get_key = [key](auto container) { return container.at(key); };
     auto fun = op.at(key);
     result[key] = [=](){ return fun(eval(get_key(arg0)), eval(get_key(args))...); };
