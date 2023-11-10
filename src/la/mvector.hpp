@@ -60,7 +60,6 @@ public :
     return data_.at(k);
   }
 
-
   auto begin()
   {
     return data_.begin();
@@ -459,12 +458,12 @@ auto sum(const Kokkos::View<numeric_t*, ARGS...>& x)
 }
 
 
-template <class T>
-std::enable_if_t<is_kokkos_view<eval_t<T>>::value, mvector<std::function<double()> > >
-sum(const mvector<T>& x)
-{
-  return tapply([](auto xi) { return(sum(eval(xi))); }, x);
-}
+// template <class T>
+// std::enable_if_t<is_kokkos_view<eval_t<T>>::value, mvector<std::function<double()> > >
+// sum(const mvector<T>& x)
+// {
+//   return tapply([](auto xi) { return(sum(eval(xi))); }, x);
+// }
 
 
 template<class T>

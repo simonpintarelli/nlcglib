@@ -18,6 +18,7 @@
 #include "la/mvector.hpp"
 #include "la/utils.hpp"
 #include "linesearch/linesearch.hpp"
+#include "mpi/communicator.hpp"
 #include "mvp2/descent_direction.hpp"
 #include "overlap.hpp"
 #include "preconditioner.hpp"
@@ -228,6 +229,8 @@ nlcg_us(EnergyBase& energy_base,
   //                ~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
   nlcg_info info;
 
+  Communicator comm_world(energy_base.comm_world());
+
   auto S = Overlap(overlap_base);
   auto P = USPreconditioner(us_precond_base);
 
@@ -296,6 +299,7 @@ nlcg_us(EnergyBase& energy_base,
   auto eta = eval_threaded(tapply(make_diag(), ek));
   auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
   double slope = std::get<0>(slope_zx_zeta);
+
   auto z_x = std::get<1>(slope_zx_zeta);
   auto z_eta = std::get<2>(slope_zx_zeta);
   // allocate rotation matrices
@@ -323,7 +327,7 @@ nlcg_us(EnergyBase& energy_base,
                          ek,
                          fn,
                          free_energy.ks_energy_components(),
-                         commk,
+                         comm_world,
                          cg_iter);
 
       free_energy.ehandle().print_info();  // print magnetization
@@ -363,7 +367,7 @@ nlcg_us(EnergyBase& energy_base,
                          ek,
                          fn,
                          free_energy.ks_energy_components(),
-                         commk,
+                         comm_world,
                          cg_iter);
 
       timer.start();

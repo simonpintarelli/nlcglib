@@ -1,10 +1,12 @@
 #pragma once
 
+#include <mpi.h>
 #include "hip/hip_space.hpp"
 #include <functional>
 #include <utility>
 #include "la/map.hpp"
 #include "lapack_cpu.hpp"
+#include "mpi/communicator.hpp"
 #ifdef __NLCGLIB__CUDA
 #include "lapack_cuda.hpp"
 #endif
@@ -240,7 +242,7 @@ struct inner_
   {
     int n = A.map().ncols();
     int m = B.map().ncols();
-    Map<SlabLayoutV> map(A.map().comm(), SlabLayoutV({{0, 0, n, m}}));
+    Map<SlabLayoutV> map(Communicator(), SlabLayoutV({{0, 0, n, m}}));
     to_layout_left_t<M1> C(map);
     inner(C, A, B, alpha, beta);
     return C;
@@ -285,6 +287,8 @@ struct innerh_tr
         Kokkos::RangePolicy<exec_t<memory_space>>(0, nrows),
         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
         sum);
+
+    sum = X.map().comm().allreduce(sum, mpi_op::sum);
     return sum;
   }
 #endif
@@ -321,7 +325,7 @@ struct innerh_tr
         Kokkos::RangePolicy<Kokkos::Serial>(0, nrows),
         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
         sum);
-
+    sum = X.map().comm().allreduce(sum, mpi_op::sum);
     return sum;
   }
 };

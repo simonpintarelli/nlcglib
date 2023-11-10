@@ -141,7 +141,7 @@ inner(M0& c,
                              typename M2::storage_t::memory_space>::value,
                 "a,b not on same memory");
   // static_assert(std::is_same<LAYOUT1, LAYOUT2>::value, "matrix layout do not match");
-  if (a.map().is_local() && b.map().is_local() && c.map().is_local()) {
+  if c.map().is_local()) {
     if (a.array().stride(0) != 1 || b.array().stride(0) != 1 || c.array().stride(0) != 1) {
       throw std::runtime_error("expecting column major layout");
     }
@@ -160,6 +160,7 @@ inner(M0& c,
     auto H = rocblas_operation::rocblas_operation_conjugate_transpose;
     auto N = rocblas_operation::rocblas_operation_none;
     rocm::gemm(H, N, m, n, k, alpha, A_ptr, lda, B_ptr, ldb, beta, C_ptr, ldc);
+    allreduce(c, a.map().comm());
   } else {
     throw std::runtime_error("distributed inner product not implemented.");
   }

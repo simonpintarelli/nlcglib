@@ -51,8 +51,6 @@ void run() {
 
     Kokkos::deep_copy(X.array(), host);
 
-
-    // eigh(X);
     auto H = inner_()(X, X);
     auto HH = empty_like()(H);
     // auto  Z = transform_alloc(X, H, 1.0);

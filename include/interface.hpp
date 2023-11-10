@@ -147,6 +147,7 @@ public:
   virtual void set_chemical_potential(double) = 0;
   virtual double get_chemical_potential() = 0;
   virtual void print_info() const = 0;
+  virtual MPI_Comm comm_world() const = 0;
 };
 
 class OpBase

@@ -38,6 +38,7 @@ MACRO(NLCGLIB_SETUP_TARGET _target)
   target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_CUDA}>:__NLCGLIB__CUDA>)
   target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_ROCM}>:__NLCGLIB__ROCM>)
   target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_MAGMA}>:__NLCGLIB__MAGMA>)
+  target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_GPU_DIRECT}>:__NLCGLIB__GPU_DIRECT>)
   target_include_directories(${_target} PUBLIC $<TARGET_PROPERTY:Kokkos::kokkoscore,INTERFACE_INCLUDE_DIRECTORIES>)
 
 ENDMACRO()

@@ -101,7 +101,7 @@ inner(M0& c,
                              typename M2::storage_t::memory_space>::value,
                 "a,b not on same memory");
   // static_assert(std::is_same<LAYOUT1, LAYOUT2>::value, "matrix layout do not match");
-  if (a.map().is_local() && b.map().is_local() && c.map().is_local()) {
+
     if (a.array().stride(0) != 1 || b.array().stride(0) != 1 || c.array().stride(0) != 1) {
       throw std::runtime_error("expecting column major layout");
     }
@@ -119,10 +119,7 @@ inner(M0& c,
 
     using gemm = cuda::gemm<numeric_t>;
     gemm::call(gemm::H, gemm::N, m, n, k, alpha, A_ptr, lda, B_ptr, ldb, beta, C_ptr, ldc);
-
-  } else {
-    throw std::runtime_error("distributed inner product not implemented.");
-  }
+    allreduce(c, a.map().comm());
 }
 
 /// Inner product c = a^H * b, on GPU
@@ -195,9 +192,8 @@ transform(M0& C,
   static_assert(std::is_same<typename vector1_t::storage_t::memory_space,
                              typename vector2_t::storage_t::memory_space>::value,
                 "a,b not on same memory");
-  // static_assert(std::is_same<LAYOUT1, LAYOUT2>::value, "matrix layout do not match");
 
-  if (A.map().is_local() && B.map().is_local() && C.map().is_local()) {
+  if (B.map().is_local()) {
     /* single rank */
     int m = A.map().nrows();
     int n = B.map().ncols();
@@ -238,25 +234,21 @@ add(M0& C,
                              typename vector1_t::storage_t::memory_space>::value,
                 "c,a not on same memory");
 
-  if (A.map().is_local() && C.map().is_local()) {
-    /* single rank */
-    int m = A.map().nrows();
-    int n = C.map().ncols();
-    numeric_t* A_ptr = A.array().data();
-    numeric_t* C_ptr = C.array().data();
+  /* single rank */
+  int m = A.map().nrows();
+  int n = C.map().ncols();
+  numeric_t* A_ptr = A.array().data();
+  numeric_t* C_ptr = C.array().data();
 
-    if (A.array().stride(0) != 1 || C.array().stride(0) != 1) {
-      throw std::runtime_error("expecting column major layout");
-    }
-    // assume there are no strides
-    int lda = A.array().stride(1);
-    int ldc = C.array().stride(1);
-
-    using geam = cuda::geam<numeric_t>;
-    geam::call(geam::N, geam::N, m, n, alpha, A_ptr, lda, beta, C_ptr, ldc, C_ptr, ldc);
-  } else {
-    throw std::runtime_error("not implemented.");
+  if (A.array().stride(0) != 1 || C.array().stride(0) != 1) {
+    throw std::runtime_error("expecting column major layout");
   }
+  // assume there are no strides
+  int lda = A.array().stride(1);
+  int ldc = C.array().stride(1);
+
+  using geam = cuda::geam<numeric_t>;
+  geam::call(geam::N, geam::N, m, n, alpha, A_ptr, lda, beta, C_ptr, ldc, C_ptr, ldc);
 }
 #endif
 }  // namespace nlcglib

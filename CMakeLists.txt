@@ -7,6 +7,7 @@ set(USE_OPENMP On CACHE BOOL "use OpenMP")
 set(USE_CUDA Off CACHE BOOL "use cuda")
 set(USE_ROCM Off CACHE BOOL "use amd gpus")
 set(USE_MAGMA Off CACHE BOOL "use magma eigensolver for amd gpus")
+set(USE_GPU_DIRECT Off CACHE BOOL "use gpu direct")
 
 set(BUILD_TESTS OFF CACHE BOOL "build tests")
 set(LAPACK_VENDOR "OpenBLAS" CACHE STRING "lapack vendor")
@@ -21,7 +22,6 @@ endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS "YES")
 
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 include(cmake/nlcglib_macros.cmake)

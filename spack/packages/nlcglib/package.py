@@ -28,6 +28,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         description="CMake build type",
         values=("Debug", "Release", "RelWithDebInfo"),
     )
+    variant("gpu_direct", default=False)
 
     depends_on("cmake@3.21:", type="build")
     depends_on("mpi")
@@ -59,6 +60,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
             self.define_from_variant("USE_OPENMP", "openmp"),
             self.define_from_variant("BUILD_TESTS", "tests"),
             self.define_from_variant("USE_ROCM", "rocm"),
+            self.define_from_variant("USE_GPU_DIRECT", "gpu_direct"),
             self.define_from_variant("USE_MAGMA", "magma"),
             self.define_from_variant("USE_CUDA", "cuda"),
         ]
