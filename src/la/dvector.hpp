@@ -346,5 +346,25 @@ print(const KokkosDVector<T**, ARGS...>& mat, O&& out, int precision = 4)
   }
 }
 
+template<class T, class... ARGS>
+void
+allreduce(KokkosDVector<T, ARGS...>& C, const Communicator& comm)
+{
+#ifdef __NLCGLIB___GPU_DIRECT
+  auto C_ptr = C.array().data();
+  int m = C.map().nrows();
+  int n = C.map().ncols();
+  comm.allreduce(C_ptr, m*n, mpi_op::sum);
+#else
+  auto C_h = create_mirror_view_and_copy(Kokkos::HostSpace(), C);
+  auto C_ptr = C_h.array().data();
+  int m = C_h.map().nrows();
+  int n = C_h.map().ncols();
+  comm.allreduce(C_ptr, m * n, mpi_op::sum);
+  // copy back to original memory
+  deep_copy(C, C_h);
+#endif
+}
+
 
 }  // namespace nlcglib
