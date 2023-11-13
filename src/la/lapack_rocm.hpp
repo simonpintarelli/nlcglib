@@ -141,7 +141,7 @@ inner(M0& c,
                              typename M2::storage_t::memory_space>::value,
                 "a,b not on same memory");
   // static_assert(std::is_same<LAYOUT1, LAYOUT2>::value, "matrix layout do not match");
-  if c.map().is_local()) {
+  if (c.map().is_local()) {
     if (a.array().stride(0) != 1 || b.array().stride(0) != 1 || c.array().stride(0) != 1) {
       throw std::runtime_error("expecting column major layout");
     }
