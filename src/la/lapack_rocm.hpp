@@ -237,9 +237,7 @@ transform(M0& C,
   static_assert(std::is_same<typename vector1_t::storage_t::memory_space,
                              typename vector2_t::storage_t::memory_space>::value,
                 "a,b not on same memory");
-  // static_assert(std::is_same<LAYOUT1, LAYOUT2>::value, "matrix layout do not match");
-
-  if (A.map().is_local() && B.map().is_local() && C.map().is_local()) {
+  if (B.map().is_local()) {
     /* single rank */
     int m = A.map().nrows();
     int n = B.map().ncols();
