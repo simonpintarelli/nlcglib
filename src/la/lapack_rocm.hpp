@@ -278,27 +278,23 @@ add(M0& C,
                              typename vector1_t::storage_t::memory_space>::value,
                 "c,a not on same memory");
 
-  if (A.map().is_local() && C.map().is_local()) {
-    /* single rank */
-    int m = A.map().nrows();
-    int n = C.map().ncols();
-    numeric_t* A_ptr = A.array().data();
-    numeric_t* C_ptr = C.array().data();
+  /* single rank */
+  int m = A.map().nrows();
+  int n = C.map().ncols();
+  numeric_t* A_ptr = A.array().data();
+  numeric_t* C_ptr = C.array().data();
 
-    if (A.array().stride(0) != 1 || C.array().stride(0) != 1) {
-      throw std::runtime_error("expecting column major layout");
-    }
-    // assume there are no strides
-    int lda = A.array().stride(1);
-    int ldc = C.array().stride(1);
-
-    // using geam = rocm::geam<numeric_t>;
-    auto N = rocblas_operation::rocblas_operation_none;
-    // rocm::geam(N, N, m, n, alpha, A_ptr, lda, beta, B_ptr, ldb, C, ldc);
-    rocm::geam(N, N, m, n, alpha, A_ptr, lda, beta, C_ptr, ldc, C_ptr, ldc);
-  } else {
-    throw std::runtime_error("not implemented.");
+  if (A.array().stride(0) != 1 || C.array().stride(0) != 1) {
+    throw std::runtime_error("expecting column major layout");
   }
+  // assume there are no strides
+  int lda = A.array().stride(1);
+  int ldc = C.array().stride(1);
+
+  // using geam = rocm::geam<numeric_t>;
+  auto N = rocblas_operation::rocblas_operation_none;
+  // rocm::geam(N, N, m, n, alpha, A_ptr, lda, beta, B_ptr, ldb, C, ldc);
+  rocm::geam(N, N, m, n, alpha, A_ptr, lda, beta, C_ptr, ldc, C_ptr, ldc);
 }
 
 #endif
