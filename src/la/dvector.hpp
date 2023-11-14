@@ -354,12 +354,25 @@ allreduce(KokkosDVector<T, ARGS...>& C, const Communicator& comm)
   auto C_ptr = C.array().data();
   int m = C.map().nrows();
   int n = C.map().ncols();
+  if (C.array().stride(0) != 1) {
+    throw std::runtime_error("allreduce, expected stride(0) == 1");
+  }
+  if (C.array().stride(1) != m) {
+    throw std::runtime_error("allreduce, expected stride(1) == ncols");
+  }
+
   comm.allreduce(C_ptr, m*n, mpi_op::sum);
 #else
   auto C_h = create_mirror_view_and_copy(Kokkos::HostSpace(), C);
   auto C_ptr = C_h.array().data();
   int m = C_h.map().nrows();
   int n = C_h.map().ncols();
+  if (C_h.array().stride(0) != 1) {
+    throw std::runtime_error("allreduce, expected stride(0) == 1");
+  }
+  if (C_h.array().stride(1) != m) {
+    throw std::runtime_error("allreduce, expected stride(1) == ncols");
+  }
   comm.allreduce(C_ptr, m * n, mpi_op::sum);
   // copy back to original memory
   deep_copy(C, C_h);
