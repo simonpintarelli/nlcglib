@@ -350,6 +350,8 @@ template<class T, class... ARGS>
 void
 allreduce(KokkosDVector<T, ARGS...>& C, const Communicator& comm)
 {
+  typename KokkosDVector<T, ARGS...>::storage_t::execution_space ex;
+  ex.fence();
 #ifdef __NLCGLIB___GPU_DIRECT
   auto C_ptr = C.array().data();
   int m = C.map().nrows();
