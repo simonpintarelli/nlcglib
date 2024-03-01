@@ -69,6 +69,29 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
             options += [self.define("LAPACK_VENDOR", "MKL")]
         elif self.spec["blas"].name in ["intel-oneapi-mkl"]:
             options += [self.define("LAPACK_VENDOR", "MKLONEAPI")]
+            mkl_mapper = {
+                "threading": {
+                    "none": "sequential",
+                    "openmp": "gnu_thread",
+                    "tbb": "tbb_thread",
+                },
+                "mpi": {"intel-mpi": "intelmpi", "mpich": "mpich", "openmpi": "openmpi"},
+            }
+
+            mkl_threads = mkl_mapper["threading"][self.spec["intel-oneapi-mkl"].variants["threads"].value]
+
+            mpi_provider = self.spec["mpi"].name
+            if mpi_provider in ["mpich", "cray-mpich", "mvapich", "mvapich2"]:
+                mkl_mpi = mkl_mapper["mpi"]["mpich"]
+            else:
+                mkl_mpi = mkl_mapper["mpi"][mpi_provider]
+
+            options.extend([
+                self.define("MKL_INTERFACE", "lp64"),
+                self.define("MKL_THREADING", mkl_threads),
+                self.define("MKL_MPI", mkl_mpi)
+            ])
+
         elif self.spec["blas"].name in ["openblas"]:
             options += [self.define("LAPACK_VENDOR", "OpenBLAS")]
         else:
@@ -90,6 +113,8 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
                 options += [self.define("CMAKE_CUDA_FLAGS", cuda_flags)]
             else:
                 options += [self.define("CMAKE_CUDA_ARCHITECTURES", cuda_archs)]
+
+
 
         if "^cuda+allow-unsupported-compilers" in self.spec:
             options += [self.define("CMAKE_CUDA_FLAGS", "--allow-unsupported-compiler")]
