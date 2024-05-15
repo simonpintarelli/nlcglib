@@ -3,7 +3,6 @@
 #include <Kokkos_Core.hpp>
 #include <cmath>
 #include <stdexcept>
-#include <valarray>
 #include "constants.hpp"
 #include "dft/newton_minimization_smearing.hpp"
 #include "interface.hpp"
@@ -11,7 +10,6 @@
 #include "la/utils.hpp"
 #include "utils/env.hpp"
 #include "utils/logger.hpp"
-#include "utils/timer.hpp"
 
 namespace nlcglib {
 
