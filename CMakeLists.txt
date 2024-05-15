@@ -27,15 +27,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 include(cmake/nlcglib_macros.cmake)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake/modules")
 
-find_package(Kokkos)
 if(USE_CUDA)
   find_package(CUDAToolkit REQUIRED)
   include(cmake/cudalibs_target.cmake)
 endif()
-
 if(USE_ROCM)
   include(cmake/rocmlibs_target.cmake)
 endif()
+find_package(Kokkos)
 
 if(USE_MAGMA)
   find_package(MAGMA REQUIRED)
