@@ -1,11 +1,8 @@
 #pragma once
 
-#include <memory>
 #include "interface.hpp"
-#include "la/mvector.hpp"
-#include "la/dvector.hpp"
-#include "operator.hpp"
 #include "mpi/communicator.hpp"
+#include "operator.hpp"
 
 
 namespace nlcglib {
@@ -27,14 +24,18 @@ public:
 
   auto at(const key_t& key) const -> value_type;
 
-  auto begin() { return local::op_iterator<Overlap> (overlap_base.get_keys(), *this, false); }
+  auto begin() { return local::op_iterator<Overlap>(overlap_base.get_keys(), *this, false); }
   auto end() { return local::op_iterator<Overlap>(overlap_base.get_keys(), *this, true); }
-  auto begin() const { return local::op_iterator<const Overlap>(overlap_base.get_keys(), *this, false); }
-  auto end() const { return local::op_iterator<const Overlap>(overlap_base.get_keys(), *this, true); }
-
-  Communicator commk() const {
-    throw std::runtime_error("not implemented");
+  auto begin() const
+  {
+    return local::op_iterator<const Overlap>(overlap_base.get_keys(), *this, false);
   }
+  auto end() const
+  {
+    return local::op_iterator<const Overlap>(overlap_base.get_keys(), *this, true);
+  }
+
+  Communicator commk() const { throw std::runtime_error("not implemented"); }
 
 
 private:

@@ -196,7 +196,6 @@ public:
                  const mvector<vector_t>& ek,
                  const mvector<vector2_t>& wk)
   {
-    // delta_eta = kappa * (hij - diag(ek))
     return tapply_async(_delta_eta(kappa), Hij, ek, wk);
   }
 

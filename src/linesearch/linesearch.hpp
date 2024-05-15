@@ -1,16 +1,16 @@
 #pragma once
 
-#include "exceptions.hpp"
-#include "utils/logger.hpp"
 #include <iomanip>
 #include <tuple>
+#include "exceptions.hpp"
+#include "utils/logger.hpp"
 
 namespace nlcglib {
 
 
 struct line_search_info
 {
-  std::string type; // the ls-type used
+  std::string type;  // the ls-type used
 };
 
 class line_search
@@ -34,11 +34,13 @@ public:
     Logger::GetInstance() << "line search t_trial = " << std::scientific << t_trial << "\n";
     double F0 = FE.get_F();
     try {
-      return std::tuple_cat(qline(G, FE, slope, force_restart), std::make_tuple(line_search_info{"qline"}));
+      return std::tuple_cat(qline(G, FE, slope, force_restart),
+                            std::make_tuple(line_search_info{"qline"}));
     } catch (StepError& step_error) {
       Logger::GetInstance() << "\t"
                             << "quadratic line search failed -> backtracking search\n";
-      return std::tuple_cat(bt_search(G, FE, F0, force_restart), std::make_tuple(line_search_info{"btsearch"}));
+      return std::tuple_cat(bt_search(G, FE, F0, force_restart),
+                            std::make_tuple(line_search_info{"btsearch"}));
     }
   }
 
@@ -56,7 +58,6 @@ template <class GEODESIC, class FREE_ENERGY>
 auto
 line_search::bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0, bool& force_restart)
 {
-
   if (tau >= 1) {
     throw std::runtime_error("invalid value");
   }
@@ -65,19 +66,22 @@ line_search::bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0, bool& force_rest
   while (t > 1e-8) {
     auto ek_ul = G(t);
     double Fp = FE.get_F();
-    Logger::GetInstance() << "fd slope: " << std::scientific << std::setprecision(3) << (Fp - F0) / t << " t: " << t
-                          << " F:" << std::fixed << std::setprecision(13) << Fp << "\n";
+    Logger::GetInstance() << "fd slope: " << std::scientific << std::setprecision(3)
+                          << (Fp - F0) / t << " t: " << t << " F:" << std::fixed
+                          << std::setprecision(13) << Fp << "\n";
     if (Fp < F0) {
-      Logger::GetInstance() << "fd slope: " << std::scientific << std::setprecision(3) << (Fp - F0)/t << "\n";
+      Logger::GetInstance() << "fd slope: " << std::scientific << std::setprecision(3)
+                            << (Fp - F0) / t << "\n";
       force_restart = false;
       return ek_ul;
     }
     t *= tau;
-    Logger::GetInstance() << "\tbacktracking search tau = " << std::scientific << std::setprecision(5) << t << "\n";
+    Logger::GetInstance() << "\tbacktracking search tau = " << std::scientific
+                          << std::setprecision(5) << t << "\n";
   }
   // TODO: let logger print state
   Logger::GetInstance().flush();
-  if (force_restart)  {
+  if (force_restart) {
     throw DescentError();
   } else {
     force_restart = true;
@@ -102,7 +106,8 @@ line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_resta
   //   G(dt);
   //   double F1 = FE.get_F();
   //   double fd_slope = (F1-F0)/dt;
-  //   Logger::GetInstance() << "\t DEBUG qline slope = " << std::setprecision(6) << slope << ", fd_slope = " << fd_slope << "\n";
+  //   Logger::GetInstance() << "\t DEBUG qline slope = " << std::setprecision(6) << slope << ",
+  //   fd_slope = " << fd_slope << "\n";
   // }
 
   // (END) DEBUG check slope
@@ -135,13 +140,12 @@ line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_resta
   // evaluate FE at predicted minimum
   auto ek_ul = G(t_min);
   double F_min = FE.get_F();
-  Logger::GetInstance() << "\t t_min = " << t_min
-                        << " q line prediction error: " << std::scientific << std::setprecision(8) << (F_pred - F_min)
-                        << " dE: " << std::scientific << std::setprecision(8) << (F0 - F_min) << "\n";
+  Logger::GetInstance() << "\t t_min = " << t_min << " q line prediction error: " << std::scientific
+                        << std::setprecision(8) << (F_pred - F_min) << " dE: " << std::scientific
+                        << std::setprecision(8) << (F0 - F_min) << "\n";
 
   if (F_min > F0) {
-    Logger::GetInstance() << std::setprecision(13)
-                          << "\t quadratic line search failed:\n"
+    Logger::GetInstance() << std::setprecision(13) << "\t quadratic line search failed:\n"
                           << "\t - F_min: " << F_min << "\n"
                           << "\t - F0:    " << F0 << "\n\n";
     throw StepError();
@@ -152,22 +156,5 @@ line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_resta
 
   return ek_ul;
 }
-
-
-
-// template <class GEODESIC, class FREE_ENERGY>
-// auto
-// line_search(GEODESIC&& G_base, FREE_ENERGY&& FE, double slope, double t_trial = 0.2)
-// {
-//   double F0 = FE.get_F();
-//   try {
-//     return qline(G_base, FE, slope, t_trial);
-//   } catch (StepError& step_error) {
-//     Logger::GetInstance() << "\t"
-//              << "quadratic line search failed -> backtracking search\n";
-//     return bt_search(G_base, FE, F0, t_trial, 0.1);
-//   }
-// }
-
 
 }  // namespace nlcglib

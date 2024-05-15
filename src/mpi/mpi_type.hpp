@@ -1,9 +1,9 @@
 #pragma once
 
 #include <mpi.h>
-#include <utility>
-#include <complex>
 #include <Kokkos_Core.hpp>
+#include <complex>
+#include <utility>
 
 namespace nlcglib {
 
@@ -23,9 +23,11 @@ enum class mpi_op
 };
 
 template <enum mpi_op>
-struct mpi_op_{};
+struct mpi_op_
+{
+};
 
-template<>
+template <>
 struct mpi_op_<mpi_op::sum>
 {
   static MPI_Op value() { return MPI_SUM; }
@@ -88,12 +90,8 @@ struct mpi_type<std::pair<T1, T2>>
     int array_of_block_lengths[2] = {1, 1};
     MPI_Aint array_of_displacements[2] = {0, sizeof(T1)};
     MPI_Datatype types[2] = {mpi_type<T1>::type(), mpi_type<T2>::type()};
-    CALL_MPI(
-        MPI_Type_create_struct, (2,
-                                 array_of_block_lengths,
-                                 array_of_displacements,
-                                 types,
-                                 &result));
+    CALL_MPI(MPI_Type_create_struct,
+             (2, array_of_block_lengths, array_of_displacements, types, &result));
     CALL_MPI(MPI_Type_commit, (&result));
     return result;
   }

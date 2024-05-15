@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
-#include "hip/hip_space.hpp"
 #include <iomanip>
 #include <iostream>
+#include <random>
 #include "gtest/gtest.h"
+#include "hip/hip_space.hpp"
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
-#include <random>
 
 using namespace nlcglib;
 
@@ -15,7 +15,7 @@ using complex_double = Kokkos::complex<double>;
 int nrows = 200;
 int ncols = 20;
 
-template<typename T>
+template <typename T>
 class TestSymSolve : public ::testing::Test
 {
 public:
@@ -23,7 +23,9 @@ public:
   TestSymSolve()
       : X(Map<>(Communicator(), SlabLayoutV({{0, 0, nrows, ncols}})))
       , H(Map<>(Communicator(), SlabLayoutV({{0, 0, ncols, ncols}})))
-  {}
+  {
+  }
+
 protected:
   using vector_t = KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, T>;
   //
@@ -33,7 +35,8 @@ protected:
 
 
 template <typename T>
-void TestSymSolve<T>::SetUp()
+void
+TestSymSolve<T>::SetUp()
 {
   std::uniform_real_distribution<double> unif01(0, 1);
   std::mt19937 gen(0);
@@ -77,11 +80,10 @@ TYPED_TEST(TestSymSolve, PotrfPotrs)
   // check result
   for (int i = 0; i < ncols; ++i) {
     for (int j = 0; j < ncols; ++j) {
-      if ( i == j ) {
+      if (i == j) {
         EXPECT_NEAR(S_host(i, j).real(), 1, 1e-8);
         EXPECT_NEAR(S_host(i, j).imag(), 0, 1e-8);
-      }
-      else {
+      } else {
         EXPECT_NEAR(S_host(i, j).imag(), 0, 1e-8);
         EXPECT_NEAR(S_host(i, j).real(), 0, 1e-8);
       }

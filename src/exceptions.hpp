@@ -25,4 +25,4 @@ public:
 };
 
 
-}  // nlcglib
+}  // namespace nlcglib

@@ -2,10 +2,10 @@
 
 #include <array>
 #include <complex>
-#include <memory>
-#include <map>
-#include <stdexcept>
 #include <functional>
+#include <map>
+#include <memory>
+#include <stdexcept>
 #include <vector>
 #include "mpi.h"
 
@@ -18,9 +18,8 @@ enum class memory_type
   device
 };
 
-static std::map<memory_type, std::string> memory_names = {{memory_type::none, "none"},
-                                                          {memory_type::host, "host"},
-                                                          {memory_type::device, "device"}};
+static std::map<memory_type, std::string> memory_names = {
+    {memory_type::none, "none"}, {memory_type::host, "host"}, {memory_type::device, "device"}};
 
 enum class smearing_type
 {
@@ -50,20 +49,18 @@ struct buffer_protocol
                   std::array<int, d> size,
                   T* data,
                   enum memory_type memtype,
-                  MPI_Comm mpi_comm=MPI_COMM_SELF)
+                  MPI_Comm mpi_comm = MPI_COMM_SELF)
       : stride(std::move(stride))
       , size(std::move(size))
       , data(data)
       , memtype(memtype)
       , mpi_comm(mpi_comm)
-  { /* empty */ }
+  { /* empty */
+  }
 
   // 1d constructor
   // template<int k=dim, class=std::enable_if_t<k==1>>
-  buffer_protocol(int size,
-                  T* data,
-                  enum memory_type memtype,
-                  MPI_Comm mpi_comm= MPI_COMM_SELF)
+  buffer_protocol(int size, T* data, enum memory_type memtype, MPI_Comm mpi_comm = MPI_COMM_SELF)
       : buffer_protocol({1}, {size}, data, memtype, mpi_comm)
   {
     static_assert(d == 1, "not available.");
@@ -79,7 +76,7 @@ struct buffer_protocol
   MPI_Comm mpi_comm{MPI_COMM_SELF};
 };
 
-template<int dim, class numeric_t>
+template <int dim, class numeric_t>
 class BufferBase
 {
 public:
@@ -100,7 +97,7 @@ public:
   virtual kindex_t kpoint_index(int i) const = 0;
 };
 
-template<class numeric_t>
+template <class numeric_t>
 class BufferBase<0, numeric_t>
 {
 public:
@@ -140,7 +137,8 @@ public:
   virtual std::shared_ptr<MatrixBaseZ> get_sphi(memory_type) = 0;
   virtual std::shared_ptr<MatrixBaseZ> get_C(memory_type) = 0;
   virtual std::shared_ptr<VectorBaseZ> get_fn() = 0;
-  virtual void set_fn(const std::vector<std::pair<int, int>>&, const std::vector<std::vector<double>>&) = 0;
+  virtual void set_fn(const std::vector<std::pair<int, int>>&,
+                      const std::vector<std::vector<double>>&) = 0;
   virtual std::shared_ptr<VectorBaseZ> get_ek() = 0;
   virtual std::shared_ptr<VectorBaseZ> get_gkvec_ekin() = 0;
   virtual std::shared_ptr<ScalarBaseZ> get_kpoint_weights() = 0;
@@ -154,10 +152,9 @@ class OpBase
 {
 public:
   using key_t = std::pair<int, int>;
+
 public:
-  virtual void apply(const key_t&,
-                     MatrixBaseZ::buffer_t& out,
-                     MatrixBaseZ::buffer_t& in) const = 0;
+  virtual void apply(const key_t&, MatrixBaseZ::buffer_t& out, MatrixBaseZ::buffer_t& in) const = 0;
   virtual std::vector<key_t> get_keys() const = 0;
 };
 

@@ -4,39 +4,37 @@
 #include "traits.hpp"
 
 #ifdef __NLCGLIB__CUDA
-void run()
+void
+run()
 {
   int n = 10;
   double arr[10];
 
-  Kokkos::View<double*, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryUnmanaged>
-    c(arr, n);
-  Kokkos::View<double*, Kokkos::HostSpace>
-    a("A",  n);
-  Kokkos::View<double*, Kokkos::CudaSpace>
-    a_device("A", n);
-  Kokkos::View<double*, Kokkos::HostSpace>
-    b("b", n);
+  Kokkos::View<double *, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryUnmanaged> c(arr, n);
+  Kokkos::View<double *, Kokkos::HostSpace> a("A", n);
+  Kokkos::View<double *, Kokkos::CudaSpace> a_device("A", n);
+  Kokkos::View<double *, Kokkos::HostSpace> b("b", n);
   for (int i = 0; i < n; ++i) {
     a(i) = i;
   }
 
-  Kokkos::parallel_for(Kokkos::RangePolicy<Kokkos::Cuda>(0, n), KOKKOS_LAMBDA(int i) {
-      a_device[i] = i;
-    });
+  Kokkos::parallel_for(
+      Kokkos::RangePolicy<Kokkos::Cuda>(0, n), KOKKOS_LAMBDA(int i) { a_device[i] = i; });
 
   Kokkos::deep_copy(b, a);
   Kokkos::deep_copy(c, a_device);
   std::cout << "a.data: " << a.data() << "\n";
   std::cout << "b.data: " << b.data() << "\n";
 
-  std::cout << "b" << "\n";
+  std::cout << "b"
+            << "\n";
   for (int i = 0; i < n; ++i) {
     std::cout << b(i) << ", ";
   }
   std::cout << "\n";
 
-  std::cout << "c (should be same as b)" << "\n";
+  std::cout << "c (should be same as b)"
+            << "\n";
   for (int i = 0; i < n; ++i) {
     std::cout << c(i) << ", ";
   }
@@ -48,7 +46,7 @@ void
 run_2d()
 {
   int n = 3;
-  double arr[n*n];
+  double arr[n * n];
 
   Kokkos::View<double **, Kokkos::LayoutLeft, Kokkos::MemoryUnmanaged> c(arr, n, n);
   Kokkos::View<double **, Kokkos::HostSpace> a("A", n, n);

@@ -16,7 +16,8 @@ using typeX = KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, 
 //   return make_const(m);
 // }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
   KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> X(
       Map<>(Communicator(), SlabLayoutV({{0, 0, 200, 20}})));

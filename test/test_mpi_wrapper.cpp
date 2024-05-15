@@ -48,7 +48,8 @@ run_pair()
   comm.allgather(buffer.data(), 2);
 
   for (auto i = 0ul; i < buffer.size(); ++i) {
-    std::cout << "rank " << comm.rank() << ": " << buffer[i].first << " , " << buffer[i].second << "\n";
+    std::cout << "rank " << comm.rank() << ": " << buffer[i].first << " , " << buffer[i].second
+              << "\n";
   }
 }
 
@@ -72,10 +73,8 @@ run_pair2()
 
   for (auto i = 0ul; i < buffer.size(); ++i) {
     auto p1 = buffer[i];
-    std::cout << "rank " << comm.rank() << ": ("
-              << p1.first.first << " , "
-              << p1.first.second << ") , "
-              << p1.second << "\n";
+    std::cout << "rank " << comm.rank() << ": (" << p1.first.first << " , " << p1.first.second
+              << ") , " << p1.second << "\n";
   }
 }
 

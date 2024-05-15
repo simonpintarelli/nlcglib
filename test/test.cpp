@@ -13,11 +13,13 @@ using namespace nlcglib;
 
 typedef std::complex<double> complex_double;
 
-void run() {
-  KokkosDVector<complex_double**, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> X(
+void
+run()
+{
+  KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> X(
       Map<>(Communicator(), SlabLayoutV({{0, 0, 200, 20}})));
 
-  KokkosDVector<complex_double**, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> H(
+  KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> H(
       Map<>(Communicator(), SlabLayoutV({{0, 0, 20, 20}})));
 
   auto kokkos_array = X.array();
@@ -33,11 +35,10 @@ run_unmanaged()
   KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> X(
       Map<>(Communicator(), SlabLayoutV({{0, 0, 200, 20}})));
 
-  std::vector<complex_double> yptr(200*20);
+  std::vector<complex_double> yptr(200 * 20);
   KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutStride, Kokkos::MemoryUnmanaged> Y(
       Map<>(Communicator(), SlabLayoutV({{0, 0, 200, 20}})),
-      buffer_protocol<complex_double, 2>({1, 200}, {200, 20}, yptr.data(), memory_type::host)
-  );
+      buffer_protocol<complex_double, 2>({1, 200}, {200, 20}, yptr.data(), memory_type::host));
 
   KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> H(
       Map<>(Communicator(), SlabLayoutV({{0, 0, 20, 20}})));
@@ -48,7 +49,7 @@ run_unmanaged()
 
   auto S = H.copy();
 
-  Kokkos::View<double*, Kokkos::HostSpace> eigvals("eigvals", 20);
+  Kokkos::View<double *, Kokkos::HostSpace> eigvals("eigvals", 20);
   eigh(H, eigvals, S);
 }
 
@@ -61,10 +62,10 @@ run_unmanaged_cuda()
 
   complex_double yptr[200 * 20];
   KokkosDVector<complex_double **,
-                    SlabLayoutV,
-                    Kokkos::LayoutStride,
-                    Kokkos::CudaSpace,
-                    Kokkos::MemoryUnmanaged>
+                SlabLayoutV,
+                Kokkos::LayoutStride,
+                Kokkos::CudaSpace,
+                Kokkos::MemoryUnmanaged>
       Y(Map<>(Communicator(), SlabLayoutV({{0, 0, 200, 20}})),
         buffer_protocol<complex_double, 2>({1, 200}, {200, 20}, yptr, memory_type::host));
 
@@ -77,10 +78,9 @@ run_unmanaged_cuda()
 
   auto S = H.copy();
 
-  Kokkos::View<double*, Kokkos::CudaSpace> eigvals("eigvals", 20);
+  Kokkos::View<double *, Kokkos::CudaSpace> eigvals("eigvals", 20);
 
   eigh(S, eigvals, H);
-
 }
 #endif
 
@@ -102,7 +102,8 @@ run_stacked_vector()
 }
 
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
   Kokkos::initialize();
   Communicator::init(argc, argv);
@@ -117,9 +118,9 @@ int main(int argc, char *argv[])
 
   run();
 
-  #ifdef __NLCGLIB__CUDA
+#ifdef __NLCGLIB__CUDA
   run_unmanaged_cuda();
-  #endif
+#endif
 
   Communicator::finalize();
   Kokkos::finalize();

@@ -2,9 +2,9 @@
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <Kokkos_Complex.hpp>
+#include <cassert>
 #include <complex>
 #include <cstdio>
-#include <cassert>
 
 namespace nlcglib {
 #define CALL_DEVICE_API(func__, args__)                      \

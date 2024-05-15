@@ -15,8 +15,10 @@ using namespace nlcglib;
 
 typedef Kokkos::complex<double> complex_double;
 
-template<class T>
-struct print_type {};
+template <class T>
+struct print_type
+{
+};
 
 void
 run()
@@ -29,13 +31,10 @@ run()
 
   auto Y = create_mirror_view_and_copy(device_space_t(), X);
 
-  if (Y.array().data() == X.array().data())
-  {
+  if (Y.array().data() == X.array().data()) {
     std::cout << "create_mirror_view_and_copy(SPACE, KokkosDVectors) works"
               << "\n";
-  }
-  else
-  {
+  } else {
     std::cout << "create_mirror_view_and_copy(SPACE, KokkosDVectors) broken"
               << "\n";
   }
@@ -58,7 +57,7 @@ run_copy_to_host()
 void
 test2()
 {
-  using matrix_t = Kokkos::View<double **, Kokkos::LayoutLeft ,device_space_t>;
+  using matrix_t = Kokkos::View<double **, Kokkos::LayoutLeft, device_space_t>;
 
   int n = 10;
   matrix_t A("foo", n, n);
@@ -69,8 +68,9 @@ test2()
 
   std::cout << "A.ptr = " << A.data() << "\n";
   std::cout << "B.ptr = " << B.data() << "\n";
-  if ( A.data() != B.data()) {
-    std::cout << "A and B are _distinct_ arrays!" << "\n";
+  if (A.data() != B.data()) {
+    std::cout << "A and B are _distinct_ arrays!"
+              << "\n";
   }
 
   auto C = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), A);

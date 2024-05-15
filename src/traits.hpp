@@ -1,10 +1,10 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
-#include <iostream>
 #include <functional>
-#include <utility>
 #include <future>
+#include <iostream>
+#include <utility>
 
 namespace nlcglib {
 
@@ -36,7 +36,8 @@ struct is_kokkos_view : _is_kokkos_view<std::remove_cv_t<std::remove_reference_t
 
 template <class X>
 struct _is_future : std::false_type
-{};
+{
+};
 
 template <class X>
 struct _is_future<std::shared_future<X>> : std::true_type
@@ -79,14 +80,16 @@ class mvector;
 
 template <class X>
 constexpr auto&&
-eval(X&& x, std::enable_if_t<(!is_callable<X>::value && !is_future<X>::value) || is_kokkos_view<X>::value> * = nullptr)
+eval(X&& x,
+     std::enable_if_t<(!is_callable<X>::value && !is_future<X>::value) ||
+                      is_kokkos_view<X>::value>* = nullptr)
 {
   return std::forward<X>(x);
 }
 
 template <class X>
 constexpr auto
-eval(X &&x, std::enable_if_t<is_callable<X>::value && !is_kokkos_view<X>::value> * = nullptr)
+eval(X&& x, std::enable_if_t<is_callable<X>::value && !is_kokkos_view<X>::value>* = nullptr)
 {
   return x();
 }
@@ -105,8 +108,9 @@ eval(const std::shared_future<X>& x)
   return x.get();
 }
 
-template<class X>
-struct eval_type {
+template <class X>
+struct eval_type
+{
   using type = std::remove_reference_t<decltype(eval(std::declval<X>()))>;
 };
 
@@ -114,13 +118,13 @@ template <class X>
 using eval_t = typename eval_type<X>::type;
 
 
-template<class X>
+template <class X>
 struct result_of
 {
   using type = decltype(eval(std::declval<X>()));
 };
 
-template<class X>
+template <class X>
 struct result_of<mvector<X>>
 {
   using type = typename result_of<X>::type;
@@ -132,9 +136,11 @@ using result_of_t = typename result_of<X>::type;
 
 /// add const if argument is true
 template <class T, bool is_const>
-struct conditional_add_const {};
+struct conditional_add_const
+{
+};
 
-template<class T>
+template <class T>
 struct conditional_add_const<T, true>
 {
   using type = typename std::add_const_t<T>;
@@ -146,7 +152,7 @@ struct conditional_add_const<T, false>
   using type = T;
 };
 
-template<class T, bool is_const>
+template <class T, bool is_const>
 using conditional_add_const_t = typename conditional_add_const<T, is_const>::type;
 
 

@@ -1,14 +1,14 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
-#include "hip/hip_space.hpp"
 #include <complex>
 #include <iomanip>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include "hip/hip_space.hpp"
+#include "interface.hpp"
 #include "map.hpp"
-#include "nlcglib.hpp"
 
 namespace nlcglib {
 
@@ -346,7 +346,7 @@ print(const KokkosDVector<T**, ARGS...>& mat, O&& out, int precision = 4)
   }
 }
 
-template<class T, class... ARGS>
+template <class T, class... ARGS>
 void
 allreduce(KokkosDVector<T, ARGS...>& C, const Communicator& comm)
 {
@@ -363,7 +363,7 @@ allreduce(KokkosDVector<T, ARGS...>& C, const Communicator& comm)
     throw std::runtime_error("allreduce, expected stride(1) == ncols");
   }
 
-  comm.allreduce(C_ptr, m*n, mpi_op::sum);
+  comm.allreduce(C_ptr, m * n, mpi_op::sum);
 #else
   auto C_h = create_mirror_view_and_copy(Kokkos::HostSpace(), C);
   auto C_ptr = C_h.array().data();

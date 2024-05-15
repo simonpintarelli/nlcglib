@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
-
 #include "la/lapack.hpp"
 #include "la/utils.hpp"
 

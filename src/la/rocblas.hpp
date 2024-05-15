@@ -28,8 +28,7 @@ namespace nlcglib {
 namespace rocm {
 
 
+}  // namespace rocm
 
-}  // rocm
 
-
-}  // nlcglib
+}  // namespace nlcglib

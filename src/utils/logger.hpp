@@ -2,8 +2,8 @@
 
 #include <mpi.h>
 #include <fstream>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -13,14 +13,14 @@
 
 namespace nlcglib {
 
-const static struct to_stdout_trigger {} TO_STDOUT;
+const static struct to_stdout_trigger
+{
+} TO_STDOUT;
 
 class Logger : public CSingleton<Logger>
 {
 public:
-  Logger() {
-    MPI_Comm_rank(MPI_COMM_WORLD, &pid_);
-  }
+  Logger() { MPI_Comm_rank(MPI_COMM_WORLD, &pid_); }
 
   Logger(Logger&&) = default;
 
@@ -34,8 +34,7 @@ public:
   void attach_file_master(const std::string& fname = "nlcg.out")
   {
     MPI_Comm_rank(MPI_COMM_WORLD, &pid_);
-    if (pid_ == 0)
-      stream_ptr_ = std::make_shared<std::ofstream>(fname);
+    if (pid_ == 0) stream_ptr_ = std::make_shared<std::ofstream>(fname);
   }
 
   template <typename T>
@@ -87,7 +86,7 @@ public:
 
   void flush()
   {
-    if(stream_ptr_) {
+    if (stream_ptr_) {
       std::mutex mutex;
       std::lock_guard<std::mutex> lock(mutex);
       auto& out = *(stream_ptr_.get());

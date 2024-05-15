@@ -242,9 +242,8 @@ struct cold_smearing : summed<cold_smearing>, non_monotonous
     if (x < -8) return 0;
     if (x > 10) return 0;
     double sqrt2 = std::sqrt(2.0);
-    double z = (x - 1/sqrt2);
-    return mo * std::exp(-z*z) * (sqrt2 - 6 * x + 2 * sqrt2 * x * x) /
-           std::sqrt(constants::pi);
+    double z = (x - 1 / sqrt2);
+    return mo * std::exp(-z * z) * (sqrt2 - 6 * x + 2 * sqrt2 * x * x) / std::sqrt(constants::pi);
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
@@ -253,8 +252,8 @@ struct cold_smearing : summed<cold_smearing>, non_monotonous
     if (x > 10) return 0;
     double sqrtpi = std::sqrt(constants::pi);
     double sqrt2 = std::sqrt(2.0);
-    double z = (x - 1/sqrt2);
-    return mo * std::exp(-z*z) * (1 - sqrt2 * x) / 2 / sqrtpi;
+    double z = (x - 1 / sqrt2);
+    return mo * std::exp(-z * z) * (1 - sqrt2 * x) / 2 / sqrtpi;
   }
 };
 

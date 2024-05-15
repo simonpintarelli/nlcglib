@@ -229,12 +229,18 @@ Communicator::allreduce(T val, enum mpi_op op) const
 }
 
 template <class T>
-void Communicator::allreduce(T* buffer, int count, enum mpi_op op) const
+void
+Communicator::allreduce(T* buffer, int count, enum mpi_op op) const
 {
-  switch(op) {
+  switch (op) {
     case mpi_op::sum: {
       CALL_MPI(MPI_Allreduce,
-               (MPI_IN_PLACE, buffer, count, mpi_type<T>::type(), mpi_op_<mpi_op::sum>::value(), mpicomm_));
+               (MPI_IN_PLACE,
+                buffer,
+                count,
+                mpi_type<T>::type(),
+                mpi_op_<mpi_op::sum>::value(),
+                mpicomm_));
       break;
     }
     default: {

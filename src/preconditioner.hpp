@@ -2,10 +2,10 @@
 
 #include <Kokkos_Core.hpp>
 
-#include "la/dvector.hpp"
-#include "la/mvector.hpp"
-#include "la/lapack.hpp"
 #include "exec_space.hpp"
+#include "la/dvector.hpp"
+#include "la/lapack.hpp"
+#include "la/mvector.hpp"
 
 namespace nlcglib {
 
@@ -19,14 +19,11 @@ class diagonal_preconditioner
 public:
   diagonal_preconditioner(const view_t<SPACE>& entries)
       : entries(entries)
-  {}
+  {
+  }
 
-  template <class M1,
-            class M2,
-            class... KOKKOS_ARGS3>
-  static void apply(M1& dst,
-                    const M2& src,
-                    const Kokkos::View<double*, KOKKOS_ARGS3...>& entries)
+  template <class M1, class M2, class... KOKKOS_ARGS3>
+  static void apply(M1& dst, const M2& src, const Kokkos::View<double*, KOKKOS_ARGS3...>& entries)
   {
     typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>, exec_t<SPACE>> mdrange_policy;
     int m = dst.array().extent(0);
@@ -40,7 +37,7 @@ public:
         });
   }
 
-  template<typename X>
+  template <typename X>
   auto operator()(const X& x)
   {
     auto y = empty_like()(x);
@@ -48,7 +45,7 @@ public:
     return y;
   }
 
-  template<typename X>
+  template <typename X>
   void apply_in_place(X& x)
   {
     diagonal_preconditioner::apply(x, x, entries);
@@ -65,11 +62,13 @@ private:
  *  http://dx.doi.org/10.1103/RevModPhys.64.1045
  */
 template <class SPACE>
-class PreconditionerTeter //: public mvector_base<PreconditionerTeter<SPACE>, diagonal_preconditioner<SPACE>>
+class PreconditionerTeter  //: public mvector_base<PreconditionerTeter<SPACE>,
+                           //: diagonal_preconditioner<SPACE>>
 {
 public:
   using memspace = SPACE;
   using value_type = diagonal_preconditioner<SPACE>;
+
 public:
   PreconditionerTeter(std::shared_ptr<VectorBaseZ> ekin)
   {
@@ -94,13 +93,13 @@ public:
   }
 
 
-  template<class key_t>
+  template <class key_t>
   auto operator[](const key_t& key) const
   {
     return diagonal_preconditioner<memspace>(kinetic_diag_precond.at(key));
   }
 
-  template<class key_t>
+  template <class key_t>
   auto at(const key_t& key) const
   {
     return this->operator[](key);

@@ -21,7 +21,7 @@ std::uniform_real_distribution<double> unif01(0, 1);
 std::mt19937 gen(0);
 
 
-template<class SPACE=Kokkos::HostSpace>
+template <class SPACE = Kokkos::HostSpace>
 void
 run_unmanaged()
 {
@@ -39,8 +39,7 @@ run_unmanaged()
   Kokkos::deep_copy(arr, host_view);
 
   using matrix_t = KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, SPACE>;
-  matrix_t H(
-      Map<>(Communicator(), SlabLayoutV({{0, 0, ncols, ncols}})));
+  matrix_t H(Map<>(Communicator(), SlabLayoutV({{0, 0, ncols, ncols}})));
 
   inner(H, X, X);
   auto S = H.copy();
@@ -48,22 +47,23 @@ run_unmanaged()
   solve_sym(H /* will be overwritten by Cholesky factorization */,
             S /* will be overwritten by solution */);
 
-  std::cout <<  "extent " << S.array().extent(0) << "\n";
-  std::cout <<  "extent " << S.array().extent(1) << "\n";
+  std::cout << "extent " << S.array().extent(0) << "\n";
+  std::cout << "extent " << S.array().extent(1) << "\n";
 
   auto S_host = Kokkos::create_mirror(S.array());
   Kokkos::deep_copy(S_host, S.array());
   // print result
   for (int i = 0; i < ncols; ++i) {
     for (int j = 0; j < ncols; ++j) {
-      std::cout << S_host(i,j) << "  ";
+      std::cout << S_host(i, j) << "  ";
     }
     std::cout << "\n";
   }
 }
 
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
   Kokkos::initialize();
   Communicator::init(argc, argv);
@@ -76,7 +76,8 @@ int main(int argc, char *argv[])
   }
   std::cout << "thread_count: " << threads_count;
 
-  std::cout << "run on HOST" << "\n";
+  std::cout << "run on HOST"
+            << "\n";
   run_unmanaged<Kokkos::HostSpace>();
 
   std::cout << "run on DEVICE"

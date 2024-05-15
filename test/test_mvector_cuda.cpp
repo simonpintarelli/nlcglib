@@ -1,21 +1,22 @@
 #include <stdlib.h>
 #include <Kokkos_Core.hpp>
 #include <iostream>
-#include "smearing.hpp"
 #include "la/mvector.hpp"
+#include "smearing.hpp"
 
 #ifdef __NLCGLIB__CUDA
-void run()
+void
+run()
 {
   int n = 10;
-  using vector_t = Kokkos::View<double*, Kokkos::CudaSpace>;
+  using vector_t = Kokkos::View<double *, Kokkos::CudaSpace>;
   vector_t a_view("test", n);
 
 
   auto host_view = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), a_view);
 
   for (int i = 0; i < n; ++i) {
-    host_view(i) = i+1;
+    host_view(i) = i + 1;
   }
 
   Kokkos::deep_copy(a_view, host_view);

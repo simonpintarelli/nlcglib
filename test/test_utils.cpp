@@ -3,10 +3,14 @@
 using namespace nlcglib;
 
 
-template<class T>
-struct print_type {};
+template <class T>
+struct print_type
+{
+};
 
-void test_unzip() {
+void
+test_unzip()
+{
   mvector<std::tuple<int, int, double>> Z;
   auto X = unzip(Z);
   auto x0 = std::get<0>(X);
@@ -14,7 +18,8 @@ void test_unzip() {
 }
 
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
   test_unzip();
   return 0;

@@ -4,8 +4,10 @@
 
 namespace nlcglib {
 
-void initialize();
-void finalize();
+void
+initialize();
+void
+finalize();
 
 nlcg_info
 nlcg_mvp2_cpu(EnergyBase& energy_base,
@@ -28,12 +30,12 @@ nlcg_mvp2_device(EnergyBase& energy_base,
 
 nlcg_info
 nlcg_mvp2_cpu_device(EnergyBase& energy_base,
-                      smearing_type smearing,
-                      double temp,
-                      double tol,
-                      double kappa,
-                      double tau,
-                      int maxiter,
+                     smearing_type smearing,
+                     double temp,
+                     double tol,
+                     double kappa,
+                     double tau,
+                     int maxiter,
                      int restart);
 nlcg_info
 nlcg_mvp2_device_cpu(EnergyBase& energy_base,

@@ -2,10 +2,8 @@
 
 #include <Kokkos_Core.hpp>
 #include "la/dvector.hpp"
-#include "la/mvector.hpp"
 #include "mvp2.hpp"
 #include "pseudo_hamiltonian/grad_eta.hpp"
-#include "utils/logger.hpp"
 
 
 namespace nlcglib {

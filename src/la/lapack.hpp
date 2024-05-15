@@ -1,9 +1,9 @@
 #pragma once
 
 #include <mpi.h>
-#include "hip/hip_space.hpp"
 #include <functional>
 #include <utility>
+#include "hip/hip_space.hpp"
 #include "la/map.hpp"
 #include "lapack_cpu.hpp"
 #include "mpi/communicator.hpp"
@@ -252,7 +252,7 @@ struct inner_
 /// Hermitian inner product, summed
 struct innerh_tr
 {
-#if defined(__NLCGLIB__CUDA)  || defined(__NLCGLIB__ROCM)
+#if defined(__NLCGLIB__CUDA) || defined(__NLCGLIB__ROCM)
   template <class M1, class M2>
   std::enable_if_t<
       !Kokkos::SpaceAccessibility<Kokkos::Serial, typename M1::storage_t::memory_space>::accessible,

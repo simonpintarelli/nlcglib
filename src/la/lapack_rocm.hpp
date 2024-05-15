@@ -4,12 +4,12 @@
 // #include <rocsolver.h>
 
 #include "la/cblas.hpp"
-#include "rocm.hpp"
-#include "rocblas.hpp"
-#include "rocsolver.hpp"
 #include "la/dvector.hpp"
-#include "la/utils.hpp"
 #include "la/lapack_cpu.hpp"
+#include "la/utils.hpp"
+#include "rocblas.hpp"
+#include "rocm.hpp"
+#include "rocsolver.hpp"
 
 #ifdef __NLCGLIB__MAGMA
 #include "magma.hpp"
@@ -28,7 +28,6 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
      const KokkosDVector<T, LAYOUT, KOKKOS...>& S)
 {
   if (U.map().is_local() && S.map().is_local()) {
-
     deep_copy(U, S);
 
     // int n = U.map().nrows();
@@ -46,12 +45,12 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
       int n = U_host.map().ncols();
       Kokkos::deep_copy(U_host.array(), S_host.array());
       LAPACKE_zheevd(
-          LAPACK_COL_MAJOR,                                           /* matrix layout */
-          'V',                                                        /* jobz */
-          'U',                                                        /* uplot */
-          n,                                                          /* matrix size */
+          LAPACK_COL_MAJOR,                                                /* matrix layout */
+          'V',                                                             /* jobz */
+          'U',                                                             /* uplot */
+          n,                                                               /* matrix size */
           reinterpret_cast<lapack_complex_double*>(U_host.array().data()), /* Complex double */
-          lda,                                                        /* lda */
+          lda,                                                             /* lda */
           w_host.data()                                                    /* eigenvalues */
       );
     }
@@ -60,7 +59,8 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
     // zheevd_magma(n, U.array().data(), lda, w_host.data());
     Kokkos::deep_copy(w, w_host);
     deep_copy(U, U_host);
-    // rocm::heevd(rocblas_evect::rocblas_evect_original, rocblas_fill::rocblas_fill_upper, n, U.array().data(), lda, w.data());
+    // rocm::heevd(rocblas_evect::rocblas_evect_original, rocblas_fill::rocblas_fill_upper, n,
+    // U.array().data(), lda, w.data());
   } else {
     throw std::runtime_error("distributed eigh not implemented");
   }
@@ -68,7 +68,8 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
 
 /// stores result in RHS, after the call A will contain the cholesky factorization of a
 template <class T, class LAYOUT, class... KOKKOS>
-std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value>
+std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space,
+                              Kokkos::Experimental::HIPSpace>::value>
 cholesky(KokkosDVector<T, LAYOUT, KOKKOS...>& A)
 {
   if (A.map().is_local()) {
@@ -89,9 +90,9 @@ cholesky(KokkosDVector<T, LAYOUT, KOKKOS...>& A)
 
 /// stores result in RHS, after the call A will contain the cholesky factorization of a
 template <class T, class LAYOUT, class... KOKKOS>
-std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value>
-solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A,
-          KokkosDVector<T, LAYOUT, KOKKOS...>& RHS)
+std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space,
+                              Kokkos::Experimental::HIPSpace>::value>
+solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A, KokkosDVector<T, LAYOUT, KOKKOS...>& RHS)
 {
   auto A_host = create_mirror_view_and_copy(Kokkos::HostSpace(), A);
   auto RHS_host = create_mirror_view_and_copy(Kokkos::HostSpace(), RHS);
@@ -125,7 +126,9 @@ solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A,
 
 /// Inner product c = a^H * b, on GPU
 template <class M0, class M1, class M2>
-std::enable_if_t<std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value, void>
+std::enable_if_t<
+    std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value,
+    void>
 inner(M0& c,
       const M1& a,
       const M2& b,
@@ -167,12 +170,9 @@ inner(M0& c,
 }
 
 /// Inner product c = a^H * b, on GPU
-template <class M0,
-          class M1,
-          class M2>
+template <class M0, class M1, class M2>
 std::enable_if_t<
-    std::is_same<typename M0::storage_t::memory_space,
-                 Kokkos::Experimental::HIPSpace>::value,
+    std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value,
     void>
 outer(M0& c,
       const M1& a,
@@ -219,12 +219,11 @@ outer(M0& c,
 
 /// C <- beta * C + alpha * A @ B
 template <class M0, class M1, class M2>
-std::enable_if_t<std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value, void>
-transform(M0& C,
-          typename M0::numeric_t beta,
-          typename M0::numeric_t alpha,
-          const M1& A,
-          const M2& B)
+std::enable_if_t<
+    std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value,
+    void>
+transform(
+    M0& C, typename M0::numeric_t beta, typename M0::numeric_t alpha, const M1& A, const M2& B)
 {
   typedef M0 vector0_t;
   typedef M1 vector1_t;
@@ -264,7 +263,9 @@ transform(M0& C,
 
 /// add C <- alpha * A + beta * C
 template <class M0, class M1>
-std::enable_if_t<std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value, void>
+std::enable_if_t<
+    std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value,
+    void>
 add(M0& C,
     const M1& A,
     typename M0::numeric_t alpha,
@@ -299,4 +300,4 @@ add(M0& C,
 
 #endif
 
-}  // nlcglib
+}  // namespace nlcglib

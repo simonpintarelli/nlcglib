@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
-#include "hip/hip_space.hpp"
+#include <iomanip>
 #include <iostream>
+#include "hip/hip_space.hpp"
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
 #include "la/magma.hpp"
-#include <iomanip>
 
 using namespace nlcglib;
 
@@ -51,8 +51,7 @@ protected:
     }
   }
 
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace>
-      vector_t;
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> vector_t;
 
   vector_t a_;
   vector_t b_;
@@ -62,8 +61,7 @@ protected:
 
 TEST_F(CPUKokkosVectors, InnerProductCPU)
 {
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace>
-      vector_t;
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> vector_t;
   int n = 5;
   vector_t c(Map<>(Communicator(), SlabLayoutV({{0, 0, n, n}})));
   inner(c, a_, b_);
@@ -83,8 +81,7 @@ TEST_F(CPUKokkosVectors, InnerProductCPU)
 
 TEST_F(CPUKokkosVectors, TransformCPU)
 {
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace>
-      vector_t;
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> vector_t;
   int n = a_.map().ncols();
   int m = a_.map().nrows();
   vector_t c(Map<>(Communicator(), SlabLayoutV({{0, 0, m, n}})));
@@ -153,15 +150,16 @@ public:
     auto U = u_.array();
     Kokkos::parallel_for(
         "init", mdrange_policy({0, 0}, {5, 5}), KOKKOS_LAMBDA(int i, int j) {
-              M(i, j) = c_arr[i * n + j];
-              if (i == j) U(i, j) = 1;
-              else U(i, j) = 0;
+          M(i, j) = c_arr[i * n + j];
+          if (i == j)
+            U(i, j) = 1;
+          else
+            U(i, j) = 0;
         });
   }
 
 protected:
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t>
-      vector_t;
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t> vector_t;
 
   vector_t a_;
   vector_t b_;
@@ -172,14 +170,12 @@ protected:
 
 TEST_F(GPUKokkosVectors, InnerProductGPU)
 {
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t>
-      vector_t;
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t> vector_t;
   int n = 5;
   vector_t c(Map<>(Communicator(), SlabLayoutV({{0, 0, n, n}})));
   inner(c, a_, b_);
   // host vector type
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace>
-      h_vector_t;
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> h_vector_t;
 
   h_vector_t h_c(c.map());
   h_vector_t h_cRef(c.map());
@@ -199,15 +195,13 @@ TEST_F(GPUKokkosVectors, InnerProductGPU)
 
 TEST_F(GPUKokkosVectors, TransformGPU)
 {
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t>
-      vector_t;
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t> vector_t;
   int n = a_.map().ncols();
   int m = a_.map().nrows();
   vector_t c(Map<>(Communicator(), SlabLayoutV({{0, 0, m, n}})));
   transform(c, 0., 1., a_, u_);
   // host vector type
-  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace>
-      h_vector_t;
+  typedef KokkosDVector<double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> h_vector_t;
 
   h_vector_t h_c(c.map());
   h_vector_t h_cRef(c.map());
@@ -226,8 +220,7 @@ TEST(EigenValues, EigHermitian)
 {
   // Poisson matrix: n =5, ones on diagonal, -2 on first off-diagonals
   typedef std::complex<double> numeric_t;
-  typedef KokkosDVector<numeric_t **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t>
-      vector_t;
+  typedef KokkosDVector<numeric_t **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t> vector_t;
 
   const std::vector<numeric_t> _Varr = {
       2.88675135e-01,  5.00000000e-01,  5.77350269e-01,  5.00000000e-01, 2.88675135e-01,
@@ -250,7 +243,7 @@ TEST(EigenValues, EigHermitian)
   Kokkos::parallel_for(
       "init", mdrange_policy({0, 0}, {5, 5}), KOKKOS_LAMBDA(int i, int j) {
         A_array(i, i) = 1;
-        if (std::abs(i-j) == 1) A_array(i, j) = -2;
+        if (std::abs(i - j) == 1) A_array(i, j) = -2;
       });
 
   //
@@ -271,7 +264,8 @@ TEST(EigenValues, EigHermitian)
   auto wh = Kokkos::create_mirror(w);
   Kokkos::deep_copy(wh, w);
 
-  std::cout << "eigenvalues" << "\n";
+  std::cout << "eigenvalues"
+            << "\n";
   for (int i = 0; i < wh.extent(0); ++i) {
     // double err = eigs[i] - wh(i);
     EXPECT_NEAR(wh(i), eigs[i], 1e-8);
@@ -289,17 +283,17 @@ main(int argc, char *argv[])
 
   Kokkos::initialize();
 
-  #ifdef __NLCGLIB__MAGMA
+#ifdef __NLCGLIB__MAGMA
   nlcg_init_magma();
-  #endif
+#endif
 
   result = RUN_ALL_TESTS();
 
   Kokkos::finalize();
 
-  #ifdef __NLCGLIB__MAGMA
+#ifdef __NLCGLIB__MAGMA
   nlcg_finalize_magma();
-  #endif
+#endif
 
   Communicator::finalize();
 

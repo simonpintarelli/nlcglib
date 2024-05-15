@@ -1,15 +1,15 @@
 #include <stdlib.h>
 #include <Kokkos_Core.hpp>
 #include <iostream>
-#include "smearing.hpp"
 #include "la/mvector.hpp"
+#include "smearing.hpp"
 
 
 auto
 run()
 {
   int n = 10;
-  using vector_t = Kokkos::View<double*, Kokkos::HostSpace>;
+  using vector_t = Kokkos::View<double *, Kokkos::HostSpace>;
   vector_t a_view("test", n);
   for (int i = 0; i < n; ++i) {
     a_view(i) = i;
