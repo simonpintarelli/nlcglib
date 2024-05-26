@@ -1,0 +1,11 @@
+name: Check source code formatting
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container: zhongruoyu/llvm-ports:17.0.4-slim-focal
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check .cpp and .hpp files
+        run: |
+          ./check-format.sh
