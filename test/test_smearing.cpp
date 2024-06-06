@@ -1,4 +1,6 @@
 #include <Kokkos_Core.hpp>
+
+
 #include "smearing.hpp"
 
 using namespace nlcglib;
@@ -24,7 +26,7 @@ run(smearing_type smearing_t)
 
   int nk_loc = nk / comm.size();
 
-  if (pid == nranks-1) {
+  if (pid == nranks - 1) {
     nk_loc = nk - (nranks - 1) * nk_loc;
   }
 
@@ -38,13 +40,13 @@ run(smearing_type smearing_t)
     }
 
     double check = sum(wk, comm);
-    if (std::abs(check-1) > 1e-10)  {
-      std::cout << sum(wk,comm) << "\n";
+    if (std::abs(check - 1) > 1e-10) {
+      std::cout << sum(wk, comm) << "\n";
       throw std::runtime_error("wrong weights");
     }
   }
 
-  if(pid == nranks-1) {
+  if (pid == nranks - 1) {
     print(wk);
   }
 
@@ -63,30 +65,29 @@ run(smearing_type smearing_t)
   mvector<vec_t> ek;
 
   for (int i = 0; i < nk_loc; ++i) {
-
     auto key = std::make_pair(pid * nk / nranks + i, 0);
 
     double lb = -10;
     vec_t eki("ek" + std::to_string(i), num_bands);
     eki(0) = lb;
     for (int ib = 1; ib < num_bands; ++ib) {
-      eki(ib) = eki(ib-1) + std::exp(-0.05*ib);
+      eki(ib) = eki(ib - 1) + std::exp(-0.05 * ib);
     }
     ek[key] = eki;
-    if (i == 0)
-    print(ek);
+    if (i == 0) print(ek);
   }
 
   auto mu_fn = smearing.fn(ek);
   double S = smearing.entropy(std::get<1>(mu_fn), ek, std::get<0>(mu_fn));
   double smax = comm.allreduce(S, mpi_op::max);
-  if ( S != smax) {
+  if (S != smax) {
     throw std::runtime_error("entropy differs");
   }
   std::cout << "entropy is " << S << "\n";
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
   MPI_Init(&argc, &argv);
   Kokkos::initialize();

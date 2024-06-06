@@ -1,10 +1,12 @@
 #pragma once
 
-#include "hip/hip_space.hpp"
+#include <mpi.h>
 #include <functional>
 #include <utility>
+#include "hip/hip_space.hpp"
 #include "la/map.hpp"
 #include "lapack_cpu.hpp"
+#include "mpi/communicator.hpp"
 #ifdef __NLCGLIB__CUDA
 #include "lapack_cuda.hpp"
 #endif
@@ -240,7 +242,7 @@ struct inner_
   {
     int n = A.map().ncols();
     int m = B.map().ncols();
-    Map<SlabLayoutV> map(A.map().comm(), SlabLayoutV({{0, 0, n, m}}));
+    Map<SlabLayoutV> map(Communicator(), SlabLayoutV({{0, 0, n, m}}));
     to_layout_left_t<M1> C(map);
     inner(C, A, B, alpha, beta);
     return C;
@@ -250,7 +252,7 @@ struct inner_
 /// Hermitian inner product, summed
 struct innerh_tr
 {
-#if defined(__NLCGLIB__CUDA)  || defined(__NLCGLIB__ROCM)
+#if defined(__NLCGLIB__CUDA) || defined(__NLCGLIB__ROCM)
   template <class M1, class M2>
   std::enable_if_t<
       !Kokkos::SpaceAccessibility<Kokkos::Serial, typename M1::storage_t::memory_space>::accessible,
@@ -285,6 +287,9 @@ struct innerh_tr
         Kokkos::RangePolicy<exec_t<memory_space>>(0, nrows),
         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
         sum);
+    exec_t<memory_space> spc;
+    spc.fence();
+    sum = X.map().comm().allreduce(sum, mpi_op::sum);
     return sum;
   }
 #endif
@@ -321,7 +326,7 @@ struct innerh_tr
         Kokkos::RangePolicy<Kokkos::Serial>(0, nrows),
         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
         sum);
-
+    sum = X.map().comm().allreduce(sum, mpi_op::sum);
     return sum;
   }
 };

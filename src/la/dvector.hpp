@@ -1,14 +1,14 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
-#include "hip/hip_space.hpp"
 #include <complex>
 #include <iomanip>
 #include <string>
 #include <type_traits>
 #include <utility>
+#include "hip/hip_space.hpp"
+#include "interface.hpp"
 #include "map.hpp"
-#include "nlcglib.hpp"
 
 namespace nlcglib {
 
@@ -344,6 +344,41 @@ print(const KokkosDVector<T**, ARGS...>& mat, O&& out, int precision = 4)
     }
     out << "\n";
   }
+}
+
+template <class T, class... ARGS>
+void
+allreduce(KokkosDVector<T, ARGS...>& C, const Communicator& comm)
+{
+  typename KokkosDVector<T, ARGS...>::storage_t::execution_space ex;
+  ex.fence();
+#ifdef __NLCGLIB___GPU_DIRECT
+  auto C_ptr = C.array().data();
+  int m = C.map().nrows();
+  int n = C.map().ncols();
+  if (C.array().stride(0) != 1) {
+    throw std::runtime_error("allreduce, expected stride(0) == 1");
+  }
+  if (C.array().stride(1) != m) {
+    throw std::runtime_error("allreduce, expected stride(1) == ncols");
+  }
+
+  comm.allreduce(C_ptr, m * n, mpi_op::sum);
+#else
+  auto C_h = create_mirror_view_and_copy(Kokkos::HostSpace(), C);
+  auto C_ptr = C_h.array().data();
+  int m = C_h.map().nrows();
+  int n = C_h.map().ncols();
+  if (static_cast<int>(C_h.array().stride(0)) != 1) {
+    throw std::runtime_error("allreduce, expected stride(0) == 1");
+  }
+  if (static_cast<int>(C_h.array().stride(1)) != m) {
+    throw std::runtime_error("allreduce, expected stride(1) == ncols");
+  }
+  comm.allreduce(C_ptr, m * n, mpi_op::sum);
+  // copy back to original memory
+  deep_copy(C, C_h);
+#endif
 }
 
 

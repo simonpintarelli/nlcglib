@@ -39,7 +39,7 @@ struct GradEtaHelper
           "dFdmu",
           Kokkos::RangePolicy<Kokkos::Serial>(0, nbands),
           KOKKOS_LAMBDA(int i, Kokkos::complex<double>& result) {
-            double delta = smearing<smearing_t>::delta((en_loc(i) - mu) / kT, mo);
+            double delta = smearing<smearing_t>::delta((mu - en_loc(i)) / kT, mo);
             result += (hii(i) - en_loc(i)) * (delta);
           },
           v);
@@ -51,7 +51,7 @@ struct GradEtaHelper
 
   /** w_k * fn (1-fn) summed over all k-points
      \f[
-         \sum_{n, k'} w_{k'} f_n (mo-f_n)
+         \sum_{n, k'} w_{k'} delta( (μ - e_{n,k'}) / kT )
      \f]
      \$mo\$ is 1 for spin-polarized calucations and 2 otherwise.
   */
@@ -72,7 +72,7 @@ struct GradEtaHelper
       int nbands = en[key].size();
       auto en_loc = en[key];
       for (int i = 0; i < nbands; ++i) {
-        double delta = smearing<smearing_t>::delta((en_loc(i) - mu) / kT, mo);
+        double delta = smearing<smearing_t>::delta((mu - en_loc(i)) / kT, mo);
         v += delta * w_k;
       }
     }
@@ -151,7 +151,7 @@ public:
     double kT_loc = kT;
     Kokkos::parallel_for(
         "gEta (1)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
-          double delta = smearing<smearing_t>::delta((ek(i) - mu) / kT_loc, mo);
+          double delta = smearing<smearing_t>::delta((mu - ek(i)) / kT_loc, mo);
           mgETA(i, i) = -1 / kT_loc * (mHij(i, i) - wk * ek(i)) * (delta);
         });
 
@@ -161,7 +161,7 @@ public:
       Kokkos::parallel_for(
           "gEta (2)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
             // sumfn dmuFn
-            double delta = smearing<smearing_t>::delta((ek(i) - mu) / kT_loc, mo);
+            double delta = smearing<smearing_t>::delta((mu - ek(i)) / kT_loc, mo);
             mgETA(i, i) += wk * (delta) / dmu_deta * (dFdmu / kT_loc);
           });
     }
@@ -196,7 +196,6 @@ public:
                  const mvector<vector_t>& ek,
                  const mvector<vector2_t>& wk)
   {
-    // delta_eta = kappa * (hij - diag(ek))
     return tapply_async(_delta_eta(kappa), Hij, ek, wk);
   }
 

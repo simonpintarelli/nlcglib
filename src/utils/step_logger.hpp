@@ -1,11 +1,10 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
 #include <Kokkos_Complex.hpp>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <nlohmann/json.hpp>
 #include <string>
-#include <type_traits>
 #include <type_traits>
 #include "la/mvector.hpp"
 
@@ -26,25 +25,28 @@ namespace nlcglib {
 class StepLogger
 {
 public:
-  StepLogger(int i, std::string fname = "nlcg.json", bool active=true)
-      : i(i), fname(fname), active(active)
+  StepLogger(int i, std::string fname = "nlcg.json", bool active = true)
+      : i(i)
+      , fname(fname)
+      , active(active)
   {
     dict["type"] = "cg_iteration";
     dict["step"] = i;
   }
 
-  template<class X>
-  std::enable_if_t<std::is_scalar<std::remove_reference_t<X>>::value> log(const std::string& key, X&& x);
+  template <class X>
+  std::enable_if_t<std::is_scalar<std::remove_reference_t<X>>::value> log(const std::string& key,
+                                                                          X&& x);
 
-  template<class X>
+  template <class X>
   void log(const std::string& key, const std::map<std::string, X>& v);
 
-  template<class V>
+  template <class V>
   void log(const std::string& key, const mvector<V>& x);
 
   ~StepLogger()
   {
-    if(active) {
+    if (active) {
       std::ofstream fout(std::string("nlcg") + ".json", std::ios_base::app);
       fout << dict;
       fout.flush();
@@ -62,14 +64,15 @@ template <class X>
 std::enable_if_t<std::is_scalar<std::remove_reference_t<X>>::value>
 StepLogger::log(const std::string& key, X&& x)
 {
-  if(!active) return;
+  if (!active) return;
   dict[key] = x;
 }
 
-template<class X>
-void StepLogger::log(const std::string& key, const std::map<std::string, X>& v)
+template <class X>
+void
+StepLogger::log(const std::string& key, const std::map<std::string, X>& v)
 {
-  if(!active) return;
+  if (!active) return;
   dict[key] = v;
 }
 
@@ -77,7 +80,7 @@ template <class V>
 void
 StepLogger::log(const std::string& key, const mvector<V>& x)
 {
-  if(!active) return;
+  if (!active) return;
   // assuming V is a 1-d kokkos array
   for (auto& elem : x) {
     auto x_key = elem.first;

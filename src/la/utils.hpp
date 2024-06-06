@@ -1,12 +1,12 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
+#include <exec_space.hpp>
 #include <functional>
 #include <future>
-#include <vector>
 #include <la/dvector.hpp>
-#include <exec_space.hpp>
 #include <traits.hpp>
+#include <vector>
 
 namespace nlcglib {
 
@@ -54,7 +54,10 @@ struct to_layout_left<KokkosDVector<aT, LAYOUT, KOKKOS...>&&>
 
 // const ref
 template <class aT, class LAYOUT, class... KOKKOS>
-struct to_layout_left<const KokkosDVector<aT, LAYOUT, KOKKOS...>&> : to_layout_left<KokkosDVector<aT, LAYOUT, KOKKOS...>> {};
+struct to_layout_left<const KokkosDVector<aT, LAYOUT, KOKKOS...>&>
+    : to_layout_left<KokkosDVector<aT, LAYOUT, KOKKOS...>>
+{
+};
 
 // ref
 template <class aT, class LAYOUT, class... KOKKOS>
@@ -119,13 +122,13 @@ Kokkos::View<T*, ARGS...>
 _empty_like(const Kokkos::View<T*, ARGS...>& other)
 {
   // return Kokkos::View<T*, ARGS...>("tmp", other.size());
-  auto ret = Kokkos::View<T*, ARGS...>(Kokkos::view_alloc(Kokkos::WithoutInitializing, "tmp"), other.size());
+  auto ret = Kokkos::View<T*, ARGS...>(Kokkos::view_alloc(Kokkos::WithoutInitializing, "tmp"),
+                                       other.size());
 #ifdef DEBUG
   // initialize with NAN to throw an error immediately if not overwritten
   using memspc = typename Kokkos::View<T*, ARGS...>::memory_space;
-  Kokkos::parallel_for(Kokkos::RangePolicy<exec_t<memspc>>(0, other.size()), KOKKOS_LAMBDA(int i) {
-      ret(i) = NAN;
-      });
+  Kokkos::parallel_for(
+      Kokkos::RangePolicy<exec_t<memspc>>(0, other.size()), KOKKOS_LAMBDA(int i) { ret(i) = NAN; });
 #endif
   return ret;
 }
@@ -205,11 +208,6 @@ tapply(FUNCTOR&& fun, const ARG& arg0, const ARGS&... args)
   return result;
 }
 
-template <class T>
-class find_type
-{
-  using t = typename T::fjsadlfjasf;
-};
 
 /// tapply for packed operators
 template <class OP, class ARG0, class... ARGS>
@@ -223,10 +221,9 @@ tapply_op(OP&& op, const ARG0& arg0, const ARGS&... args)
   mvector<std::function<R()>> result(arg0.commk());
   for (auto& elem : arg0) {
     auto key = elem.first;
-    // find_type<decltype(key)>::t;
     auto get_key = [key](auto container) { return container.at(key); };
     auto fun = op.at(key);
-    result[key] = [=](){ return fun(eval(get_key(arg0)), eval(get_key(args))...); };
+    result[key] = [=]() { return fun(eval(get_key(arg0)), eval(get_key(args))...); };
   }
   return result;
 }

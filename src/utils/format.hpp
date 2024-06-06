@@ -1,12 +1,13 @@
 #pragma once
 
-#include <iostream>
 #include <cstdio>
+#include <iostream>
 
 namespace nlcglib {
 
-template<class... ARGS>
-std::string format(std::string format_string, ARGS&&... args)
+template <class... ARGS>
+std::string
+format(std::string format_string, ARGS&&... args)
 {
   char buf[format_string.size()];
   std::sprintf(buf, format_string.c_str(), args...);
@@ -14,4 +15,4 @@ std::string format(std::string format_string, ARGS&&... args)
   return std::string(buf);
 }
 
-}  // nlcglib
+}  // namespace nlcglib

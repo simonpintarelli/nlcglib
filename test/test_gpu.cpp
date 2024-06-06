@@ -1,6 +1,6 @@
+#include <Kokkos_Core.hpp>
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
-#include <Kokkos_Core.hpp>
 
 #include <mpi.h>
 #include <iostream>
@@ -29,7 +29,9 @@ std::mt19937 gen(0);
 
 typedef Kokkos::complex<double> complex_double;
 
-void run() {
+void
+run()
+{
   int n = 4000;
   int m = 400;
 
@@ -51,8 +53,6 @@ void run() {
 
     Kokkos::deep_copy(X.array(), host);
 
-
-    // eigh(X);
     auto H = inner_()(X, X);
     auto HH = empty_like()(H);
     // auto  Z = transform_alloc(X, H, 1.0);
@@ -63,10 +63,10 @@ void run() {
   // Kokkos::parallel_for("init_H",
   //                      mdrange_policy({0, 0}, {m, m}),
   //                      MDFunctor<typename vector_t::storage_t>(M));
-
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
   Kokkos::initialize();
   Communicator::init(argc, argv);

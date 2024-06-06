@@ -92,7 +92,8 @@ FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<t
   energy.set_fn(key_fn, vec_fn);
   energy.compute();
 
-  // update fermi energy in SIRIUS (no effect here, but make sure to leave SIRIUS in a consistent state)
+  // update fermi energy in SIRIUS (no effect here, but make sure to leave SIRIUS in a consistent
+  // state)
   energy.set_chemical_potential(mu);
 
   double etot = energy.get_total_energy();

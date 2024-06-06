@@ -1,22 +1,23 @@
+#include <stdlib.h>
 #include <Kokkos_Core.hpp>
 #include <iostream>
-#include <stdlib.h>
 #include "la/dvector.hpp"
 
 
-auto unmanaged()
+auto
+unmanaged()
 {
   std::cout << "\nunmanaged\n";
   int n = 10;
-  double* A = new double[n*n];
+  double* A = new double[n * n];
 
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < n; ++j) {
-      A[n*i + j] = n * i + j;
+      A[n * i + j] = n * i + j;
     }
   }
 
-  Kokkos::View<double**, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged> > a_view(
+  Kokkos::View<double**, Kokkos::HostSpace, Kokkos::MemoryTraits<Kokkos::Unmanaged>> a_view(
       A, n, n);
 
   for (int i = 0; i < n; ++i) {
@@ -30,31 +31,33 @@ auto unmanaged()
 }
 
 
-auto unmanaged_strided()
+auto
+unmanaged_strided()
 {
   std::cout << "\nunmanaged_strided\n";
-  int n = 10; // rows
-  int m = 10; // cols
+  int n = 10;  // rows
+  int m = 10;  // cols
   int lda = 12;
 
   double* A;
-  int res = posix_memalign(reinterpret_cast<void**>(&A), 256, lda*m*sizeof(double));
+  int res = posix_memalign(reinterpret_cast<void**>(&A), 256, lda * m * sizeof(double));
   std::cout << "A: " << A << "\n";
   std::cout << "poisx_memalign: " << res << "\n";
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < m; ++j) {
-      A[j*lda + i] = i*n + j;
+      A[j * lda + i] = i * n + j;
     }
   }
-  nlcglib::buffer_protocol<double, 2> buf{std::array<int, 2>{1, lda}, std::array<int, 2>{n, m}, A, nlcglib::memory_type::host};
+  nlcglib::buffer_protocol<double, 2> buf{
+      std::array<int, 2>{1, lda}, std::array<int, 2>{n, m}, A, nlcglib::memory_type::host};
 
   nlcglib::Map<> map(nlcglib::Communicator(), nlcglib::SlabLayoutV({{0, 0, n, m}}));
-      nlcglib::KokkosDVector<double**,
-                             nlcglib::SlabLayoutV,
-                             Kokkos::LayoutStride,
-                             Kokkos::HostSpace,
-                             Kokkos::MemoryTraits<Kokkos::Unmanaged>>
-        dvector(map, buf);
+  nlcglib::KokkosDVector<double**,
+                         nlcglib::SlabLayoutV,
+                         Kokkos::LayoutStride,
+                         Kokkos::HostSpace,
+                         Kokkos::MemoryTraits<Kokkos::Unmanaged>>
+      dvector(map, buf);
 
   // check daata
   bool passed = true;
@@ -64,14 +67,17 @@ auto unmanaged_strided()
       passed = passed && is_same;
     }
   }
-  if (passed) std::cout << "worked!\n";
-  else std::cout << "failed!\n";
+  if (passed)
+    std::cout << "worked!\n";
+  else
+    std::cout << "failed!\n";
 
   return dvector;
 }
 
 
-int main(int argc, char *argv[])
+int
+main(int argc, char* argv[])
 {
   Kokkos::initialize();
   auto x = unmanaged();
@@ -84,5 +90,4 @@ int main(int argc, char *argv[])
   std::cout << x2.data() << "\n";
   Kokkos::finalize();
   return 0;
-
 }

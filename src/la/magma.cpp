@@ -1,11 +1,11 @@
 #ifdef __NLCGLIB__MAGMA
+#include "la/magma.hpp"
 #include <magma_auxiliary.h>
 #include <magma_types.h>
 #include <magma_v2.h>
 #include <Kokkos_Core.hpp>
 #include <complex>
 #include <stdexcept>
-#include "la/magma.hpp"
 
 #define TESTING_CHECK(err)                                    \
   do {                                                        \
@@ -23,14 +23,16 @@
   } while (0)
 
 
-void nlcg_init_magma()
+void
+nlcg_init_magma()
 {
   TESTING_CHECK(magma_init());
   // magma_print_environment();
 }
 
 
-void nlcg_finalize_magma()
+void
+nlcg_finalize_magma()
 {
   TESTING_CHECK(magma_finalize());
 }
@@ -133,7 +135,9 @@ zpotrs_magma(int n, int nrhs, COMPLEX* dA, int lda, COMPLEX* dB, int ldb)
   }
 }
 
-template void zpotrs_magma(int, int, Kokkos::complex<double>*, int, Kokkos::complex<double>*, int);
-template void zpotrs_magma(int, int, std::complex<double>*, int, std::complex<double>*, int);
+template void
+zpotrs_magma(int, int, Kokkos::complex<double>*, int, Kokkos::complex<double>*, int);
+template void
+zpotrs_magma(int, int, std::complex<double>*, int, std::complex<double>*, int);
 
 #endif /*__NLCGLIB__MAGMA*/

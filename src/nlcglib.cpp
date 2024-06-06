@@ -1,31 +1,20 @@
 #include <Kokkos_Core.hpp>
-// #include <Kokkos_Parallel.hpp>
-#include <cfenv>
-#include <cstdio>
 #include <iomanip>
 #include <ios>
 #include <iostream>
 #include <nlcglib.hpp>
-#include "exec_space.hpp"
 #include "free_energy.hpp"
 #include "geodesic.hpp"
 #include "interface.hpp"
-#include "la/dvector.hpp"
 #include "la/lapack.hpp"
-#include "la/layout.hpp"
-#include "la/magma.hpp"
-#include "la/map.hpp"
 #include "la/mvector.hpp"
 #include "la/utils.hpp"
 #include "linesearch/linesearch.hpp"
+#include "mpi/communicator.hpp"
 #include "mvp2/descent_direction.hpp"
 #include "overlap.hpp"
-#include "preconditioner.hpp"
-#include "pseudo_hamiltonian/grad_eta.hpp"
 #include "smearing.hpp"
-#include "traits.hpp"
 #include "ultrasoft_precond.hpp"
-#include "utils/format.hpp"
 #include "utils/logger.hpp"
 #include "utils/step_logger.hpp"
 #include "utils/timer.hpp"
@@ -37,16 +26,8 @@ namespace nlcglib {
 void
 initialize()
 {
-#if KOKKOS_VERSION < 30700
-  Kokkos::InitArguments args;
-  args.disable_warnings = true;
-#ifdef USE_OPENMP
-  args.num_threads = omp_get_max_threads();
-#endif /* endif USE_OPENMP */
-#else  /* KOKKOS_VERSION >= 3.7.00 */
   Kokkos::InitializationSettings args;
   args.set_disable_warnings(true);
-#endif /* endif KOKKOS VERSION */
 #ifdef USE_OPENMP
   args.num_threads = omp_get_max_threads();
 #endif
@@ -228,6 +209,8 @@ nlcg_us(EnergyBase& energy_base,
   //                ~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
   nlcg_info info;
 
+  Communicator comm_world(energy_base.comm_world());
+
   auto S = Overlap(overlap_base);
   auto P = USPreconditioner(us_precond_base);
 
@@ -296,6 +279,7 @@ nlcg_us(EnergyBase& energy_base,
   auto eta = eval_threaded(tapply(make_diag(), ek));
   auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
   double slope = std::get<0>(slope_zx_zeta);
+
   auto z_x = std::get<1>(slope_zx_zeta);
   auto z_eta = std::get<2>(slope_zx_zeta);
   // allocate rotation matrices
@@ -323,7 +307,7 @@ nlcg_us(EnergyBase& energy_base,
                          ek,
                          fn,
                          free_energy.ks_energy_components(),
-                         commk,
+                         comm_world,
                          cg_iter);
 
       free_energy.ehandle().print_info();  // print magnetization
@@ -363,7 +347,7 @@ nlcg_us(EnergyBase& energy_base,
                          ek,
                          fn,
                          free_energy.ks_energy_components(),
-                         commk,
+                         comm_world,
                          cg_iter);
 
       timer.start();

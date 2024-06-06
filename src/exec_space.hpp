@@ -30,7 +30,7 @@ template <>
 struct exec<Kokkos::HostSpace>
 {
 #ifdef __USE_OPENMP
- using type = Kokkos::OpenMP;
+  using type = Kokkos::OpenMP;
 #else
   using type = Kokkos::Serial;
 #endif
@@ -40,4 +40,4 @@ template <class SPACE>
 using exec_t = typename exec<SPACE>::type;
 
 
-}  // nlcglib
+}  // namespace nlcglib

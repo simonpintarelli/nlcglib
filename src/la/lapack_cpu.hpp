@@ -47,7 +47,7 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
     );
     if (info != 0) throw std::runtime_error("cblas zheevd failed");
   } else {
-    throw std::runtime_error("not yet implemented");
+    throw std::runtime_error("eigh: not yet implemented");
   }
 }
 
@@ -81,7 +81,7 @@ solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A, KokkosDVector<T, LAYOUT, KOKKO
     typedef cblas::potrs<numeric_t> potrs_t;
     potrs_t::call(order, uplo, n, nrhs, ptr_A, lda, ptr_B, ldb);
   } else {
-    throw std::runtime_error("not implemented");
+    throw std::runtime_error("solve_sym: not implemented");
   }
 }
 
@@ -120,39 +120,36 @@ inner(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
   static_assert(std::is_same<LAYOUT1, LAYOUT2>::value, "matrix layout do not match");
 
   // single rank
-  if (A.map().is_local() && B.map().is_local() && C.map().is_local()) {
-    int m = A.map().ncols();
-    int k = A.map().nrows();
-    int n = B.map().ncols();
-    numeric_t* A_ptr = A.array().data();
-    numeric_t* B_ptr = B.array().data();
-    numeric_t* C_ptr = C.array().data();
+  int m = A.map().ncols();
+  int k = A.map().nrows();
+  int n = B.map().ncols();
+  numeric_t* A_ptr = A.array().data();
+  numeric_t* B_ptr = B.array().data();
+  numeric_t* C_ptr = C.array().data();
 
-    if (A.array().stride(0) != 1 || B.array().stride(0) != 1 || C.array().stride(0) != 1) {
-      throw std::runtime_error("expecting column major layout");
-    }
-    int lda = A.array().stride(1);
-    int ldb = B.array().stride(1);
-    int ldc = C.array().stride(1);
-
-    // single rank inner product
-    cblas::gemm<numeric_t>::call(CblasColMajor,
-                                 cblas::gemm<numeric_t>::H,
-                                 CblasNoTrans,
-                                 m,
-                                 n,
-                                 k,
-                                 alpha,
-                                 A_ptr,
-                                 lda,
-                                 B_ptr,
-                                 ldb,
-                                 beta,
-                                 C_ptr,
-                                 ldc);
-  } else {
-    throw std::runtime_error("not implemented.");
+  if (A.array().stride(0) != 1 || B.array().stride(0) != 1 || C.array().stride(0) != 1) {
+    throw std::runtime_error("expecting column major layout");
   }
+  int lda = A.array().stride(1);
+  int ldb = B.array().stride(1);
+  int ldc = C.array().stride(1);
+
+  // single rank inner product
+  cblas::gemm<numeric_t>::call(CblasColMajor,
+                               cblas::gemm<numeric_t>::H,
+                               CblasNoTrans,
+                               m,
+                               n,
+                               k,
+                               alpha,
+                               A_ptr,
+                               lda,
+                               B_ptr,
+                               ldb,
+                               beta,
+                               C_ptr,
+                               ldc);
+  allreduce(C, A.map().comm());
 }
 
 ///  Inner product: c = a^H * b, on CPU
@@ -220,7 +217,7 @@ outer(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
                                  C_ptr,
                                  ldc);
   } else {
-    throw std::runtime_error("not implemented.");
+    throw std::runtime_error("outer: not implemented.");
   }
 }
 
@@ -257,7 +254,7 @@ transform(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
                 "a,b not on same memory");
   static_assert(std::is_same<LAYOUT1, LAYOUT2>::value, "matrix layout do not match");
 
-  if (A.map().is_local() && B.map().is_local() && C.map().is_local()) {
+  if (B.map().is_local()) {
     /* single rank */
     int m = A.map().nrows();
     int n = B.map().ncols();
@@ -267,7 +264,7 @@ transform(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
     numeric_t* C_ptr = C.array().data();
 
     if (A.array().stride(0) != 1 || B.array().stride(0) != 1 || C.array().stride(0) != 1) {
-      throw std::runtime_error("expecting column major layout");
+      throw std::runtime_error("transform: expecting column major layout");
     }
     int lda = A.array().stride(1);
     int ldb = B.array().stride(1);
@@ -289,7 +286,7 @@ transform(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
                                  C_ptr,
                                  ldc);
   } else {
-    throw std::runtime_error("not implemented.");
+    throw std::runtime_error("tranform: not implemented.");
   }
 }
 
@@ -310,26 +307,22 @@ add(M0& C,
                              typename vector1_t::storage_t::memory_space>::value,
                 "c,a not on same memory");
 
-  if (A.map().is_local() && C.map().is_local()) {
-    /* single rank */
-    int m = A.map().nrows();
-    int n = C.map().ncols();
-    numeric_t* A_ptr = A.array().data();
-    numeric_t* C_ptr = C.array().data();
+  /* single rank */
+  int m = A.map().nrows();
+  int n = C.map().ncols();
+  numeric_t* A_ptr = A.array().data();
+  numeric_t* C_ptr = C.array().data();
 
-    if (A.array().stride(0) != 1 || C.array().stride(0) != 1) {
-      throw std::runtime_error("expecting column major layout");
-    }
-    // assume there are no strides
-    int lda = A.array().stride(1);
-    int ldc = C.array().stride(1);
-
-    using geam = cblas::geam<numeric_t>;
-    geam::call(
-        CblasColMajor, geam::N, geam::N, m, n, alpha, A_ptr, lda, beta, C_ptr, ldc, C_ptr, ldc);
-  } else {
-    throw std::runtime_error("not implemented.");
+  if (A.array().stride(0) != 1 || C.array().stride(0) != 1) {
+    throw std::runtime_error("expecting column major layout");
   }
+  // assume there are no strides
+  int lda = A.array().stride(1);
+  int ldc = C.array().stride(1);
+
+  using geam = cblas::geam<numeric_t>;
+  geam::call(
+      CblasColMajor, geam::N, geam::N, m, n, alpha, A_ptr, lda, beta, C_ptr, ldc, C_ptr, ldc);
 }
 
 }  // namespace nlcglib

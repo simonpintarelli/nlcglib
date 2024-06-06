@@ -7,8 +7,10 @@
 
 namespace nlcglib {
 
-template<class T>
-struct duration_string {};
+template <class T>
+struct duration_string
+{
+};
 
 template <>
 struct duration_string<std::chrono::milliseconds>
@@ -56,4 +58,4 @@ Timer::stop()
   return std::chrono::duration_cast<std::chrono::duration<double>>(now - this->t).count();
 }
 
-}  // nlcglib
+}  // namespace nlcglib

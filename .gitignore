@@ -2,3 +2,4 @@ spack-build-*
 *~undo-tree~
 __pycache__/
 compile_commands.json
+build-linux-*

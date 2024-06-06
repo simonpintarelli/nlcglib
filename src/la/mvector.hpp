@@ -1,136 +1,108 @@
 #pragma once
 
-#include <map>
-#include <vector>
-#include <numeric>
+#include <Kokkos_Core.hpp>
 #include <algorithm>
+#include <cassert>
+#include <iomanip>
+#include <map>
+#include <memory>
+#include <numeric>
+#include <vector>
+#include "gpu/acc.hpp"
+#include "la/dvector.hpp"
 #include "mpi/communicator.hpp"
 #include "traits.hpp"
-#include "helper/funcs.hpp"
-#include <Kokkos_Core.hpp>
-#include <cassert>
-#include <memory>
-#include <iomanip>
-#include "nlcglib.hpp"
-#include "la/dvector.hpp"
 #include "utils.hpp"
-#include "gpu/acc.hpp"
 
 namespace nlcglib {
 
-template<class DERIVED, class ELEM>
+template <class DERIVED, class ELEM>
 class mvector_base
 {
 };
 
 
-template<class T>
-class mvector : public mvector_base<mvector<T>, T> {
+template <class T>
+class mvector : public mvector_base<mvector<T>, T>
+{
   static_assert(std::is_same<T, std::remove_reference_t<T>>::value, "must have ownership");
+
 public:
   using value_type = T;
   using key_t = std::pair<int, int>;
   using container_t = std::map<key_t, T>;
 
-public :
-  mvector(Communicator comm) : comm_(comm) {}
+public:
+  mvector(Communicator comm)
+      : comm_(comm)
+  {
+  }
   mvector() = default;
   mvector(const mvector&) = default;
   mvector(mvector&&) = default;
   mvector& operator=(const mvector&) = default;
-  mvector(const container_t& data) : data_(data) {}
-
-  T& operator[] (key_t k)
+  mvector(const container_t& data)
+      : data_(data)
   {
-    return data_[k];
   }
 
-  const T& operator[] (key_t k) const
-  {
-    return data_.at(k);
-  }
+  T& operator[](key_t k) { return data_[k]; }
 
-  T& at(key_t k)
-  {
-    return data_.at(k);
-  }
+  const T& operator[](key_t k) const { return data_.at(k); }
 
-  const T& at(key_t k) const
-  {
-    return data_.at(k);
-  }
+  T& at(key_t k) { return data_.at(k); }
 
+  const T& at(key_t k) const { return data_.at(k); }
 
-  auto begin()
-  {
-    return data_.begin();
-  }
+  auto begin() { return data_.begin(); }
 
-  auto end()
-  {
-    return data_.end();
-  }
+  auto end() { return data_.end(); }
 
   auto begin() const { return data_.begin(); }
 
   auto end() const { return data_.end(); }
 
-  auto& data()
-  {
-    return this->data_;
-  }
+  auto& data() { return this->data_; }
 
-  auto& data() const
-  {
-    return this->data_;
-  }
+  auto& data() const { return this->data_; }
 
-  auto find()
-  {
-    return data_.find();
-  }
+  auto find() { return data_.find(); }
 
   auto size() { return data_.size(); }
   auto size() const { return data_.size(); }
 
   mvector empty_like();
 
-  mvector& operator=(std::map<key_t, T>&& data)
-  {
-    data_ = std::forward<std::map<key_t, T>>(data);
-  }
+  mvector& operator=(std::map<key_t, T>&& data) { data_ = std::forward<std::map<key_t, T>>(data); }
 
-  template<typename Z>
+  template <typename Z>
   mvector& operator=(mvector<Z>& other)
   {
     // iterate over keys and call assign
-    for(auto& elem : data_) {
+    for (auto& elem : data_) {
       auto key = elem.first;
       data_[key] = eval(other.at(key));
     }
     return *this;
   }
 
-  const Communicator& commk() const
-  {
-    return comm_;
-  }
+  const Communicator& commk() const { return comm_; }
 
-  template<class X=T>
-  std::enable_if_t<std::is_scalar<X>::value, mvector<X>>
-  allgather(Communicator comm = Communicator{MPI_COMM_NULL}) const;
+  template <class X = T>
+  std::enable_if_t<std::is_scalar<X>::value, mvector<X>> allgather(Communicator comm = Communicator{
+                                                                       MPI_COMM_NULL}) const;
 
-  template<class X=T>
-  std::enable_if_t<is_kokkos_view<X>::value, mvector<X>>
-  allgather(Communicator comm = Communicator{MPI_COMM_NULL}) const;
+  template <class X = T>
+  std::enable_if_t<is_kokkos_view<X>::value, mvector<X>> allgather(Communicator comm = Communicator{
+                                                                       MPI_COMM_NULL}) const;
 
 private:
   container_t data_;
   Communicator comm_;
 };
 
-template<class T>
-template<class X>
+template <class T>
+template <class X>
 std::enable_if_t<std::is_scalar<X>::value, mvector<X>>
 mvector<T>::allgather(Communicator comm) const
 {
@@ -163,8 +135,9 @@ mvector<T>::allgather(Communicator comm) const
 }
 
 
-template<class VAL>
-std::vector<std::vector<VAL>> _allgather(const std::vector<VAL>& values, const Communicator& comm)
+template <class VAL>
+std::vector<std::vector<VAL>>
+_allgather(const std::vector<VAL>& values, const Communicator& comm)
 {
   int nranks = comm.size();
   std::vector<int> nelems(nranks);
@@ -180,20 +153,20 @@ std::vector<std::vector<VAL>> _allgather(const std::vector<VAL>& values, const C
 
   std::vector<std::vector<VAL>> result(nranks);
   for (int i = 0; i < nranks; ++i) {
-    result[i] = std::vector<VAL>(sendrecv_buffer.data() + scan[i], sendrecv_buffer.data() + scan[i+1]);
+    result[i] =
+        std::vector<VAL>(sendrecv_buffer.data() + scan[i], sendrecv_buffer.data() + scan[i + 1]);
   }
   return result;
 }
 
 
 /// allgather, copy to host -> communicate -> copy to original memory (if needed)
-template<class T>
-template<class X>
+template <class T>
+template <class X>
 std::enable_if_t<is_kokkos_view<X>::value, mvector<X>>
 mvector<T>::allgather(Communicator comm) const
 {
-  if (comm == Communicator{MPI_COMM_NULL})
-    comm = comm_;
+  if (comm == Communicator{MPI_COMM_NULL}) comm = comm_;
   if (comm < comm_) {
     throw std::runtime_error("mvector::allgather: most likely gave unintended communicator");
   }
@@ -213,8 +186,9 @@ mvector<T>::allgather(Communicator comm) const
 
   // collect total size
   std::vector<int> local_number_of_elements(data_.size());
-  std::transform(data_.begin(), data_.end(), local_number_of_elements.data(),
-                 [](auto& elem) {return elem.second.size();});
+  std::transform(data_.begin(), data_.end(), local_number_of_elements.data(), [](auto& elem) {
+    return elem.second.size();
+  });
   auto global_number_of_elements = _allgather(local_number_of_elements, comm);
 
   // collect the offsets as a list [every mpi rank] of list [every block]
@@ -239,30 +213,31 @@ mvector<T>::allgather(Communicator comm) const
       auto host_view = Kokkos::create_mirror_view(arr);
       Kokkos::deep_copy(host_view, arr);
       assert(offsets[rank][i] < send_recv_buffer.size());
-      std::copy(host_view.data(), host_view.data() + host_view.size(),
+      std::copy(host_view.data(),
+                host_view.data() + host_view.size(),
                 send_recv_buffer.data() + offsets[rank][i]);
       ++i;
     }
   }
 
   std::vector<int> recv_counts(comm.size());
-  std::transform(global_number_of_elements.begin(), global_number_of_elements.end(),
+  std::transform(global_number_of_elements.begin(),
+                 global_number_of_elements.end(),
                  recv_counts.begin(),
                  [](auto& in) { return std::accumulate(in.begin(), in.end(), 0); });
   comm.allgather(send_recv_buffer.data(), recv_counts);
 
   // copy into results and issue memory transfer if needed.
   mvector<T> result(Communicator{MPI_COMM_SELF});
-  for(int rank = 0; rank < nranks; ++rank) {
+  for (int rank = 0; rank < nranks; ++rank) {
     for (auto block_id = 0ul; block_id < offsets[rank].size(); ++block_id) {
       int lsize = global_number_of_elements[rank][block_id];
       int offset = offsets[rank][block_id];
       Kokkos::View<numeric_t*, Kokkos::HostSpace> tmp(
-          Kokkos::view_alloc(Kokkos::WithoutInitializing, ""),
-          lsize);
-      std::copy(send_recv_buffer.data() + offset, send_recv_buffer.data() + offset + lsize, tmp.data());
-      T dst(Kokkos::view_alloc(Kokkos::WithoutInitializing, ""),
-            lsize);
+          Kokkos::view_alloc(Kokkos::WithoutInitializing, ""), lsize);
+      std::copy(
+          send_recv_buffer.data() + offset, send_recv_buffer.data() + offset + lsize, tmp.data());
+      T dst(Kokkos::view_alloc(Kokkos::WithoutInitializing, ""), lsize);
       Kokkos::deep_copy(dst, tmp);
       auto key = global_keys[rank][block_id];
       result[key] = dst;
@@ -272,9 +247,10 @@ mvector<T>::allgather(Communicator comm) const
 }
 
 
-template<class mspc, class xspc=mspc, class _=void>
+template <class mspc, class xspc = mspc, class _ = void>
 struct make_mmatrix_return_type
-{};
+{
+};
 
 template <class mspc, class xspc>
 struct make_mmatrix_return_type<mspc, xspc, std::enable_if_t<std::is_same<mspc, xspc>::value>>
@@ -289,10 +265,7 @@ struct make_mmatrix_return_type<mspc, xspc, std::enable_if_t<std::is_same<mspc, 
 template <class mspc, class xspc>
 struct make_mmatrix_return_type<mspc, xspc, std::enable_if_t<!std::is_same<mspc, xspc>::value>>
 {
-  using type = KokkosDVector<Kokkos::complex<double>**,
-                             SlabLayoutV,
-                             Kokkos::LayoutLeft,
-                             xspc>;
+  using type = KokkosDVector<Kokkos::complex<double>**, SlabLayoutV, Kokkos::LayoutLeft, xspc>;
   using view_type = KokkosDVector<Kokkos::complex<double>**,
                                   SlabLayoutV,
                                   Kokkos::LayoutStride,
@@ -304,11 +277,12 @@ struct make_mmatrix_return_type<mspc, xspc, std::enable_if_t<!std::is_same<mspc,
 /// @brief create an mvector from SIRIUS adaptor
 /// @tparam T Kokkos memory space
 /// @tparam execution memory space
-template <class T, class X=T>
+template <class T, class X = T>
 mvector<typename make_mmatrix_return_type<T, X>::type>
-make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<std::is_same<T, X>::value>* _ = nullptr)
+make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base,
+             std::enable_if_t<std::is_same<T, X>::value>* _ = nullptr)
 {
-  static_assert(std::is_same<T,X>::value, "invalid template parameters");
+  static_assert(std::is_same<T, X>::value, "invalid template parameters");
   using memspace = T;
   typedef typename make_mmatrix_return_type<T>::type matrix_t;
   mvector<matrix_t> mvector(Communicator(matrix_base->mpicomm()));
@@ -328,21 +302,20 @@ make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<std::is_
 #endif
     if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
       // make sure is memory type device
-      if (buffer.memtype != memory_type::host)
-        throw std::runtime_error("expected host memory");
+      if (buffer.memtype != memory_type::host) throw std::runtime_error("expected host memory");
     }
     mvector[kindex] =
-      matrix_t(Map<>(comm, SlabLayoutV({{0, 0, buffer.size[0], buffer.size[1]}})), buffer);
-
+        matrix_t(Map<>(comm, SlabLayoutV({{0, 0, buffer.size[0], buffer.size[1]}})), buffer);
   }
   return mvector;
 }
 
 
 /// copy implementation
-template<class T, class X>
+template <class T, class X>
 mvector<typename make_mmatrix_return_type<T, X>::type>
-make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<!std::is_same<T, X>::value>* _ =nullptr)
+make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base,
+             std::enable_if_t<!std::is_same<T, X>::value>* _ = nullptr)
 {
   static_assert(!std::is_same<T, X>::value, "invalid template parameters");
   using memspace = T;
@@ -364,21 +337,21 @@ make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base, std::enable_if_t<!std::is
 #endif
     if (Kokkos::SpaceAccessibility<Kokkos::Serial, memspace>::accessible) {
       // make sure is memory type device
-      if (buffer.memtype != memory_type::host)
-        throw std::runtime_error("expected host memory");
+      if (buffer.memtype != memory_type::host) throw std::runtime_error("expected host memory");
     }
     // copy view T, using cuda memcpy ...
     matrix_t mat(Map<>(comm, SlabLayoutV({{0, 0, buffer.size[0], buffer.size[1]}})));
     // issue memcpy
-    acc::copy(mat.array().data(), buffer.data, buffer.size[0]*buffer.size[1]);
+    acc::copy(mat.array().data(), buffer.data, buffer.size[0] * buffer.size[1]);
     mvector[kindex] = mat;
   }
   return mvector;
 }
 
 
-template<class T>
-auto make_mmvector(std::shared_ptr<VectorBaseZ> vector_base)
+template <class T>
+auto
+make_mmvector(std::shared_ptr<VectorBaseZ> vector_base)
 {
   using memspace = T;
   typedef Kokkos::View<double*, memspace> vector_t;
@@ -389,7 +362,8 @@ auto make_mmvector(std::shared_ptr<VectorBaseZ> vector_base)
     auto buffer = vector_base->get(i);
     if (buffer.memtype == memory_type::device) {
 #ifdef __NLCGLIB__CUDA
-      Kokkos::View<double*, Kokkos::CudaSpace, Kokkos::MemoryUnmanaged> src(buffer.data, buffer.size[0]);
+      Kokkos::View<double*, Kokkos::CudaSpace, Kokkos::MemoryUnmanaged> src(buffer.data,
+                                                                            buffer.size[0]);
       vector_t dst("vector", buffer.size[0]);
       Kokkos::deep_copy(dst, src);
       auto kindex = vector_base->kpoint_index(i);
@@ -410,11 +384,12 @@ auto make_mmvector(std::shared_ptr<VectorBaseZ> vector_base)
 }
 
 
-inline auto make_mmscalar(std::shared_ptr<ScalarBaseZ> scalar_base)
+inline auto
+make_mmscalar(std::shared_ptr<ScalarBaseZ> scalar_base)
 {
   mvector<ScalarBaseZ::buffer_t> mvector(Communicator(scalar_base->mpicomm()));
   int num_vec = scalar_base->size();
-  for(int i = 0; i < num_vec; ++i) {
+  for (int i = 0; i < num_vec; ++i) {
     auto v = scalar_base->get(i);
     auto key = scalar_base->kpoint_index(i);
     mvector[key] = v;
@@ -437,7 +412,8 @@ eval_threaded(const mvector<T>& input)
 
 
 template <typename T>
-void execute(const mvector<T>& input)
+void
+execute(const mvector<T>& input)
 {
   for (auto& elem : input) {
     eval(elem.second);
@@ -446,29 +422,23 @@ void execute(const mvector<T>& input)
 
 
 template <class numeric_t, class... ARGS>
-auto sum(const Kokkos::View<numeric_t*, ARGS...>& x)
+auto
+sum(const Kokkos::View<numeric_t*, ARGS...>& x)
 {
   using view_type = Kokkos::View<numeric_t*, ARGS...>;
-  static_assert(view_type::dimension::rank == 1,
-                "KokkosView");
+  static_assert(view_type::dimension::rank == 1, "KokkosView");
 
   auto host_mirror = Kokkos::create_mirror_view(x);
   Kokkos::deep_copy(host_mirror, x);
 
-  return std::accumulate(host_mirror.data(), host_mirror.data()+ host_mirror.size(), 0.0);
+  return std::accumulate(host_mirror.data(), host_mirror.data() + host_mirror.size(), 0.0);
 }
 
 
 template <class T>
-std::enable_if_t<is_kokkos_view<eval_t<T>>::value, mvector<std::function<double()> > >
-sum(const mvector<T>& x)
-{
-  return tapply([](auto xi) { return(sum(eval(xi))); }, x);
-}
-
-
-template<class T>
-std::enable_if_t<std::is_scalar<eval_t<T>>::value || std::is_same<Kokkos::complex<double>, T>::value, eval_t<T>>
+std::enable_if_t<std::is_scalar<eval_t<T>>::value ||
+                     std::is_same<Kokkos::complex<double>, T>::value,
+                 eval_t<T>>
 sum(const mvector<T>& x, Communicator comm = Communicator{MPI_COMM_NULL})
 {
   if (comm == Communicator{MPI_COMM_NULL}) comm = x.commk();
@@ -478,22 +448,23 @@ sum(const mvector<T>& x, Communicator comm = Communicator{MPI_COMM_NULL})
   }
 
   eval_t<T> sum = 0;
-  for (auto& elem: x) {
+  for (auto& elem : x) {
     sum += eval(elem.second);
   }
   return comm.allreduce(sum, mpi_op::sum);
 }
 
 
-template<class T1, class T2>
-auto operator*(const mvector<T1>& a, const mvector<T2>& b)
+template <class T1, class T2>
+auto
+operator*(const mvector<T1>& a, const mvector<T2>& b)
 {
-  return tapply([](auto x, auto y) { return eval(x)*eval(y); }, a, b);
+  return tapply([](auto x, auto y) { return eval(x) * eval(y); }, a, b);
 }
 
 
-template<class numeric_t, class... ARGS>
-std::enable_if_t<Kokkos::View<numeric_t*,ARGS...>::dimension::rank == 1>
+template <class numeric_t, class... ARGS>
+std::enable_if_t<Kokkos::View<numeric_t*, ARGS...>::dimension::rank == 1>
 print(const mvector<Kokkos::View<numeric_t*, ARGS...>>& vec)
 {
   for (auto& elem : vec) {
@@ -509,8 +480,9 @@ print(const mvector<Kokkos::View<numeric_t*, ARGS...>>& vec)
 }
 
 
-struct do_copy {
-  template<class X>
+struct do_copy
+{
+  template <class X>
   to_layout_left_t<std::remove_reference_t<X>> operator()(X&& x)
   {
     auto copy = empty_like()(x);
@@ -521,14 +493,17 @@ struct do_copy {
 
 
 template <class X>
-auto copy(const mvector<X>& x)
+auto
+copy(const mvector<X>& x)
 {
   return eval_threaded(tapply(do_copy(), x));
 }
 
 
 template <class... T>
-auto unzip(const mvector<std::tuple<T...>>& V) {
+auto
+unzip(const mvector<std::tuple<T...>>& V)
+{
   std::tuple<mvector<T>...> U;
 
   for (auto& elem : V) {
@@ -583,7 +558,7 @@ auto
 unzip(const std::tuple<T...>& src, std::tuple<mvector<T>...>& dst, const key_t& key)
 {
   using tuple_t = std::tuple<T...>;
-  unzip_impl<std::tuple_size<tuple_t>::value-1>::apply(src, dst , key);
+  unzip_impl<std::tuple_size<tuple_t>::value - 1>::apply(src, dst, key);
 }
 
 
@@ -594,8 +569,9 @@ print(const mvector<numeric_t>& vec)
   for (auto& elem : vec) {
     auto key = elem.first;
     auto& val = elem.second;
-    std::cout << "kindex (" << key.first << ", " << key.second << "): " << std::setprecision(10) << val << "\n";
+    std::cout << "kindex (" << key.first << ", " << key.second << "): " << std::setprecision(10)
+              << val << "\n";
   }
 }
 
-}  // nlcglib
+}  // namespace nlcglib

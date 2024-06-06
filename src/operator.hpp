@@ -1,7 +1,6 @@
 #pragma once
 
 #include "la/dvector.hpp"
-#include "la/mvector.hpp"
 
 namespace nlcglib {
 

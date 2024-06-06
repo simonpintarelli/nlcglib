@@ -28,6 +28,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         description="CMake build type",
         values=("Debug", "Release", "RelWithDebInfo"),
     )
+    variant("gpu_direct", default=False)
 
     depends_on("cmake@3.21:", type="build")
     depends_on("mpi")
@@ -38,6 +39,10 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
 
     depends_on("googletest", type="build", when="+tests")
     depends_on("nlohmann-json")
+    depends_on("kokkos@4:", when="@1.1:")
+
+    # MKLConfig.cmake introduced in 2021.3
+    conflicts("intel-oneapi-mkl@:2021.2", when="^intel-oneapi-mkl")
 
     with when("@:0.9"):
         conflicts("+rocm")
@@ -59,6 +64,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
             self.define_from_variant("USE_OPENMP", "openmp"),
             self.define_from_variant("BUILD_TESTS", "tests"),
             self.define_from_variant("USE_ROCM", "rocm"),
+            self.define_from_variant("USE_GPU_DIRECT", "gpu_direct"),
             self.define_from_variant("USE_MAGMA", "magma"),
             self.define_from_variant("USE_CUDA", "cuda"),
         ]
@@ -67,6 +73,29 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
             options += [self.define("LAPACK_VENDOR", "MKL")]
         elif self.spec["blas"].name in ["intel-oneapi-mkl"]:
             options += [self.define("LAPACK_VENDOR", "MKLONEAPI")]
+            mkl_mapper = {
+                "threading": {
+                    "none": "sequential",
+                    "openmp": "gnu_thread",
+                    "tbb": "tbb_thread",
+                },
+                "mpi": {"intel-mpi": "intelmpi", "mpich": "mpich", "openmpi": "openmpi"},
+            }
+
+            mkl_threads = mkl_mapper["threading"][self.spec["intel-oneapi-mkl"].variants["threads"].value]
+
+            mpi_provider = self.spec["mpi"].name
+            if mpi_provider in ["mpich", "cray-mpich", "mvapich", "mvapich2"]:
+                mkl_mpi = mkl_mapper["mpi"]["mpich"]
+            else:
+                mkl_mpi = mkl_mapper["mpi"][mpi_provider]
+
+            options.extend([
+                self.define("MKL_INTERFACE", "lp64"),
+                self.define("MKL_THREADING", mkl_threads),
+                self.define("MKL_MPI", mkl_mpi)
+            ])
+
         elif self.spec["blas"].name in ["openblas"]:
             options += [self.define("LAPACK_VENDOR", "OpenBLAS")]
         else:

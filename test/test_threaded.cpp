@@ -2,8 +2,8 @@
 #include "la/lapack.hpp"
 
 #include <mpi.h>
-#include <iostream>
 #include <complex>
+#include <iostream>
 
 using namespace nlcglib;
 
@@ -32,7 +32,8 @@ run_stacked_vector()
 }
 
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
   Kokkos::initialize();
   MPI_Init(&argc, &argv);

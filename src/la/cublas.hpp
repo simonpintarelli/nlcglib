@@ -12,11 +12,12 @@ private:
     static cublasHandle_t handle{nullptr};
     return handle;
   }
+
 public:
   static cublasHandle_t& get()
   {
     cublasHandle_t& handle = _get();
-    if(!handle) {
+    if (!handle) {
       cublasCreate(&handle);
     }
     return handle;
@@ -24,10 +25,10 @@ public:
 
   static void destroy()
   {
-    if(!_get()) cublasDestroy(_get());
+    if (!_get()) cublasDestroy(_get());
     _get() = nullptr;
   }
 };
 
 
-}  // cublas
+}  // namespace cublas
