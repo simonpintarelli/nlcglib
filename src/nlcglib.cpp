@@ -26,16 +26,8 @@ namespace nlcglib {
 void
 initialize()
 {
-#if KOKKOS_VERSION < 30700
-  Kokkos::InitArguments args;
-  args.disable_warnings = true;
-#ifdef USE_OPENMP
-  args.num_threads = omp_get_max_threads();
-#endif /* endif USE_OPENMP */
-#else  /* KOKKOS_VERSION >= 3.7.00 */
   Kokkos::InitializationSettings args;
   args.set_disable_warnings(true);
-#endif /* endif KOKKOS VERSION */
 #ifdef USE_OPENMP
   args.num_threads = omp_get_max_threads();
 #endif

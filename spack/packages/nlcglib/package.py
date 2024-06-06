@@ -39,6 +39,10 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
 
     depends_on("googletest", type="build", when="+tests")
     depends_on("nlohmann-json")
+    depends_on("kokkos@4:", when="@1.1:")
+
+    # MKLConfig.cmake introduced in 2021.3
+    conflicts("intel-oneapi-mkl@:2021.2", when="^intel-oneapi-mkl")
 
     with when("@:0.9"):
         conflicts("+rocm")
@@ -113,8 +117,6 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
                 options += [self.define("CMAKE_CUDA_FLAGS", cuda_flags)]
             else:
                 options += [self.define("CMAKE_CUDA_ARCHITECTURES", cuda_archs)]
-
-
 
         if "^cuda+allow-unsupported-compilers" in self.spec:
             options += [self.define("CMAKE_CUDA_FLAGS", "--allow-unsupported-compiler")]
