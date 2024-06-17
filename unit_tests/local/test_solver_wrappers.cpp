@@ -52,6 +52,9 @@ TestSymSolve<T>::SetUp()
   matrix_t H(Map<>(Communicator(), SlabLayoutV({{0, 0, ncols, ncols}})));
 }
 
+#if (!__NLCGLIB__CUDA) && (!__NLCGLIB__ROCM)
+// pass
+#else
 // https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#typed-tests
 #ifdef __NLCGLIB__CUDA
 using KokkosMemTypes = ::testing::Types<Kokkos::CudaSpace, Kokkos::HostSpace>;
@@ -90,3 +93,5 @@ TYPED_TEST(TestSymSolve, PotrfPotrs)
     }
   }
 }
+
+#endif
