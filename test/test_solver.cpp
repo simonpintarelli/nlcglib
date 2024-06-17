@@ -61,7 +61,6 @@ run_unmanaged()
   }
 }
 
-
 int
 main(int argc, char *argv[])
 {

@@ -98,6 +98,9 @@ kokkos_reduction_device()
 #elif defined __NLCGLIB__ROCM
   using space = Kokkos::Experimental::HIPSpace;
   using exec_space = Kokkos::Experimental::HIP;
+#else
+  using space = Kokkos::HostSpace;
+  using exec_space = Kokkos::Serial;
 #endif
 
   int n = 100;
@@ -114,11 +117,6 @@ kokkos_reduction_device()
   std::cout << "Sum is: " << sum << "\n";
 }
 
-
-struct fun
-{
-  __device__ __host__ double operator()(double x) const { return 1 / (1 + exp(x)); }
-};
 
 int
 main(int argc, char* argv[])
