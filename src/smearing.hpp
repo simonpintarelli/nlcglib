@@ -473,7 +473,6 @@ occupation_from_mvector_newton(double T,
   } catch (failed_to_converge&) {
     Logger::GetInstance()
         << "Warning: newton minimization for Fermi energy failed, fallback to bisection search.\n";
-    // TODO print a warning that fallback to bisection search was used
     mu = find_chemical_potential(
         [&x = x_all, &wk = wk_all, &Ne = Ne, T = T, occ = occ](double mu) {
           double sum = 0;
