@@ -30,7 +30,7 @@ newton_minimization_chemical_potential(
 {
   // Newton finds the minimum, not necessarily N(mu) == ne, tolerate up to `tol_ne` difference in
   // number of electrons if |N(mu_0) -ne| > tol_ne an error is thrown.
-  const double tol_ne = 1e-2;
+  const double tol_ne = 1e-10;
 
   double mu = mu0;
   int iter{0};
