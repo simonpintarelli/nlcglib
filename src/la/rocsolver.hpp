@@ -1,3 +1,3 @@
 #pragma once
 
-#include <rocsolver.h>
+#include <rocsolver/rocsolver.h>

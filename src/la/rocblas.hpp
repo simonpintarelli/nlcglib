@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rocblas.h>
+#include <rocblas/rocblas.h>
 #include <cstdio>
 
 
