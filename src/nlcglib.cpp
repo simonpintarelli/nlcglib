@@ -1,4 +1,5 @@
 #include <Kokkos_Core.hpp>
+#include <cfenv>
 #include <iomanip>
 #include <ios>
 #include <iostream>
@@ -207,6 +208,8 @@ nlcg_us(EnergyBase& energy_base,
   // std::feclearexcept(FE_ALL_EXCEPT);
   // feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT &
   //                ~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
+
+  feenableexcept(FE_INVALID);
   nlcg_info info;
 
   Communicator comm_world(energy_base.comm_world());
