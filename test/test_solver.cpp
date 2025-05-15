@@ -79,9 +79,11 @@ main(int argc, char *argv[])
             << "\n";
   run_unmanaged<Kokkos::HostSpace>();
 
+#if defined(__NLCGLIB__ROCM) || defined(__NLCGLIB__ROCM_CUDA)
   std::cout << "run on DEVICE"
             << "\n";
   run_unmanaged<device_space_t>();
+#endif
 
   // std::cout << "run non GPU" << "\n";
   // run_unmanaged<Kokkos::CudaSpace>();
