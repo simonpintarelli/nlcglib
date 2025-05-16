@@ -56,7 +56,7 @@ main(int argc, char* argv[])
   Kokkos::initialize();
   Communicator::init(argc, argv);
 
-#ifdef __NLCGLIB__CUDA || __NLCGLIB__ROCM
+#if defined(__NLCGLIB__CUDA) || defined(__NLCGLIB__ROCM)
   run();
 #endif
 
