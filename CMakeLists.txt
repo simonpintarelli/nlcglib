@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 project(nlcglib LANGUAGES CXX VERSION 0.8)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 # user variables
 set(USE_OPENMP On CACHE BOOL "use OpenMP")
 set(USE_CUDA Off CACHE BOOL "use cuda")
