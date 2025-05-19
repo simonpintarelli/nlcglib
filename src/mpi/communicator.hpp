@@ -236,6 +236,13 @@ Communicator::allreduce(T* buffer, int count, enum mpi_op op) const
   }
 }
 
+template <class T, std::size_t n>
+void
+sum_inplace(std::array<T, n>& x, Communicator& comm)
+{
+  comm.allreduce(x.data(), n, mpi_op::sum);
+}
+
 inline bool
 operator==(const Communicator& lhs, const Communicator& rhs)
 {
