@@ -48,25 +48,6 @@ public:
     return *this;
   }
 
-  bool operator==(const Communicator& other)
-  {
-    int result;
-    // check if both or one is null
-    if (mpicomm_ == MPI_COMM_NULL && other.mpicomm_ == MPI_COMM_NULL) return true;
-    if (mpicomm_ == MPI_COMM_NULL || other.mpicomm_ == MPI_COMM_NULL) return false;
-
-    // compare using MPI_Comm_compare (does not allow to compare MPI_COMM_NULL)
-    CALL_MPI(MPI_Comm_compare, (mpicomm_, other.mpicomm_, &result));
-    if (result == MPI_IDENT)
-      return true;
-    else
-      return false;
-  }
-
-  bool operator<(const Communicator& other) { return this->size() < other.size(); }
-
-  bool operator>(const Communicator& other) { return this->size() > other.size(); }
-
 
   Communicator& operator=(Communicator&& other)
   {
@@ -127,6 +108,12 @@ public:
 
 private:
   MPI_Comm mpicomm_;
+  friend bool operator==(const Communicator& lhs, const Communicator& rhs);
+  friend bool operator<(const Communicator& lhs, const Communicator& rhs);
+  friend bool operator>(const Communicator& lhs, const Communicator& rhs);
+
+  // bool operator<(const Communicator& other) { return this->size() < other.size(); }
+  // bool operator>(const Communicator& other) { return this->size() > other.size(); }
 };
 
 template <class T>
@@ -248,5 +235,34 @@ Communicator::allreduce(T* buffer, int count, enum mpi_op op) const
     }
   }
 }
+
+inline bool
+operator==(const Communicator& lhs, const Communicator& rhs)
+{
+  int result;
+  // check if both or one is null
+  if (lhs.mpicomm_ == MPI_COMM_NULL && rhs.mpicomm_ == MPI_COMM_NULL) return true;
+  if (lhs.mpicomm_ == MPI_COMM_NULL || rhs.mpicomm_ == MPI_COMM_NULL) return false;
+
+  // compare using MPI_Comm_compare (does not allow to compare MPI_COMM_NULL)
+  CALL_MPI(MPI_Comm_compare, (lhs.mpicomm_, rhs.mpicomm_, &result));
+  if (result == MPI_IDENT)
+    return true;
+  else
+    return false;
+}
+
+inline bool
+operator<(const Communicator& lhs, const Communicator& rhs)
+{
+  return lhs.size() < rhs.size();
+}
+
+inline bool
+operator>(const Communicator& lhs, const Communicator& rhs)
+{
+  return lhs.size() > rhs.size();
+}
+
 
 }  // namespace nlcglib
