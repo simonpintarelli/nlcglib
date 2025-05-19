@@ -277,11 +277,10 @@ nlcg_us(EnergyBase& energy_base,
   descent_direction<smearing_t> dd(T, kappa);
 
   auto eta = eval_threaded(tapply(make_diag(), ek));
-  auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
-  double slope = std::get<0>(slope_zx_zeta);
-
-  auto z_x = std::get<1>(slope_zx_zeta);
-  auto z_eta = std::get<2>(slope_zx_zeta);
+  auto [slope, z_x, z_eta] = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
+  // double slope = std::get<0>(slope_zx_zeta);
+  // auto z_x = std::get<1>(slope_zx_zeta);
+  // auto z_eta = std::get<2>(slope_zx_zeta);
   // allocate rotation matrices
   auto ul = eval_threaded(tapply([](auto&& z) { return empty_like()(z); }, z_eta));
 
@@ -377,11 +376,8 @@ nlcg_us(EnergyBase& energy_base,
       if ((cg_iter % restart == 0) || force_restart) {
         /* compute directions for steepest descent */
         timer.start();
-        auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
-        slope = std::get<0>(slope_zx_zeta);  // no need to catch slope > 0 -> linesearch will throw
+        std::tie(slope, z_x, z_eta) = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
         fr = slope;
-        z_x = std::get<1>(slope_zx_zeta);
-        z_eta = std::get<2>(slope_zx_zeta);
 
         auto tlap = timer.stop();
         logger << "steepest descent took: " << tlap << " seconds\n";
@@ -389,23 +385,15 @@ nlcg_us(EnergyBase& energy_base,
         /* compute directions for cg */
         timer.start();
 
-        auto fr_slope_z_x_z_eta =
+        std::tie(fr, slope, z_x, z_eta) =
             dd.conjugated(xspace(), fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
-        fr = std::get<0>(fr_slope_z_x_z_eta);
-        slope = std::get<1>(fr_slope_z_x_z_eta);
-        z_x = std::get<2>(fr_slope_z_x_z_eta);
-        z_eta = std::get<3>(fr_slope_z_x_z_eta);
 
         if (slope > 0) {
           // force restart
           logger << "i=" << cg_iter << ": slope > 0 detected -> restart\n";
-          auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
-          slope = std::get<0>(
-              slope_zx_zeta);  // no need to catch slope > 0 again -> linesearch will throw
+          // auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
+          std::tie(slope, z_x, z_eta) = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
           fr = slope;
-          z_x = std::get<1>(slope_zx_zeta);
-          z_eta = std::get<2>(slope_zx_zeta);
-
           force_restart = true;
         }
 
