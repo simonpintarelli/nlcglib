@@ -52,16 +52,15 @@ auto
 print_info(double free_energy,
            double ks_energy,
            double entropy,
-           double slope_x,
-           double slope_eta,
+           slope_t slope,
            double efermi,
            int step)
 {
   auto& logger = Logger::GetInstance();
   logger << TO_STDOUT << std::setw(15) << std::left << step << std::setw(15) << std::left
          << std::fixed << std::setprecision(13) << free_energy << "\t" << std::setw(15) << std::left
-         << std::scientific << std::setprecision(13) << slope_x << " " << std::scientific
-         << std::setprecision(13) << slope_eta << "\n"
+         << std::scientific << std::setprecision(13) << slope.x << " " << std::scientific
+         << std::setprecision(13) << slope.eta << "\n"
          << "\t kT * S       : " << std::fixed << std::setprecision(13) << entropy << "\n"
          << "\t Fermi energy : " << std::fixed << std::setprecision(13) << efermi << "\n"
          << "\t KS energy    : " << std::fixed << std::setprecision(13) << ks_energy << "\n";
@@ -69,7 +68,7 @@ print_info(double free_energy,
   nlcg_info info;
   info.F = free_energy;
   info.S = entropy;
-  info.tolerance = slope_x + slope_eta;
+  info.tolerance = slope.x + slope.eta;
   info.iter = step;
 
   return info;
@@ -80,8 +79,7 @@ void
 cg_write_step_json(double free_energy,
                    double ks_energy,
                    double entropy,
-                   double slope_x,
-                   double slope_eta,
+                   slope_t slope,
                    double efermi,
                    T1&& ek,
                    T2&& fn,
@@ -93,8 +91,8 @@ cg_write_step_json(double free_energy,
   logger.log("F", free_energy);
   logger.log("EKS", ks_energy);
   logger.log("entropy", entropy);
-  logger.log("slope_x", slope_x);
-  logger.log("slope_eta", slope_eta);
+  logger.log("slope_x", slope.x);
+  logger.log("slope_eta", slope.eta);
   logger.log("fermi_energy", efermi);
   logger.log("ks_energy_comps", energy_components);
 
@@ -285,23 +283,21 @@ nlcg_us(EnergyBase& energy_base,
   auto ul = eval_threaded(tapply([](auto&& z) { return empty_like()(z); }, z_eta));
 
   // CG related variables
-  double fr = slope;  // Fletcher-Reeves numerator
+  slope_t fr = slope;  // Fletcher-Reeves numerator
   bool force_restart{false};
 
   for (int cg_iter = 0; cg_iter < maxiter; ++cg_iter) {
-    if (std::abs(slope) < tol) {
+    if (std::abs(slope.x + slope.eta) < tol) {
       info = print_info(free_energy.get_F(),
                         free_energy.ks_energy(),
                         free_energy.get_entropy(),
                         slope,
-                        -1,
                         free_energy.get_chemical_potential(),
                         cg_iter);
       cg_write_step_json(free_energy.get_F(),
                          free_energy.ks_energy(),
                          free_energy.get_entropy(),
                          slope,
-                         -1,
                          free_energy.get_chemical_potential(),
                          ek,
                          fn,
@@ -341,7 +337,6 @@ nlcg_us(EnergyBase& energy_base,
                          free_energy.ks_energy(),
                          free_energy.get_entropy(),
                          slope,
-                         -1,
                          free_energy.get_chemical_potential(),
                          ek,
                          fn,
@@ -355,12 +350,11 @@ nlcg_us(EnergyBase& energy_base,
                         free_energy.ks_energy(),
                         free_energy.get_entropy(),
                         slope /* slope in X and eta, temporarily */,
-                        -1 /* need to separate the two slopes first */,
                         free_energy.get_chemical_potential(),
                         cg_iter);
       free_energy.ehandle().print_info();  // print magnetization
 
-      auto ek_ul_x_mu = ls(g, free_energy, slope, force_restart);
+      auto ek_ul_x_mu = ls(g, free_energy, slope.x + slope.eta, force_restart);
       auto tlap = timer.stop();
       logger << "line search took: " << tlap << " seconds\n";
 
@@ -388,7 +382,7 @@ nlcg_us(EnergyBase& energy_base,
         std::tie(fr, slope, z_x, z_eta) =
             dd.conjugated(xspace(), fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
 
-        if (slope > 0) {
+        if ((slope.x + slope.eta) > 0) {
           // force restart
           logger << "i=" << cg_iter << ": slope > 0 detected -> restart\n";
           // auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
