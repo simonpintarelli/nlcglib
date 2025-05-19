@@ -31,12 +31,15 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         values=("Debug", "Release", "RelWithDebInfo"),
     )
 
+    depends_on('cxx', type="build")
+
     with when("@1.1:"):
         variant("gpu_direct", default=False)
 
-    depends_on("cmake@3.21:", type="build")
+    # depends_on("cmake@3.21:", type="build")
     depends_on("mpi")
     depends_on("lapack")
+    depends_on("blas")
 
     depends_on("kokkos~cuda~rocm", when="~cuda~rocm")
     depends_on("kokkos+openmp", when="+openmp")
@@ -75,9 +78,9 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
             self.define_from_variant("USE_CUDA", "cuda"),
         ]
 
-        if self.spec["blas"].name in ["intel-mkl", "intel-parallel-studio"]:
+        if self["blas"].name in ["intel-mkl", "intel-parallel-studio"]:
             options += [self.define("LAPACK_VENDOR", "MKL")]
-        elif self.spec["blas"].name in ["intel-oneapi-mkl"]:
+        elif self["blas"].name in ["intel-oneapi-mkl"]:
             options += [self.define("LAPACK_VENDOR", "MKLONEAPI")]
             mkl_mapper = {
                 "threading": {"none": "sequential", "openmp": "gnu_thread", "tbb": "tbb_thread"},
@@ -85,10 +88,10 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
             }
 
             mkl_threads = mkl_mapper["threading"][
-                self.spec["intel-oneapi-mkl"].variants["threads"].value
+                self["intel-oneapi-mkl"].variants["threads"].value
             ]
 
-            mpi_provider = self.spec["mpi"].name
+            mpi_provider = self["mpi"].name
             if mpi_provider in ["mpich", "cray-mpich", "mvapich", "mvapich2"]:
                 mkl_mpi = mkl_mapper["mpi"]["mpich"]
             else:
@@ -102,7 +105,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
                 ]
             )
 
-        elif self.spec["blas"].name in ["openblas"]:
+        elif self["blas"].name in ["openblas"]:
             options += [self.define("LAPACK_VENDOR", "OpenBLAS")]
         else:
             raise Exception("blas/lapack must be either openblas or mkl.")
@@ -110,7 +113,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         if "+cuda%gcc" in self.spec:
             options += [
                 self.define(
-                    "CMAKE_CXX_COMPILER", "{0}".format(self.spec["kokkos-nvcc-wrapper"].kokkos_cxx)
+                    "CMAKE_CXX_COMPILER", "{0}".format(self["kokkos"].kokkos_cxx)
                 )
             ]
 
