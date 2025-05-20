@@ -276,9 +276,6 @@ nlcg_us(EnergyBase& energy_base,
 
   auto eta = eval_threaded(tapply(make_diag(), ek));
   auto [slope, z_x, z_eta] = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
-  // double slope = std::get<0>(slope_zx_zeta);
-  // auto z_x = std::get<1>(slope_zx_zeta);
-  // auto z_eta = std::get<2>(slope_zx_zeta);
   // allocate rotation matrices
   auto ul = eval_threaded(tapply([](auto&& z) { return empty_like()(z); }, z_eta));
 
