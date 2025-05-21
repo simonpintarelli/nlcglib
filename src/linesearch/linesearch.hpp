@@ -2,6 +2,7 @@
 
 #include <iomanip>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include "utils/expected.hpp"
 #include "utils/logger.hpp"
@@ -35,7 +36,8 @@ public:
   template <class GEODESIC, class FREE_ENERGY>
   auto operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope, bool& force_restart)
       -> util::expected<
-          decltype(qline(G, FE, std::declval<double>(), std::declval<bool&>()).value()),
+          std::remove_reference_t<
+              decltype(qline(G, FE, std::declval<double>(), std::declval<bool&>()).value())>,
           LineSearchErrors>;
 
   /// trial step
@@ -47,8 +49,10 @@ public:
 template <class GEODESIC, class FREE_ENERGY>
 auto
 line_search::operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope, bool& force_restart)
-    -> util::expected<decltype(qline(G, FE, std::declval<double>(), std::declval<bool&>()).value()),
-                      LineSearchErrors>
+    -> util::expected<
+        std::remove_reference_t<
+            decltype(qline(G, FE, std::declval<double>(), std::declval<bool&>()).value())>,
+        LineSearchErrors>
 {
   if (slope > 0) {
     return util::unexpected(LineSearchErrors::SlopeError);

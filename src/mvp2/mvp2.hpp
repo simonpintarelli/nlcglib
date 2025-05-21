@@ -9,6 +9,7 @@ namespace nlcglib {
 
 namespace local {
 
+/// lagrange multipliers
 struct lmult
 {
   template <class x_t, class sx_t, class hx_t, class prec_t>
