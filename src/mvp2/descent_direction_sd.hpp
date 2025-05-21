@@ -5,7 +5,7 @@
 #include "mvp2.hpp"
 #include "pseudo_hamiltonian/grad_eta.hpp"
 
-// unpreconditoned steepest descent
+// (unpreconditoned) steepest descent
 namespace nlcglib {
 template <class memspace_t, enum smearing_type smearing_t>
 class descent_direction_sd : public descent_direction_base<memspace_t, smearing_t>

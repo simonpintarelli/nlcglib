@@ -47,6 +47,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("googletest", type="build", when="+tests")
     depends_on("nlohmann-json")
     depends_on("kokkos@4:", when="@1.1:")
+    depends_on("fmt", when="@develop")
 
     # MKLConfig.cmake introduced in 2021.3
     conflicts("intel-oneapi-mkl@:2021.2", when="^intel-oneapi-mkl")

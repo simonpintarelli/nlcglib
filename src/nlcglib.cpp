@@ -21,6 +21,13 @@
 
 typedef std::complex<double> complex_double;
 
+enum class cg_state
+{
+  CG,   // conjugate gradient
+  pSD,  // preconditioned restart
+  SD,   // steepest descent
+};
+
 namespace nlcglib {
 
 void
@@ -267,7 +274,7 @@ nlcg_us(EnergyBase& energy_base,
 
   // CG related variables
   slope_t fr = slope;  // Fletcher-Reeves numerator
-  bool force_restart{false};
+  cg_state state = cg_state::CG;
 
   for (int cg_iter = 0; cg_iter < maxiter; ++cg_iter) {
     if (std::abs(slope.x + slope.eta) < tol) {
@@ -324,72 +331,85 @@ nlcg_us(EnergyBase& energy_base,
                        comm_world,
                        cg_iter);
 
-    timer.start();
 
     info = print_info(free_energy.get_F(),
                       free_energy.ks_energy(),
                       free_energy.get_entropy(),
-                      slope /* slope in X and eta, temporarily */,
+                      slope,
                       free_energy.get_chemical_potential(),
                       cg_iter);
     free_energy.ehandle().print_info();  // print magnetization
 
-    auto ls_result = ls(g, free_energy, slope.x + slope.eta, force_restart);
-    if (ls_result.error() == LineSearchErrors::SlopeError) {
-      // attempt steepest descent
-      std::tie(slope, z_x, z_eta) =
-          dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, Sinv, P, free_energy);
-      // restarted = true;
-      continue;
-    }
-    if (ls_result.error() == LineSearchErrors::DescentError) {
-      logger << "[NLCG] Error: slope > 0 after CG-restart. Abort.\n";
-      return info;
-    }
-    auto ek_ul_x_mu = ls_result.value();
-
+    timer.start();
+    auto ls_result = ls(g, free_energy, slope.x + slope.eta);
     auto tlap = timer.stop();
     logger << "line search took: " << tlap << " seconds\n";
+    logger.flush();
 
-    // update (X, fn(ek), ul, Hx) after line-search
-    ek = std::get<0>(ek_ul_x_mu);
-    ul = std::get<1>(ek_ul_x_mu);
-    X = std::get<2>(ek_ul_x_mu);
-    double mu = std::get<3>(ek_ul_x_mu);
-    eta = eval_threaded(tapply(make_diag(), ek));
-    fn = free_energy.get_fn();
-    Hx = copy(free_energy.get_HX());
-
-    if ((cg_iter % restart == 0) || force_restart) {
-      /* compute directions for steepest descent */
-      timer.start();
+    /* search direction is not a descent direction */
+    if ((ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::CG) ||
+        cg_iter % restart == 0) {
+      // attempt preconditioned SD
+      logger << "i=" << cg_iter << ": slope > 0 detected -> restart\n";
       std::tie(slope, z_x, z_eta) =
           dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
       fr = slope;
+      state = cg_state::pSD;
+    }
 
-      auto tlap = timer.stop();
-      logger << "steepest descent took: " << tlap << " seconds\n";
-    } else {
-      /* compute directions for cg */
-      timer.start();
+    if (ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::pSD) {
+      // attempt steepest descent
+      logger << "i=" << cg_iter << ": slope > 0 detected -> steepest descent\n";
+      std::tie(slope, z_x, z_eta) =
+          dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, Sinv, P, free_energy);
+      fr = slope;
+      state = cg_state::SD;
+    }
+
+    if (ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::SD) {
+      throw std::runtime_error("unrecoverable error");
+    }
+
+    /* backtracking failed */
+    if (ls_result.error() == LineSearchErrors::DescentError && state == cg_state::SD) {
+      // abort!
+    }
+
+    if (ls_result.error() == LineSearchErrors::DescentError && state == cg_state::pSD) {
+      // continue with unpreconditioned SD step
+      logger << "i=" << cg_iter << ": backtracking failed -> steepest descent\n";
+      std::tie(slope, z_x, z_eta) =
+          dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, Sinv, P, free_energy);
+      fr = slope;
+      state = cg_state::SD;
+    }
+
+    if (ls_result.error() == LineSearchErrors::DescentError && state == cg_state::CG) {
+      // continue with preconditioned SD step
+      logger << "i=" << cg_iter << ": backtracking failed -> restart\n";
+      std::tie(slope, z_x, z_eta) =
+          dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
+      fr = slope;
+      state = cg_state::pSD;
+    }
+
+    if (ls_result) {
+      auto ek_ul_x_mu = ls_result.value();
+      ek = std::get<0>(ek_ul_x_mu);
+      ul = std::get<1>(ek_ul_x_mu);
+      X = std::get<2>(ek_ul_x_mu);
+      double mu = std::get<3>(ek_ul_x_mu);
+      eta = eval_threaded(tapply(make_diag(), ek));
+      fn = free_energy.get_fn();
+      Hx = copy(free_energy.get_HX());
 
       std::tie(fr, slope, z_x, z_eta) =
           dd.conjugated(xspace(), fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
-
-      if ((slope.x + slope.eta) > 0) {
-        // force restart
-        logger << "i=" << cg_iter << ": slope > 0 detected -> restart\n";
-        // auto slope_zx_zeta = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
-        std::tie(slope, z_x, z_eta) =
-            dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
-        fr = slope;
-        force_restart = true;
-      }
-
-      auto tlap = timer.stop();
-      logger << "conjugated descent took: " << tlap << " seconds\n";
+      state = cg_state::CG;
+    } else {
+      throw std::runtime_error("not supposed to be here");
     }
-    logger.flush();
+
   }
   return info;
 }

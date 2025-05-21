@@ -5,8 +5,8 @@
 #include "mvp2.hpp"
 #include "pseudo_hamiltonian/grad_eta.hpp"
 
-
 namespace nlcglib {
+/// Restart (preconditoned) CG
 template <class memspace_t, enum smearing_type smearing_t>
 class descent_direction_restart : public descent_direction_base<memspace_t, smearing_t>
 {
