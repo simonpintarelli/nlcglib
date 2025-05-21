@@ -315,7 +315,7 @@ nlcg_us(EnergyBase& energy_base,
 
       return info;
     }
-    try {
+    // try {
       // line search
       // TODO: capture variables explicitly
       auto g = [&](double t) {
@@ -351,7 +351,7 @@ nlcg_us(EnergyBase& energy_base,
                         cg_iter);
       free_energy.ehandle().print_info();  // print magnetization
 
-      auto ek_ul_x_mu = ls(g, free_energy, slope.x + slope.eta, force_restart);
+      auto ek_ul_x_mu = ls(g, free_energy, slope.x + slope.eta, force_restart).value();
       auto tlap = timer.stop();
       logger << "line search took: " << tlap << " seconds\n";
 
@@ -392,14 +392,14 @@ nlcg_us(EnergyBase& energy_base,
         logger << "conjugated descent took: " << tlap << " seconds\n";
       }
       logger.flush();
-    } catch (DescentError&) {
-      // CG failed abort
-      logger << "[NLCG] Error: No descent direction found, nlcg didn't reach final tolerance\n";
-      return info;
-    } catch (SlopeError&) {
-      logger << "[NLCG] Error: slope > 0 after CG-restart. Abort.\n";
-      return info;
-    }
+    // } catch (DescentError&) {
+    //   // CG failed abort
+    //   logger << "[NLCG] Error: No descent direction found, nlcg didn't reach final tolerance\n";
+    //   return info;
+    // } catch (SlopeError&) {
+    //   logger << "[NLCG] Error: slope > 0 after CG-restart. Abort.\n";
+    //   return info;
+    // }
   }
   return info;
 }

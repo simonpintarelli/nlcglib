@@ -2,11 +2,18 @@
 
 #include <iomanip>
 #include <tuple>
-#include "exceptions.hpp"
+#include <utility>
+#include "utils/expected.hpp"
 #include "utils/logger.hpp"
 
 namespace nlcglib {
 
+enum class LineSearchErrors
+{
+  DescentError,
+  StepError,
+  SlopeError
+};
 
 struct line_search_info
 {
@@ -17,32 +24,19 @@ class line_search
 {
 private:
   template <class GEODESIC, class FREE_ENERGY>
-  auto qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_restart);
+  auto qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_restart)
+      -> util::expected<decltype(G(std::declval<double>())), LineSearchErrors>;
 
   template <class GEODESIC, class FREE_ENERGY>
-  auto bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0, bool& force_restart);
+  auto bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0, bool& force_restart)
+      -> util::expected<decltype(G(std::declval<double>())), LineSearchErrors>;
 
 public:
   template <class GEODESIC, class FREE_ENERGY>
   auto operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope, bool& force_restart)
-  {
-    if (slope > 0) {
-      // char msg[256];
-      // sprintf(msg, "slope = %.5e > 0, abort!", slope);
-      throw SlopeError();
-    }
-    Logger::GetInstance() << "line search t_trial = " << std::scientific << t_trial << "\n";
-    double F0 = FE.get_F();
-    try {
-      return std::tuple_cat(qline(G, FE, slope, force_restart),
-                            std::make_tuple(line_search_info{"qline"}));
-    } catch (StepError& step_error) {
-      Logger::GetInstance() << "\t"
-                            << "quadratic line search failed -> backtracking search\n";
-      return std::tuple_cat(bt_search(G, FE, F0, force_restart),
-                            std::make_tuple(line_search_info{"btsearch"}));
-    }
-  }
+      -> util::expected<
+          decltype(qline(G, FE, std::declval<double>(), std::declval<bool&>()).value()),
+          LineSearchErrors>;
 
   /// trial step
   double t_trial{0.2};
@@ -50,18 +44,42 @@ public:
   double tau{0.1};
 };
 
+template <class GEODESIC, class FREE_ENERGY>
+auto
+line_search::operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope, bool& force_restart)
+    -> util::expected<decltype(qline(G, FE, std::declval<double>(), std::declval<bool&>()).value()),
+                      LineSearchErrors>
+{
+  if (slope > 0) {
+    return util::unexpected(LineSearchErrors::SlopeError);
+  }
+  Logger::GetInstance() << "line search t_trial = " << std::scientific << t_trial << "\n";
+  double F0 = FE.get_F();
+  // try {
+  auto qline_result = qline(G, FE, slope, force_restart);
+  if (qline_result.error() == LineSearchErrors::StepError) {
+    // check which error it is.
+    // handle StepError
+    auto bt_result = bt_search(G, FE, F0, force_restart);
+    // also check error
+    if (bt_result.error() == LineSearchErrors::DescentError)
+      return util::unexpected(bt_result.error());
+
+    // return std::tuple_cat(bt_result.value(), std::make_tuple(line_search_info{"btsearch"}));
+    return bt_result.value();
+  }
+  // return std::tuple_cat(qline_result.value(), std::make_tuple(line_search_info{"qline"}));
+  return qline_result.value();
+}
 
 /**
- * Search any admissible lower energy
+ * Backtracking search, reduce step size until lower energy is found.
  */
 template <class GEODESIC, class FREE_ENERGY>
 auto
 line_search::bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0, bool& force_restart)
+    -> util::expected<decltype(G(std::declval<double>())), LineSearchErrors>
 {
-  if (tau >= 1) {
-    throw std::runtime_error("invalid value");
-  }
-
   double t = t_trial;
   while (t > 1e-8) {
     auto ek_ul = G(t);
@@ -82,7 +100,8 @@ line_search::bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0, bool& force_rest
   // TODO: let logger print state
   Logger::GetInstance().flush();
   if (force_restart) {
-    throw DescentError();
+    return util::unexpected(LineSearchErrors::DescentError);
+    // throw DescentError();
   } else {
     force_restart = true;
     return G(0);  // reset gradient
@@ -97,6 +116,7 @@ line_search::bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0, bool& force_rest
 template <class GEODESIC, class FREE_ENERGY>
 auto
 line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_restart)
+    -> util::expected<decltype(G(std::declval<double>())), LineSearchErrors>
 {
   double F0 = FE.get_F();
 
@@ -148,7 +168,8 @@ line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope, bool& force_resta
     Logger::GetInstance() << std::setprecision(13) << "\t quadratic line search failed:\n"
                           << "\t - F_min: " << F_min << "\n"
                           << "\t - F0:    " << F0 << "\n\n";
-    throw StepError();
+    return util::unexpected(LineSearchErrors::StepError);
+    // throw StepError();
   }
 
   // reset force_restart
