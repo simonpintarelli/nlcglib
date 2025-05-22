@@ -352,10 +352,12 @@ nlcg_us(EnergyBase& energy_base,
     if ((!ls_result && ls_result.error() == LineSearchErrors::SlopeError &&
          state == cg_state::CG)) {
       // attempt preconditioned SD
-      logger << fmt::format("WARNING: iter={:d} slope={:f},{:f} > 0 detected -> restart\n",
-                            cg_iter,
-                            slope.x,
-                            slope.eta);
+      logger << fmt::format(
+          "WARNING: iter={:d} slope={:.5e} ({:.5e},{:.5e}) > 0 detected -> restart\n",
+          cg_iter,
+          slope.x + slope.eta,
+          slope.x,
+          slope.eta);
       std::tie(slope, z_x, z_eta) =
           dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
       fr = slope;
@@ -365,12 +367,14 @@ nlcg_us(EnergyBase& energy_base,
 
     if (!ls_result && ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::pSD) {
       // attempt steepest descent
-      logger << fmt::format("WARNING: iter={:d} slope={:f},{:f} > 0 detected -> steepest descent\n",
-                            cg_iter,
-                            slope.x,
-                            slope.eta);
+      logger << fmt::format(
+          "WARNING: iter={:d} slope={:.5e} ({:.5e},{:.5e}) > 0 detected -> restart\n",
+          cg_iter,
+          slope.x + slope.eta,
+          slope.x,
+          slope.eta);
       std::tie(slope, z_x, z_eta) =
-          dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, Sinv, P, free_energy);
+          dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, S, Sinv, P, free_energy);
       fr = slope;
       state = cg_state::SD;
       continue;
@@ -392,7 +396,7 @@ nlcg_us(EnergyBase& energy_base,
       // continue with unpreconditioned SD step
       logger << "i=" << cg_iter << ": backtracking failed -> steepest descent\n";
       std::tie(slope, z_x, z_eta) =
-          dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, Sinv, P, free_energy);
+          dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, S, Sinv, P, free_energy);
       fr = slope;
       state = cg_state::SD;
       continue;
@@ -409,7 +413,7 @@ nlcg_us(EnergyBase& energy_base,
       continue;
     }
 
-    if(cg_iter % restart == 0) {
+    if (cg_iter % restart == 0) {
       logger << fmt::format("i={:d} cg_restart({:d})\n", cg_iter, restart);
       std::tie(slope, z_x, z_eta) =
           dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
