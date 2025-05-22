@@ -1,8 +1,8 @@
 #pragma once
 
+#include "descent_direction_conjugate.hpp"
 #include "descent_direction_restart.hpp"
 #include "descent_direction_sd.hpp"
-#include "descent_direction_conjugate.hpp"
 #include "mpi/communicator.hpp"
 
 namespace nlcglib {
@@ -69,7 +69,8 @@ public:
             class e_t,
             class f_t,
             class hx_t,
-            class op_t,
+            class op1_t,
+            class op2_t,
             class prec_t,
             class F>
   std::tuple<slope_t, mvector<to_layout_left_t<x_t>>, mvector<to_layout_left_t<x_t>>> restarted_sd(
@@ -80,10 +81,10 @@ public:
       const mvector<hx_t>& hx,
       const mvector<double>& wk,
       double mu,
-      op_t&& S,
+      op1_t&& S,
+      op2_t&& Sinv,
       prec_t&& P,
       F&& free_energy);
-
 
 
 private:
@@ -203,20 +204,22 @@ template <class mem_t,
           class e_t,
           class f_t,
           class hx_t,
-          class op_t,
+          class op1_t,
+          class op2_t,
           class prec_t,
           class F>
 std::tuple<slope_t, mvector<to_layout_left_t<x_t>>, mvector<to_layout_left_t<x_t>>>
 descent_direction<SMEARING_TYPE>::restarted_sd(const mem_t& memspc,
-                                            const mvector<x_t>& X,
-                                            const mvector<e_t>& en,
-                                            const mvector<f_t>& fn,
-                                            const mvector<hx_t>& hx,
-                                            const mvector<double>& wk,
-                                            double mu,
-                                            op_t&& Sinv,
-                                            prec_t&& P,
-                                            F&& free_energy)
+                                               const mvector<x_t>& X,
+                                               const mvector<e_t>& en,
+                                               const mvector<f_t>& fn,
+                                               const mvector<hx_t>& hx,
+                                               const mvector<double>& wk,
+                                               double mu,
+                                               op1_t&& S,
+                                               op2_t&& Sinv,
+                                               prec_t&& P,
+                                               F&& free_energy)
 {
   double mo = free_energy.occupancy();
   double dFdmu = GradEtaHelper<SMEARING_TYPE>::dFdmu(free_energy.get_ek(), en, fn, wk, mu, T, mo);
@@ -226,13 +229,11 @@ descent_direction<SMEARING_TYPE>::restarted_sd(const mem_t& memspc,
 
   descent_direction_sd<mem_t, SMEARING_TYPE> functor(memspc, mu, dFdmu, sumfn, T, kappa, mo);
 
-  auto [m_fr, z_x, z_eta] = unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, Sinv, P, wk)));
+  auto [m_fr, z_x, z_eta] = unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, S, Sinv, P, wk)));
   slope_t fr = sum(m_fr, commk);
 
-  return std::make_tuple(slope_t{.x=fr.x, .eta=fr.eta}, z_x, z_eta);
+  return std::make_tuple(slope_t{.x = fr.x, .eta = fr.eta}, z_x, z_eta);
 }
-
-
 
 
 }  // namespace nlcglib

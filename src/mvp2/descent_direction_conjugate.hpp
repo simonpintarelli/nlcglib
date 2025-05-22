@@ -1,6 +1,10 @@
 #pragma once
 
 #include "descent_direction_impl.hpp"
+#include "la/dvector.hpp"
+#include "mvp2/mvp2.hpp"
+#include "pseudo_hamiltonian/grad_eta.hpp"
+
 
 
 namespace nlcglib {
