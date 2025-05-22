@@ -83,6 +83,7 @@ else()
 endif()
 
 find_package(nlohmann_json 3.2.0 REQUIRED)
+find_package(fmt REQUIRED)
 
 add_subdirectory(src)
 

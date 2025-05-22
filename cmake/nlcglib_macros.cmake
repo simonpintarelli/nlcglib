@@ -18,6 +18,8 @@ MACRO(NLCGLIB_SETUP_TARGET _target)
     ${CMAKE_SOURCE_DIR}/include
   )
 
+  target_link_libraries(${_target} PRIVATE fmt::fmt)
+
   if(USE_ROCM)
     target_compile_options(${_target} PUBLIC --offload-arch=gfx90a)
   endif()

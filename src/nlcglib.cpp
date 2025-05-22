@@ -1,3 +1,4 @@
+#include <fmt/format.h>
 #include <Kokkos_Core.hpp>
 #include <iomanip>
 #include <ios>
@@ -276,7 +277,8 @@ nlcg_us(EnergyBase& energy_base,
   slope_t fr = slope;  // Fletcher-Reeves numerator
   cg_state state = cg_state::CG;
 
-  for (int cg_iter = 0; cg_iter < maxiter; ++cg_iter) {
+  for (int cg_iter = 1; cg_iter < maxiter + 1; ++cg_iter) {
+    logger.flush();
     if (std::abs(slope.x + slope.eta) < tol) {
       info = print_info(free_energy.get_F(),
                         free_energy.ks_energy(),
@@ -347,46 +349,68 @@ nlcg_us(EnergyBase& energy_base,
     logger.flush();
 
     /* search direction is not a descent direction */
-    if ((ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::CG) ||
-        cg_iter % restart == 0) {
+    if ((!ls_result && ls_result.error() == LineSearchErrors::SlopeError &&
+         state == cg_state::CG)) {
       // attempt preconditioned SD
-      logger << "i=" << cg_iter << ": slope > 0 detected -> restart\n";
+      logger << fmt::format("WARNING: iter={:d} slope={:f},{:f} > 0 detected -> restart\n",
+                            cg_iter,
+                            slope.x,
+                            slope.eta);
       std::tie(slope, z_x, z_eta) =
           dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
       fr = slope;
       state = cg_state::pSD;
+      continue;
     }
 
-    if (ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::pSD) {
+    if (!ls_result && ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::pSD) {
       // attempt steepest descent
-      logger << "i=" << cg_iter << ": slope > 0 detected -> steepest descent\n";
+      logger << fmt::format("WARNING: iter={:d} slope={:f},{:f} > 0 detected -> steepest descent\n",
+                            cg_iter,
+                            slope.x,
+                            slope.eta);
       std::tie(slope, z_x, z_eta) =
           dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, Sinv, P, free_energy);
       fr = slope;
       state = cg_state::SD;
+      continue;
     }
 
-    if (ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::SD) {
+    if (!ls_result && ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::SD) {
       throw std::runtime_error("unrecoverable error");
     }
 
     /* backtracking failed */
-    if (ls_result.error() == LineSearchErrors::DescentError && state == cg_state::SD) {
+    if (!ls_result && ls_result.error() == LineSearchErrors::DescentError &&
+        state == cg_state::SD) {
       // abort!
+      throw std::runtime_error("Backtracking failed in steepest descent. Abort!");
     }
 
-    if (ls_result.error() == LineSearchErrors::DescentError && state == cg_state::pSD) {
+    if (!ls_result && ls_result.error() == LineSearchErrors::DescentError &&
+        state == cg_state::pSD) {
       // continue with unpreconditioned SD step
       logger << "i=" << cg_iter << ": backtracking failed -> steepest descent\n";
       std::tie(slope, z_x, z_eta) =
           dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, Sinv, P, free_energy);
       fr = slope;
       state = cg_state::SD;
+      continue;
     }
 
-    if (ls_result.error() == LineSearchErrors::DescentError && state == cg_state::CG) {
+    if (!ls_result && ls_result.error() == LineSearchErrors::DescentError &&
+        state == cg_state::CG) {
       // continue with preconditioned SD step
       logger << "i=" << cg_iter << ": backtracking failed -> restart\n";
+      std::tie(slope, z_x, z_eta) =
+          dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
+      fr = slope;
+      state = cg_state::pSD;
+      continue;
+    }
+
+    if(cg_iter % restart == 0) {
+      logger << fmt::format("i={:d} cg_restart({:d})\n", cg_iter, restart);
       std::tie(slope, z_x, z_eta) =
           dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
       fr = slope;
@@ -409,7 +433,6 @@ nlcg_us(EnergyBase& energy_base,
     } else {
       throw std::runtime_error("not supposed to be here");
     }
-
   }
   return info;
 }

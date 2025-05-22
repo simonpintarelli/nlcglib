@@ -227,11 +227,9 @@ descent_direction<SMEARING_TYPE>::restarted_sd(const mem_t& memspc,
   descent_direction_sd<mem_t, SMEARING_TYPE> functor(memspc, mu, dFdmu, sumfn, T, kappa, mo);
 
   auto [m_fr, z_x, z_eta] = unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, Sinv, P, wk)));
-  // auto ures = unzip(res);
+  slope_t fr = sum(m_fr, commk);
 
-  // slope_t fr = sum(m_fr, commk);
-
-  return std::make_tuple(slope_t{.x=0, .eta=0}, z_x, z_eta);
+  return std::make_tuple(slope_t{.x=fr.x, .eta=fr.eta}, z_x, z_eta);
 }
 
 

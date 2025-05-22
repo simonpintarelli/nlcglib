@@ -51,6 +51,8 @@ descent_direction_sd<memspc_t, smearing_t>::exec_spc(
 {
   auto hij = inner_()(x, hx, wk);
   auto gx = sinv(hx);
+  // compute contravairant gradient Sinv(Hx) - X * Hij
+  // 10.1016/j.cpc.2005.07.011 Eq 3.
   transform(gx, Kokkos::complex(1.0), Kokkos::complex(-1.0), x, hij);
 
   GradEta<smearing_t> grad_eta(this->T, this->kappa);

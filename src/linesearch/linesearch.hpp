@@ -34,11 +34,9 @@ private:
 
 public:
   template <class GEODESIC, class FREE_ENERGY>
-  auto operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope)
-      -> util::expected<
-          std::remove_reference_t<
-              decltype(qline(G, FE, std::declval<double>()).value())>,
-          LineSearchErrors>;
+  auto operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope) -> util::expected<
+      std::remove_reference_t<decltype(qline(G, FE, std::declval<double>()).value())>,
+      LineSearchErrors>;
 
   /// trial step
   double t_trial{0.2};
@@ -48,11 +46,9 @@ public:
 
 template <class GEODESIC, class FREE_ENERGY>
 auto
-line_search::operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope)
-    -> util::expected<
-        std::remove_reference_t<
-            decltype(qline(G, FE, std::declval<double>()).value())>,
-        LineSearchErrors>
+line_search::operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope) -> util::expected<
+    std::remove_reference_t<decltype(qline(G, FE, std::declval<double>()).value())>,
+    LineSearchErrors>
 {
   if (slope > 0) {
     return util::unexpected(LineSearchErrors::SlopeError);
@@ -60,12 +56,12 @@ line_search::operator()(GEODESIC&& G, FREE_ENERGY&& FE, double slope)
   Logger::GetInstance() << "line search t_trial = " << std::scientific << t_trial << "\n";
   double F0 = FE.get_F();
   auto qline_result = qline(G, FE, slope);
-  if (qline_result.error() == LineSearchErrors::StepError) {
+  if (!qline_result && qline_result.error() == LineSearchErrors::StepError) {
     // handle StepError
     auto bt_result = bt_search(G, FE, F0);
     // also check error
-    if (bt_result.error() == LineSearchErrors::DescentError) {
-      G(0); // reset state, gradients, etc
+    if (!bt_result && bt_result.error() == LineSearchErrors::DescentError) {
+      G(0);  // reset state, gradients, etc
       return util::unexpected(bt_result.error());
     }
     return bt_result.value();
