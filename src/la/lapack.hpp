@@ -436,11 +436,10 @@ to_layout_left_t<M1>
 transform_alloc(
     const M1& A,
     const M2& B,
-    const identity_t<typename M1::numeric_t>& alpha = identity_t<typename M1::numeric_t>{1.0},
-    const identity_t<typename M1::numeric_t>& beta = identity_t<typename M1::numeric_t>{0.})
+    const identity_t<typename M1::numeric_t>& alpha = identity_t<typename M1::numeric_t>{1.0})
 {
   to_layout_left_t<M1> C(A.map());
-  transform(C, beta, alpha, A, B);
+  transform(C, typename M1::numeric_t{0}, alpha, A, B);
   return C;
 }
 
