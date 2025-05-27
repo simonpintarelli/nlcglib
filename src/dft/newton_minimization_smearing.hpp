@@ -45,7 +45,7 @@ newton_minimization_chemical_potential(
     double ddF = 2 * dNf * dNf + 2 * (Nf - ne) * ddNf;
     // std::printf("%d Nf: %.4f, dNf: %.4f, ddF: %.4f, mu: %.4f\n", iter, Nf, dNf, ddF, mu);
 
-    if (std::abs(ddF) < 1e-10) {
+    if (std::abs(ddF) < 1e-30) {
       Logger::GetInstance() << "*Warning* Efermi Newton minimization failed (2nd deriv~=0)\n";
       throw failed_to_converge();
     }
