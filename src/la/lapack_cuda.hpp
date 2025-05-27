@@ -1,5 +1,6 @@
 #pragma once
 #include <type_traits>
+#include "exec_space.hpp"
 #include "la/cuda.hpp"
 #include "la/dvector.hpp"
 
@@ -120,6 +121,10 @@ inner(M0& c,
 
   using gemm = cuda::gemm<numeric_t>;
   gemm::call(gemm::H, gemm::N, m, n, k, alpha, A_ptr, lda, B_ptr, ldb, beta, C_ptr, ldc);
+  // fence
+  exec_t<typename M0::storage_t::memory_space> spc;
+  spc.fence();
+
   allreduce(c, a.map().comm());
 }
 

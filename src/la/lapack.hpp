@@ -287,8 +287,6 @@ struct innerh_tr
         Kokkos::RangePolicy<exec_t<memory_space>>(0, nrows),
         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
         sum);
-    exec_t<memory_space> spc;
-    spc.fence();
     sum = X.map().comm().allreduce(sum, mpi_op::sum);
     return sum;
   }
@@ -300,6 +298,7 @@ struct innerh_tr
       typename M1::numeric_t>
   operator()(const M1& X, const M2& Y)
   {
+    // CPU version
     int nrows = X.array().extent(0);
     int ncols = X.array().extent(1);
 
