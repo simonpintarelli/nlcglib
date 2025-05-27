@@ -100,7 +100,7 @@ cg_write_step_json(double free_energy,
   logger.log("fermi_energy", efermi);
   logger.log("ks_energy_comps", energy_components);
 
-  if (step % 10 == 0) {
+  if (step % 1 == 0) {
     auto ek_host =
         eval_threaded(tapply(
                           [](auto&& x) {
@@ -270,6 +270,7 @@ nlcg_us(EnergyBase& energy_base,
 
   auto eta = eval_threaded(tapply(make_diag(), ek));
   auto [slope, z_x, z_eta] = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
+
   // allocate rotation matrices
   auto ul = eval_threaded(tapply([](auto&& z) { return empty_like()(z); }, z_eta));
 
