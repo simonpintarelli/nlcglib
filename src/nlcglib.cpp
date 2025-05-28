@@ -60,14 +60,28 @@ auto
 print_info(
     double free_energy, double ks_energy, double entropy, slope_t slope, double efermi, int step)
 {
+  double slope_tot = slope.x + slope.eta;
   auto& logger = Logger::GetInstance();
-  logger << TO_STDOUT << std::setw(15) << std::left << step << std::setw(15) << std::left
-         << std::fixed << std::setprecision(13) << free_energy << "\t" << std::setw(15) << std::left
-         << std::scientific << std::setprecision(13) << slope.x << " " << std::scientific
-         << std::setprecision(13) << slope.eta << "\n"
-         << "\t kT * S       : " << std::fixed << std::setprecision(13) << entropy << "\n"
-         << "\t Fermi energy : " << std::fixed << std::setprecision(13) << efermi << "\n"
-         << "\t KS energy    : " << std::fixed << std::setprecision(13) << ks_energy << "\n";
+ //                       fmt::arg("slope_tot", slope_tot));
+  logger << TO_STDOUT
+         << fmt::format(
+                "{iter:<6d}"
+                R"(Etot     : {F:20.10f} [Ha]
+      Residual : {slope_tot:>20.5e}
+      kT * S   : {entropy:>20.8f} [Ha]
+      Efermi   : {efermi:>20.8f} [Ha]
+      KS energy: {ks_energy:>20.8f} [Ha]
+      slope x  : {slope_x:>20.5e}
+      slope eta: {slope_eta:>20.5e}
+)",
+                fmt::arg("iter", step),
+                fmt::arg("F", free_energy),
+                fmt::arg("slope_tot", slope_tot),
+                fmt::arg("entropy", entropy),
+                fmt::arg("efermi", efermi),
+                fmt::arg("ks_energy", ks_energy),
+                fmt::arg("slope_x", slope.x),
+                fmt::arg("slope_eta", slope.eta));
 
   nlcg_info info;
   info.F = free_energy;
