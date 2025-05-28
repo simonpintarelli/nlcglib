@@ -34,6 +34,10 @@ newton_minimization_chemical_potential(
 
   double mu = mu0;
   int iter{0};
+  if (std::abs(N(mu) - ne) < tol) {
+    return mu;
+  }
+
   while (true) {
     // compute
     double Nf = N(mu);
