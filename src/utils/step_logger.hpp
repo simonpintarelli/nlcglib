@@ -48,7 +48,7 @@ public:
   {
     if (active) {
       std::ofstream fout(std::string("nlcg") + ".json", std::ios_base::app);
-      fout << dict;
+      fout << dict.dump();
       fout.flush();
     }
   }
