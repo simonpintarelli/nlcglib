@@ -92,7 +92,7 @@ print_info(
   return info;
 }
 
-template <class T1, class T2>
+template <class T1, class T2, class T3>
 void
 cg_write_step_json(double free_energy,
                    double ks_energy,
@@ -101,6 +101,7 @@ cg_write_step_json(double free_energy,
                    double efermi,
                    T1&& ek,
                    T2&& fn,
+                   T3&& wk,
                    std::map<std::string, double> energy_components,
                    Communicator& commk,
                    int step)
@@ -113,6 +114,9 @@ cg_write_step_json(double free_energy,
   logger.log("slope_eta", slope.eta);
   logger.log("fermi_energy", efermi);
   logger.log("ks_energy_comps", energy_components);
+  if(step == 0) {
+    logger.log("wk", wk);
+  }
 
   if (step % 1 == 0) {
     auto ek_host =
@@ -308,6 +312,7 @@ nlcg_us(EnergyBase& energy_base,
                          free_energy.get_chemical_potential(),
                          ek,
                          fn,
+                         wk,
                          free_energy.ks_energy_components(),
                          comm_world,
                          cg_iter);
@@ -344,6 +349,7 @@ nlcg_us(EnergyBase& energy_base,
                        free_energy.get_chemical_potential(),
                        ek,
                        fn,
+                       wk,
                        free_energy.ks_energy_components(),
                        comm_world,
                        cg_iter);
