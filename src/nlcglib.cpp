@@ -118,7 +118,7 @@ cg_write_step_json(double free_energy,
     logger.log("wk", wk);
   }
 
-  if (step % 1 == 0) {
+  if (step % 10 == 0) {
     auto ek_host =
         eval_threaded(tapply(
                           [](auto&& x) {
