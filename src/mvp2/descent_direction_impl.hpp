@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
-#include "mpi/communicator.hpp"
 #include "la/mvector.hpp"
+#include "mpi/communicator.hpp"
 
 namespace nlcglib {
 
