@@ -32,8 +32,7 @@ diag(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
 
   typedef Kokkos::RangePolicy<exec_t<memspace>> range_policy;
   auto Xm = X.array();
-  Kokkos::parallel_for(
-      "diag", range_policy(0, n), KOKKOS_LAMBDA(int i) { d(i) = Xm(i, i); });
+  Kokkos::parallel_for("diag", range_policy(0, n), KOKKOS_LAMBDA(int i) { d(i) = Xm(i, i); });
 
   return d;
 }
