@@ -297,7 +297,7 @@ nlcg_us(EnergyBase& energy_base,
   slope_t fr = slope;  // Fletcher-Reeves numerator
   cg_state state = cg_state::CG;
 
-  auto write_json = [&](int step, int freq=10) {
+  auto write_json = [&](int step, int freq = 10) {
     cg_write_step_json(free_energy.get_F(),
                        free_energy.ks_energy(),
                        free_energy.get_entropy(),

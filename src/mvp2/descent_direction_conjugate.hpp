@@ -6,7 +6,6 @@
 #include "pseudo_hamiltonian/grad_eta.hpp"
 
 
-
 namespace nlcglib {
 
 /** Helper class for CG algorithm.
@@ -214,4 +213,4 @@ descent_direction_conjugate<memspc_t, smearing_t>::operator()(x_t&& X_h,
 }
 
 
-}  // nlcglib
+}  // namespace nlcglib
