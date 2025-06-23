@@ -2,6 +2,7 @@ set(SOURCES
   la/cusolver.cpp
   gpu/acc.cpp
   la/magma.cpp
+  utils/step_logger.cpp
 )
 
 add_library(nlcglib_core ${SOURCES})

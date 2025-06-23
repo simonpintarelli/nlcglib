@@ -62,7 +62,7 @@ print_info(
 {
   double slope_tot = slope.x + slope.eta;
   auto& logger = Logger::GetInstance();
- //                       fmt::arg("slope_tot", slope_tot));
+  //                       fmt::arg("slope_tot", slope_tot));
   logger << TO_STDOUT
          << fmt::format(
                 "{iter:<6d}"
@@ -104,7 +104,8 @@ cg_write_step_json(double free_energy,
                    T3&& wk,
                    std::map<std::string, double> energy_components,
                    Communicator& commk,
-                   int step)
+                   int step,
+                   int freq)
 {
   StepLogger logger(step, "nlcg.json", commk.rank() == 0);
   logger.log("F", free_energy);
@@ -114,11 +115,11 @@ cg_write_step_json(double free_energy,
   logger.log("slope_eta", slope.eta);
   logger.log("fermi_energy", efermi);
   logger.log("ks_energy_comps", energy_components);
-  if(step == 0) {
+  if (step == 0) {
     logger.log("wk", wk);
   }
 
-  if (step % 10 == 0) {
+  if (step % freq == 0) {
     auto ek_host =
         eval_threaded(tapply(
                           [](auto&& x) {
@@ -296,6 +297,21 @@ nlcg_us(EnergyBase& energy_base,
   slope_t fr = slope;  // Fletcher-Reeves numerator
   cg_state state = cg_state::CG;
 
+  auto write_json = [&](int step, int freq=10) {
+    cg_write_step_json(free_energy.get_F(),
+                       free_energy.ks_energy(),
+                       free_energy.get_entropy(),
+                       slope,
+                       free_energy.get_chemical_potential(),
+                       ek,
+                       fn,
+                       wk,
+                       free_energy.ks_energy_components(),
+                       comm_world,
+                       step,
+                       freq);
+  };
+
   for (int cg_iter = 1; cg_iter < maxiter + 1; ++cg_iter) {
     logger.flush();
     if (std::abs(slope.x + slope.eta) < tol) {
@@ -305,17 +321,7 @@ nlcg_us(EnergyBase& energy_base,
                         slope,
                         free_energy.get_chemical_potential(),
                         cg_iter);
-      cg_write_step_json(free_energy.get_F(),
-                         free_energy.ks_energy(),
-                         free_energy.get_entropy(),
-                         slope,
-                         free_energy.get_chemical_potential(),
-                         ek,
-                         fn,
-                         wk,
-                         free_energy.ks_energy_components(),
-                         comm_world,
-                         cg_iter);
+      write_json(cg_iter);
 
       free_energy.ehandle().print_info();  // print magnetization
       logger << TO_STDOUT << "kT * S   : " << std::setprecision(13) << free_energy.get_entropy()
@@ -342,17 +348,7 @@ nlcg_us(EnergyBase& energy_base,
       return std::tuple_cat(ek_ul_xnext, std::make_tuple(mu));
     };
 
-    cg_write_step_json(free_energy.get_F(),
-                       free_energy.ks_energy(),
-                       free_energy.get_entropy(),
-                       slope,
-                       free_energy.get_chemical_potential(),
-                       ek,
-                       fn,
-                       wk,
-                       free_energy.ks_energy_components(),
-                       comm_world,
-                       cg_iter);
+    write_json(cg_iter);
 
 
     info = print_info(free_energy.get_F(),
@@ -402,6 +398,7 @@ nlcg_us(EnergyBase& energy_base,
     }
 
     if (!ls_result && ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::SD) {
+      write_json(cg_iter, 1);
       throw std::runtime_error("unrecoverable error");
     }
 
@@ -409,6 +406,7 @@ nlcg_us(EnergyBase& energy_base,
     if (!ls_result && ls_result.error() == LineSearchErrors::DescentError &&
         state == cg_state::SD) {
       // abort!
+      write_json(cg_iter, 1);
       throw std::runtime_error("Backtracking failed in steepest descent. Abort!");
     }
 
@@ -456,7 +454,7 @@ nlcg_us(EnergyBase& energy_base,
           dd.conjugated(xspace(), fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
       state = cg_state::CG;
     } else {
-      throw std::runtime_error("not supposed to be here");
+      throw std::runtime_error(fmt::format("Unhandled line-search error occured."));
     }
   }
   return info;

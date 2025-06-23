@@ -26,8 +26,7 @@ class StepLogger
 {
 public:
   StepLogger(int i, std::string fname = "nlcg.json", bool active = true)
-      : i(i)
-      , fname(fname)
+      : fname(fname)
       , active(active)
   {
     dict["type"] = "cg_iteration";
@@ -44,6 +43,8 @@ public:
   template <class V>
   void log(const std::string& key, const mvector<V>& x);
 
+  void log(const std::string& key, const mvector<double>& x);
+
   ~StepLogger()
   {
     if (active) {
@@ -54,7 +55,6 @@ public:
   }
 
 private:
-  int i;
   std::string fname{"nlcg.json"};
   bool active;
   nlohmann::json dict;
@@ -95,5 +95,6 @@ StepLogger::log(const std::string& key, const mvector<V>& x)
     dict[key] += entry;
   }
 }
+
 
 }  // namespace nlcglib
