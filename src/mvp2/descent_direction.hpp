@@ -1,6 +1,9 @@
 #pragma once
 
-#include "descent_direction_impl.hpp"
+#include "descent_direction_conjugate.hpp"
+#include "descent_direction_restart.hpp"
+#include "descent_direction_sd.hpp"
+#include "mpi/communicator.hpp"
 
 namespace nlcglib {
 
@@ -26,7 +29,7 @@ public:
             class prec_t,
             class F>
   auto conjugated(const mem_t& memspc,
-                  double fr_old,
+                  slope_t fr_old,
                   const mvector<x_t>& X,
                   const mvector<e_t>& en,
                   const mvector<f_t>& fn,
@@ -49,7 +52,7 @@ public:
             class op_t,
             class prec_t,
             class F>
-  std::tuple<double, mvector<to_layout_left_t<x_t>>, mvector<to_layout_left_t<x_t>>> restarted(
+  std::tuple<slope_t, mvector<to_layout_left_t<x_t>>, mvector<to_layout_left_t<x_t>>> restarted(
       const mem_t& memspc,
       const mvector<x_t>& X,
       const mvector<e_t>& en,
@@ -60,6 +63,29 @@ public:
       op_t&& S,
       prec_t&& P,
       F&& free_energy);
+
+  template <class mem_t,
+            class x_t,
+            class e_t,
+            class f_t,
+            class hx_t,
+            class op1_t,
+            class op2_t,
+            class prec_t,
+            class F>
+  std::tuple<slope_t, mvector<to_layout_left_t<x_t>>, mvector<to_layout_left_t<x_t>>> restarted_sd(
+      const mem_t& memspc,
+      const mvector<x_t>& X,
+      const mvector<e_t>& en,
+      const mvector<f_t>& fn,
+      const mvector<hx_t>& hx,
+      const mvector<double>& wk,
+      double mu,
+      op1_t&& S,
+      op2_t&& Sinv,
+      prec_t&& P,
+      F&& free_energy);
+
 
 private:
   double T;
@@ -80,7 +106,7 @@ template <class mem_t,
           class F>
 auto
 descent_direction<SMEARING_TYPE>::conjugated(const mem_t& memspc,
-                                             double fr_old,
+                                             slope_t fr_old,
                                              const mvector<x_t>& X,
                                              const mvector<e_t>& en,
                                              const mvector<f_t>& fn,
@@ -101,30 +127,22 @@ descent_direction<SMEARING_TYPE>::conjugated(const mem_t& memspc,
 
   auto commk = wk.commk();
 
-  descent_direction_impl<mem_t, SMEARING_TYPE> functor(memspc, mu, dFdmu, sumfn, T, kappa, mo);
+  descent_direction_conjugate<mem_t, SMEARING_TYPE> functor(memspc, mu, dFdmu, sumfn, T, kappa, mo);
 
-  auto res = eval_threaded(tapply_async(functor, X, en, fn, hx, zxp, zetap, ul, S, P, wk));
+  auto [m_fr, delta_x, delta_eta, z_x, z_eta, m_slope_zp] =
+      unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, zxp, zetap, ul, S, P, wk)));
 
-  auto ures = unzip(res);
-
-  double fr = sum(std::get<0>(ures), commk);
-
-  double gamma = fr / fr_old;
-
+  slope_t fr = sum(m_fr, commk);
+  double gamma = (fr.x + fr.eta) / (fr_old.x + fr_old.eta);
   Logger::GetInstance() << " CG gamma " << std::setprecision(3) << gamma << "\n";
 
-  auto delta_x = std::get<1>(ures);
-  auto delta_eta = std::get<2>(ures);
-
-  auto z_x = std::get<3>(ures);
-  auto z_eta = std::get<4>(ures);
-  double slope_zp = sum(std::get<5>(ures), commk);
+  slope_t slope_zp = sum(m_slope_zp, commk);
 
   /* this is tr{<Z|g>} = tr{<Δ + γ*Z(n-1)|g>} = tr{<Δ |g>} + γ * tr{<Z(n-1)|g>}
    *            ^                                   ^                  ^
    *          slope  =                             fr    + γ *     slope_zp
    */
-  double slope = fr + gamma * slope_zp;
+  slope_t slope = fr + gamma * slope_zp;
 
   eval_threaded(
       // note: this operation is in-place and overwrites z_x, z_eta
@@ -152,7 +170,7 @@ template <class mem_t,
           class op_t,
           class prec_t,
           class F>
-std::tuple<double, mvector<to_layout_left_t<x_t>>, mvector<to_layout_left_t<x_t>>>
+std::tuple<slope_t, mvector<to_layout_left_t<x_t>>, mvector<to_layout_left_t<x_t>>>
 descent_direction<SMEARING_TYPE>::restarted(const mem_t& memspc,
                                             const mvector<x_t>& X,
                                             const mvector<e_t>& en,
@@ -170,16 +188,52 @@ descent_direction<SMEARING_TYPE>::restarted(const mem_t& memspc,
 
   auto commk = wk.commk();
 
-  descent_direction_impl<mem_t, SMEARING_TYPE> functor(memspc, mu, dFdmu, sumfn, T, kappa, mo);
+  descent_direction_restart<mem_t, SMEARING_TYPE> functor(memspc, mu, dFdmu, sumfn, T, kappa, mo);
 
-  auto res = eval_threaded(tapply_async(functor, X, en, fn, hx, S, P, wk));
-  auto ures = unzip(res);
+  auto [m_fr, z_x, z_eta] = unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, S, P, wk)));
+  // auto ures = unzip(res);
 
-  double fr = sum(std::get<0>(ures), commk);
-  auto z_x = std::get<1>(ures);
-  auto z_eta = std::get<2>(ures);
+  slope_t fr = sum(m_fr, commk);
 
   return std::make_tuple(fr, z_x, z_eta);
+}
+
+template <enum smearing_type SMEARING_TYPE>
+template <class mem_t,
+          class x_t,
+          class e_t,
+          class f_t,
+          class hx_t,
+          class op1_t,
+          class op2_t,
+          class prec_t,
+          class F>
+std::tuple<slope_t, mvector<to_layout_left_t<x_t>>, mvector<to_layout_left_t<x_t>>>
+descent_direction<SMEARING_TYPE>::restarted_sd(const mem_t& memspc,
+                                               const mvector<x_t>& X,
+                                               const mvector<e_t>& en,
+                                               const mvector<f_t>& fn,
+                                               const mvector<hx_t>& hx,
+                                               const mvector<double>& wk,
+                                               double mu,
+                                               op1_t&& S,
+                                               op2_t&& Sinv,
+                                               prec_t&& P,
+                                               F&& free_energy)
+{
+  double mo = free_energy.occupancy();
+  double dFdmu = GradEtaHelper<SMEARING_TYPE>::dFdmu(free_energy.get_ek(), en, fn, wk, mu, T, mo);
+  double sumfn = GradEtaHelper<SMEARING_TYPE>::dmu_deta(en, wk, mu, T, mo);
+
+  auto commk = wk.commk();
+
+  descent_direction_sd<mem_t, SMEARING_TYPE> functor(memspc, mu, dFdmu, sumfn, T, kappa, mo);
+
+  auto [m_fr, z_x, z_eta] =
+      unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, S, Sinv, P, wk)));
+  slope_t fr = sum(m_fr, commk);
+
+  return std::make_tuple(slope_t{.x = fr.x, .eta = fr.eta}, z_x, z_eta);
 }
 
 

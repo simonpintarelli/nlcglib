@@ -3,3 +3,4 @@ spack-build-*
 __pycache__/
 compile_commands.json
 build-linux-*
+build-env-*

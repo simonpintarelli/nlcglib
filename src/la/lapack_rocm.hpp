@@ -11,6 +11,7 @@
 #include "rocm.hpp"
 #include "rocsolver.hpp"
 
+#include "exec_space.hpp"
 #ifdef __NLCGLIB__MAGMA
 #include "magma.hpp"
 #endif
@@ -163,6 +164,9 @@ inner(M0& c,
     auto H = rocblas_operation::rocblas_operation_conjugate_transpose;
     auto N = rocblas_operation::rocblas_operation_none;
     rocm::gemm(H, N, m, n, k, alpha, A_ptr, lda, B_ptr, ldb, beta, C_ptr, ldc);
+    // fence
+    exec_t<typename M0::storage_t::memory_space> spc;
+    spc.fence();
     allreduce(c, a.map().comm());
   } else {
     throw std::runtime_error("distributed inner product not implemented.");

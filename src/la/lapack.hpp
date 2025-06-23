@@ -32,8 +32,7 @@ diag(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
 
   typedef Kokkos::RangePolicy<exec_t<memspace>> range_policy;
   auto Xm = X.array();
-  Kokkos::parallel_for(
-      "diag", range_policy(0, n), KOKKOS_LAMBDA(int i) { d(i) = Xm(i, i); });
+  Kokkos::parallel_for("diag", range_policy(0, n), KOKKOS_LAMBDA(int i) { d(i) = Xm(i, i); });
 
   return d;
 }
@@ -287,8 +286,6 @@ struct innerh_tr
         Kokkos::RangePolicy<exec_t<memory_space>>(0, nrows),
         KOKKOS_LAMBDA(int i, T& lsum) { lsum += tmp(i); },
         sum);
-    exec_t<memory_space> spc;
-    spc.fence();
     sum = X.map().comm().allreduce(sum, mpi_op::sum);
     return sum;
   }
@@ -300,6 +297,7 @@ struct innerh_tr
       typename M1::numeric_t>
   operator()(const M1& X, const M2& Y)
   {
+    // CPU version
     int nrows = X.array().extent(0);
     int ncols = X.array().extent(1);
 
@@ -436,11 +434,10 @@ to_layout_left_t<M1>
 transform_alloc(
     const M1& A,
     const M2& B,
-    const identity_t<typename M1::numeric_t>& alpha = identity_t<typename M1::numeric_t>{1.0},
-    const identity_t<typename M1::numeric_t>& beta = identity_t<typename M1::numeric_t>{0.})
+    const identity_t<typename M1::numeric_t>& alpha = identity_t<typename M1::numeric_t>{1.0})
 {
   to_layout_left_t<M1> C(A.map());
-  transform(C, beta, alpha, A, B);
+  transform(C, typename M1::numeric_t{0}, alpha, A, B);
   return C;
 }
 

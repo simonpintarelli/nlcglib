@@ -18,9 +18,12 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
     license("BSD-3-Clause")
 
     version("develop", branch="develop")
-    version("0.9", sha256="8d5bc6b85ee714fb3d6480f767e7f43e5e7d569116cf60e48f533a7f50a37a08")
+
+    version("1.2.0", sha256="bb3676472cf7cc9effe06e416ecf4ef38e6c58c3e423dc70b8b6b32890bc89f2")
+    version("1.1.0", sha256="9e7c2eea84a5ce191bd9af08f6c890717f7b6e88be7bd15cfe774eb0e0dabd8a")
     version("1.0b", sha256="086c46f06a117f267cbdf1df4ad42a8512689a9610885763f463469fb15e82dc")
-    version("1.1", sha256="9e7c2eea84a5ce191bd9af08f6c890717f7b6e88be7bd15cfe774eb0e0dabd8a")
+    version("0.9.1", sha256="c091e5972b3b88a7851be4649a5e72103f32fbe1d73d45fd799fd6ed767f4727")
+    version("0.9", sha256="8d5bc6b85ee714fb3d6480f767e7f43e5e7d569116cf60e48f533a7f50a37a08")
 
     variant("openmp", default=True, description="Use OpenMP")
     variant("tests", default=False, description="Build tests")
@@ -31,10 +34,14 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         values=("Debug", "Release", "RelWithDebInfo"),
     )
 
-    depends_on('cxx', type="build")
+    depends_on("cxx", type="build")
 
-    with when("@1.1:"):
-        variant("gpu_direct", default=False)
+    with when("@1.1: +cuda"):
+        variant(
+            "gpu_direct",
+            default=False,
+            description="Enable GPU direct. Required to support distributed wave-functions.",
+        )
 
     # depends_on("cmake@3.21:", type="build")
     depends_on("mpi")
@@ -47,6 +54,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
     depends_on("googletest", type="build", when="+tests")
     depends_on("nlohmann-json")
     depends_on("kokkos@4:", when="@1.1:")
+    depends_on("fmt", when="@develop")
 
     # MKLConfig.cmake introduced in 2021.3
     conflicts("intel-oneapi-mkl@:2021.2", when="^intel-oneapi-mkl")
@@ -111,11 +119,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
             raise Exception("blas/lapack must be either openblas or mkl.")
 
         if "+cuda%gcc" in self.spec:
-            options += [
-                self.define(
-                    "CMAKE_CXX_COMPILER", "{0}".format(self["kokkos"].kokkos_cxx)
-                )
-            ]
+            options += [self.define("CMAKE_CXX_COMPILER", "{0}".format(self["kokkos"].kokkos_cxx))]
 
         if "+cuda" in self.spec:
             cuda_archs = self.spec.variants["cuda_arch"].value

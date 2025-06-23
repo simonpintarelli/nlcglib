@@ -582,7 +582,7 @@ protected:
   /// kb * T
   double kT;
   /// TODO hardcoded constant
-  double tol{1e-11};
+  double tol{1e-12};
 
   mvector<double> wk;
   smearing_type smearing_t;

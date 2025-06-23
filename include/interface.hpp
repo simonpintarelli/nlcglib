@@ -162,6 +162,9 @@ class OverlapBase : public OpBase
 {
 };
 
+using InverseOverlapBase = OverlapBase;
+
+
 class UltrasoftPrecondBase : public OpBase
 {
 };

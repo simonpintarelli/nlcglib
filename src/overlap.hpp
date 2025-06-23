@@ -48,4 +48,7 @@ Overlap::at(const key_t& key) const -> value_type
   return applicator<OverlapBase>(overlap_base, key);
 }
 
+// typedef
+using InverseOverlap = Overlap;
+
 }  // namespace nlcglib

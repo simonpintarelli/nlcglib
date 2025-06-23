@@ -59,14 +59,14 @@ struct to_layout_left<const KokkosDVector<aT, LAYOUT, KOKKOS...>&>
 {
 };
 
-// ref
+// ref to value
 template <class aT, class LAYOUT, class... KOKKOS>
 struct to_layout_left<KokkosDVector<aT, LAYOUT, KOKKOS...>&>
     : to_layout_left<KokkosDVector<aT, LAYOUT, KOKKOS...>>
 {
 };
 
-
+// const to non-const
 template <class aT, class LAYOUT, class... KOKKOS>
 struct to_layout_left<const KokkosDVector<aT, LAYOUT, KOKKOS...>>
     : to_layout_left<KokkosDVector<aT, LAYOUT, KOKKOS...>>

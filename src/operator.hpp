@@ -1,6 +1,7 @@
 #pragma once
 
 #include "la/dvector.hpp"
+#include "la/utils.hpp"
 
 namespace nlcglib {
 
