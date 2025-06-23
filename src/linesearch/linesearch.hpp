@@ -158,7 +158,6 @@ line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope)
                           << "\t - F_min: " << F_min << "\n"
                           << "\t - F0:    " << F0 << "\n\n";
     return util::unexpected(LineSearchErrors::StepError);
-    // throw StepError();
   }
 
   return ek_ul;
