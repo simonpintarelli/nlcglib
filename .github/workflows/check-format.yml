@@ -7,7 +7,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    container: zhongruoyu/llvm-ports:18.1.3-slim-focal
+    container: zhongruoyu/llvm-ports:19-slim-focal
     steps:
       - uses: actions/checkout@v4
       - name: Check .cpp and .hpp files
