@@ -5,6 +5,7 @@
 #include <utility>
 #include "utils/expected.hpp"
 #include "utils/logger.hpp"
+#include "utils/profile.hpp"
 
 namespace nlcglib {
 
@@ -76,6 +77,7 @@ auto
 line_search::bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0)
     -> util::expected<decltype(G(std::declval<double>())), LineSearchErrors>
 {
+  PROFILE("nlcglib::line_search::bt_search");
   double t = t_trial;
   while (t > 1e-8) {
     auto ek_ul = G(t);
@@ -107,6 +109,7 @@ auto
 line_search::qline(GEODESIC& G, FREE_ENERGY& FE, double slope)
     -> util::expected<decltype(G(std::declval<double>())), LineSearchErrors>
 {
+  PROFILE("nlcglib::line_search::qline");
   double F0 = FE.get_F();
 
   // // DEBUG check slope

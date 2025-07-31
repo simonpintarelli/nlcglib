@@ -5,6 +5,7 @@
 #include "exec_space.hpp"
 #include "la/mvector.hpp"
 #include "smearing.hpp"
+#include "utils/profile.hpp"
 
 namespace nlcglib {
 
@@ -139,6 +140,7 @@ public:
                                    double dFdmu,
                                    double mo)
   {
+    PROFILE("nlcglib::g_eta");
     // TODO: add static assert Hij, ek, fn must all have the same memory space
     auto gETA = zeros_like()(Hij);
 

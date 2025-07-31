@@ -79,6 +79,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         depends_on("kokkos+rocm")
         depends_on("rocblas")
         depends_on("rocsolver")
+        depends_on("roctracer-dev")
 
     with when("+cuda"):
         depends_on("kokkos+cuda_lambda+wrapper", when="%gcc")

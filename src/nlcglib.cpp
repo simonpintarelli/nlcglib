@@ -214,9 +214,7 @@ nlcg_us(EnergyBase& energy_base,
         double tau,
         int restart)
 {
-  // std::feclearexcept(FE_ALL_EXCEPT);
-  // feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT &
-  //                ~FE_UNDERFLOW);  // Enable all floating point exceptions but FE_INEXACT
+  PROFILE("nlcglib");
   nlcg_info info;
 
   Communicator comm_world(energy_base.comm_world());

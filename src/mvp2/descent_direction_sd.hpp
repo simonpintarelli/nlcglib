@@ -4,6 +4,7 @@
 #include "la/dvector.hpp"
 #include "mvp2.hpp"
 #include "pseudo_hamiltonian/grad_eta.hpp"
+#include "utils/profile.hpp"
 
 // (unpreconditoned) steepest descent
 namespace nlcglib {
@@ -50,6 +51,7 @@ std::tuple<slope_t, to_layout_left_t<x_t>, to_layout_left_t<x_t>>
 descent_direction_sd<memspc_t, smearing_t>::exec_spc(
     x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op1_t&& s, op2_t&& sinv, prec_t&& p, double wk)
 {
+  PROFILE("exec");
   auto hij = inner_()(x, hx, wk);
   auto cgx = sinv(hx);
   auto sx = s(x);
@@ -81,6 +83,7 @@ auto
 descent_direction_sd<memspc_t, smearing_t>::operator()(
     x_t&& X_h, e_t&& en_h, f_t&& fn_h, hx_t&& hx_h, op1_t&& S, op2_t&& Sinv, prec_t&& P, double wk)
 {
+  PROFILE("nlcglib::cg::steepest_descent");
   // namespace of input an result
   using input_memspc = typename std::remove_reference_t<x_t>::storage_t::memory_space;
 

@@ -4,6 +4,7 @@
 #include "la/dvector.hpp"
 #include "mvp2.hpp"
 #include "pseudo_hamiltonian/grad_eta.hpp"
+#include "utils/profile.hpp"
 
 namespace nlcglib {
 /// Restart (preconditoned) CG
@@ -51,6 +52,7 @@ std::tuple<slope_t, to_layout_left_t<x_t>, to_layout_left_t<x_t>>
 descent_direction_restart<memspc_t, smearing_t>::exec_spc(
     x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op_t&& s, prec_t&& p, double wk)
 {
+  PROFILE("exec");
   auto sx = s(x);
   auto llm = local::lmult()(x, sx, hx, p);
   auto gx = local::gradx()(sx, hx, f, llm, wk);
@@ -75,6 +77,7 @@ auto
 descent_direction_restart<memspc_t, smearing_t>::operator()(
     x_t&& X_h, e_t&& en_h, f_t&& fn_h, hx_t&& hx_h, op_t&& S, prec_t&& P, double wk)
 {
+  PROFILE("nlcglib::cg::restart");
   // namespace of input an result
   using input_memspc = typename std::remove_reference_t<x_t>::storage_t::memory_space;
 
