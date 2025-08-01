@@ -4,7 +4,7 @@
 #include <string>
 
 #if defined(__NLCGLIB__CUDA)
-#include <nvtx3/nvtx3.hpp>
+#include <nvtx3/nvToolsExt.h>
 #endif
 
 #if defined(__NLCGLIB__ROCM)
@@ -29,13 +29,11 @@ class TimerVendor
 
 #if defined(__NLCGLIB__CUDA)
 template <>
-class TimerVendor<_vendor::cuda> : nvtx3::scoped_range
+class TimerVendor<_vendor::cuda>
 {
 public:
-  TimerVendor(const std::string& str)
-      : nvtx3::scoped_range(str)
-  {
-  }
+  TimerVendor(const std::string& str) { nvtxRangePush(str.c_str()); }
+  ~TimerVendor() { nvtxRangePop(); }
 };
 
 using Timer = TimerVendor<_vendor::cuda>;
@@ -47,7 +45,6 @@ class TimerVendor<_vendor::rocm>
 {
 public:
   TimerVendor(const std::string& str) { roctxRangePush(str.c_str()); }
-
   ~TimerVendor() { roctxRangePop(); }
 };
 using Timer = TimerVendor<_vendor::rocm>;
