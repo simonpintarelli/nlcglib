@@ -4,6 +4,7 @@
 #include "constants.hpp"
 #include "interface.hpp"
 #include "smearing.hpp"
+#include "utils/profile.hpp"
 
 namespace nlcglib {
 
@@ -62,6 +63,7 @@ template <class tF, class tX, class tE>
 void
 FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<tE>& en, double mu)
 {
+  PROFILE("nlcglib::FreeEnergy::compute");
   // convert fn to std::vector
   auto map_fn = tapply(
       [](auto fi) {
@@ -80,6 +82,7 @@ FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<t
   auto Xsirius = make_mmatrix<Kokkos::HostSpace>(this->energy.get_C(memory_type::host));
   execute(tapply(
       [](auto x_sirius, auto x) {
+        PROFILE("host unpinned -> pinned");
         auto xh = Kokkos::create_mirror(x.array());
         // copy to Kokkos owned host mirror,
         // since  Kokkos refuses to copy device, managed -> host, unmanaged

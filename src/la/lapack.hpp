@@ -18,6 +18,7 @@
 #include "mvector.hpp"
 #include "traits.hpp"
 #include "utils.hpp"
+#include "utils/profile.hpp"
 
 namespace nlcglib {
 
@@ -379,6 +380,7 @@ template <class T, class LAYOUT, class... KOKKOS>
 to_layout_left_t<KokkosDVector<T**, LAYOUT, KOKKOS...>>
 loewdin(const KokkosDVector<T**, LAYOUT, KOKKOS...>& X)
 {
+  PROFILE("loewdin");
   using matrix_t = KokkosDVector<T**, KOKKOS...>;
   using memspace = typename matrix_t::storage_t::memory_space;
 
