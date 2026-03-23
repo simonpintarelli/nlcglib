@@ -51,7 +51,7 @@ struct make_diag
   operator()(const Kokkos::View<T*, ARGS...>& x)
   {
     using vector_t = Kokkos::View<T*, ARGS...>;
-    static_assert(vector_t::dimension::rank == 1, "dimension mismatch");
+    static_assert(vector_t::rank() == 1, "dimension mismatch");
     using memspace = typename vector_t::memory_space;
     using matrix_t = KokkosDVector<T**, SlabLayoutV, Kokkos::LayoutLeft, memspace>;
 

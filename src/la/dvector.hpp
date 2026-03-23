@@ -140,7 +140,7 @@ public:
   using layout_t = LAYOUT;
   using storage_t = Kokkos::View<T, KOKKOS_ARGS...>;
   // figure out dimension of the underlying array
-  static const int dim = storage_t::dimension::rank;
+  static const int dim = storage_t::rank();
   using numeric_t = typename storage_t::value_type;
 
 public:
