@@ -13,8 +13,6 @@
 
 namespace nlcglib {
 
-#define SQRT2 1.4142135623730951454746218587388284504414
-#define SQRTPI 1.7724538509055158819194275565678253769875
 
 template <class Fun>
 double
@@ -166,7 +164,7 @@ struct gaussian_spline : summed<gaussian_spline>
   {
     if (x > 8) return mo;
     if (x < -8) return 0;
-    double sq2 = SQRT2;
+    double sq2 = std::sqrt(2.0);
     if (x <= 0) {
       return mo / 2 * std::exp(x * (sq2 - x));
     } else {
@@ -177,7 +175,7 @@ struct gaussian_spline : summed<gaussian_spline>
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
     if (std::abs(x) > 7) return 0;
-    double sqrt2 = SQRT2;
+    double sqrt2 = std::sqrt(2.0);
     if (x <= 0) {
       return mo * 0.5 * std::exp((sqrt2 - x) * x) * (sqrt2 - 2 * x);
     } else {
@@ -188,8 +186,8 @@ struct gaussian_spline : summed<gaussian_spline>
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
     if (std::abs(x) > 7) return 0;
-    double sqrtpi = SQRTPI;
-    double sqrt2 = SQRT2;
+    double sqrtpi = std::sqrt(constants::pi);
+    double sqrt2 = std::sqrt(2.0);
     double sqrte = std::exp(0.5);
 
     if (x > 0) {
@@ -203,7 +201,7 @@ struct gaussian_spline : summed<gaussian_spline>
 
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
   {
-    double sqrt2 = SQRT2;
+    double sqrt2 = std::sqrt(2);
 
     if (x > 8 || x < -8) return 0;
 
@@ -222,8 +220,8 @@ struct cold_smearing : summed<cold_smearing>, non_monotonous
   {
     if (x > 8) return mo;
     if (x < -8) return 0;
-    double sqrtpi = SQRTPI;
-    double sqrt2 = SQRT2;
+    double sqrtpi = std::sqrt(constants::pi);
+    double sqrt2 = std::sqrt(2.0);
     return mo *
            (std::exp(-0.5 + (sqrt2 - x) * x) / sqrt2 / sqrtpi + 0.5 * std::erfc(1 / sqrt2 - x));
   }
@@ -233,8 +231,8 @@ struct cold_smearing : summed<cold_smearing>, non_monotonous
     if (x < -8) return 0;
     if (x > 10) return 0;
 
-    double sqrtpi = SQRTPI;
-    double sqrt2 = SQRT2;
+    double sqrtpi = std::sqrt(constants::pi);
+    double sqrt2 = std::sqrt(2.0);
     double z = (x - 1 / sqrt2);
     return mo * std::exp(-z * z) * (2 - sqrt2 * x) / sqrtpi;
   }
@@ -245,15 +243,15 @@ struct cold_smearing : summed<cold_smearing>, non_monotonous
     if (x > 10) return 0;
     double sqrt2 = std::sqrt(2.0);
     double z = (x - 1 / sqrt2);
-    return mo * std::exp(-z * z) * (sqrt2 - 6 * x + 2 * sqrt2 * x * x) / SQRTPI;
+    return mo * std::exp(-z * z) * (sqrt2 - 6 * x + 2 * sqrt2 * x * x) / std::sqrt(constants::pi);
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
     if (x < -8) return 0;
     if (x > 10) return 0;
-    double sqrtpi = SQRTPI;
-    double sqrt2 = SQRT2;
+    double sqrtpi = std::sqrt(constants::pi);
+    double sqrt2 = std::sqrt(2.0);
     double z = (x - 1 / sqrt2);
     return mo * std::exp(-z * z) * (1 - sqrt2 * x) / 2 / sqrtpi;
   }
@@ -265,27 +263,27 @@ struct methfessel_paxton_smearing : summed<methfessel_paxton_smearing>, non_mono
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
   {
     double x2 = x * x;
-    double sqrtpi = SQRTPI;
+    double sqrtpi = std::sqrt(constants::pi);
     return mo / 2 * (1 + std::exp(-x2) * x / sqrtpi + std::erf(x));
   }
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
     double x2 = x * x;
-    double sqrtpi = SQRTPI;
+    double sqrtpi = std::sqrt(constants::pi);
     return mo * std::exp(-x2) * (1 + 0.25 * (2 - 4 * x2)) / sqrtpi;
   }
 
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
   {
-    double sqrtpi = SQRTPI;
+    double sqrtpi = std::sqrt(constants::pi);
     return mo * std::exp(-x * x) * (2 * x * x - 5) / sqrtpi;
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
     double x2 = x * x;
-    double sqrtpi = SQRTPI;
+    double sqrtpi = std::sqrt(constants::pi);
     return mo * std::exp(-x2) * (1 - 2 * x2) / 4 / sqrtpi;
   }
 };
@@ -299,17 +297,17 @@ struct gauss_smearing : summed<gauss_smearing>
 
   KOKKOS_INLINE_FUNCTION static double delta(double x, double mo)
   {
-    return mo * std::exp(-x * x) / SQRTPI;
+    return mo * std::exp(-x * x) / std::sqrt(constants::pi);
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)
   {
-    return mo / 2 * std::exp(-x * x) / SQRTPI;
+    return mo / 2 * std::exp(-x * x) / std::sqrt(constants::pi);
   }
 
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
   {
-    return -2 * mo * std::exp(-x * x) * x / SQRTPI;
+    return -2 * mo * std::exp(-x * x) * x / std::sqrt(constants::pi);
   }
 };
 
