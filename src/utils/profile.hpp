@@ -8,7 +8,7 @@
 #endif
 
 #if defined(__NLCGLIB__ROCM)
-#include <roctx.h>
+#include <roctracer/roctx.h>
 #endif
 
 #define PROFILER_CONCAT_IMPL(x, y) x##y
