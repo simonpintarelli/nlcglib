@@ -85,7 +85,7 @@ struct potrf<std::complex<double>> : lapack_base
 {
   inline int static call(CBLAS_ORDER order, char uplo, int n, std::complex<double> *a, int lda)
   {
-    return LAPACKE_zpotrf(LAPACK_COL_MAJOR, uplo, n, reinterpret_cast<CPX *>(a), lda);
+    return LAPACKE_zpotrf(order, uplo, n, reinterpret_cast<CPX *>(a), lda);
   }
 };
 
@@ -94,7 +94,7 @@ struct potrf<Kokkos::complex<double>> : lapack_base
 {
   inline int static call(CBLAS_ORDER order, char uplo, int n, Kokkos::complex<double> *a, int lda)
   {
-    return LAPACKE_zpotrf(LAPACK_COL_MAJOR, uplo, n, reinterpret_cast<CPX *>(a), lda);
+    return LAPACKE_zpotrf(order, uplo, n, reinterpret_cast<CPX *>(a), lda);
   }
 };
 
