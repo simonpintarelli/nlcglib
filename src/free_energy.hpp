@@ -100,7 +100,7 @@ FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<t
   energy.set_chemical_potential(mu);
 
   double etot = energy.get_total_energy();
-  double S = smearing.entropy(fn, en, mu);
+  double S = smearing.entropy(en, mu);
 
   entropy = physical_constants::kb * T * S;
   free_energy = etot + entropy;

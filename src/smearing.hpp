@@ -191,10 +191,10 @@ struct gaussian_spline : summed<gaussian_spline>
     double sqrte = std::exp(0.5);
 
     if (x > 0) {
-      return 0.25 *
+      return 0.25 * mo *
              (2 * std::exp(-x * (sqrt2 + x)) * x + sqrte * sqrtpi * std::erfc(1 / sqrt2 + x));
     } else {
-      return 0.25 *
+      return 0.25 * mo *
              (-2 * std::exp(x * (sqrt2 - x)) * x + sqrte * sqrtpi * std::erfc(1 / sqrt2 - x));
     }
   }
@@ -568,8 +568,8 @@ public:
   template <class X>
   auto ek(const mvector<X>& fn);
 
-  template <class X, class Y>
-  double entropy(const mvector<X>& fn, const mvector<Y>& en, double mu);
+  template <class X>
+  double entropy(const mvector<X>& en, double mu);
 
 
 protected:
@@ -668,12 +668,12 @@ Smearing::ek(const mvector<X>& fn)
 }
 
 
-template <class X, class Y>
+template <class X>
 double
-Smearing::entropy(const mvector<X>& fn, const mvector<Y>& en, double mu)
+Smearing::entropy(const mvector<X>& en, double mu)
 {
-  static_assert(is_on_host<X>::value, "fn must reside in host memory");
-  static_assert(is_on_host<Y>::value, "en must reside in host memory");
+  // static_assert(is_on_host<X>::value, "fn must reside in host memory");
+  static_assert(is_on_host<X>::value, "en must reside in host memory");
   // this sum goes over all k-points, since wk * tapply(..) will inherit wk's communicator
   switch (smearing_t) {
     case smearing_type::FERMI_DIRAC: {
