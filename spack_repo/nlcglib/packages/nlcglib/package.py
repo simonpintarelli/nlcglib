@@ -64,7 +64,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
 
     depends_on("googletest", type="build", when="+tests")
     depends_on("nlohmann-json")
-    depends_on("kokkos@4:", when="@1.1:")
+    depends_on("kokkos+serial@4:", when="@1.1:")
 
     # MKLConfig.cmake introduced in 2021.3
     conflicts("intel-oneapi-mkl@:2021.2", when="^intel-oneapi-mkl")
@@ -79,10 +79,10 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         depends_on("kokkos+rocm")
         depends_on("rocblas")
         depends_on("rocsolver")
-        depends_on("roctracer-dev")
+        depends_on("rocprofiler-sdk", when="@1.4:")
 
     with when("+cuda"):
-        depends_on("kokkos+cuda_lambda+wrapper", when="%gcc")
+        depends_on("kokkos+wrapper", when="%gcc")
         depends_on("kokkos+cuda")
         for arch in CudaPackage.cuda_arch_values:
             depends_on(f"kokkos cuda_arch={arch}", when=f"cuda_arch={arch}")
@@ -149,7 +149,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
                     self.define("CMAKE_CXX_COMPILER", self.spec["hip"].hipcc),
                     self.define("HIP_HCC_FLAGS", f"--amdgpu-target={archs}"),
                     self.define(
-                        "CMAKE_CXX_FLAGS", f"--amdgpu-target={archs} --offload-arch={archs}"
+                        "CMAKE_CXX_FLAGS", f"--offload-arch={archs}"
                     ),
                 ]
             )
