@@ -218,7 +218,7 @@ descent_direction<SMEARING_TYPE>::restarted_sd(const mem_t& memspc,
                                                double mu,
                                                op1_t&& S,
                                                op2_t&& Sinv,
-                                               prec_t&& P,
+                                               prec_t&& P [[maybe_unused]],
                                                F&& free_energy)
 {
   double mo = free_energy.occupancy();
@@ -230,7 +230,7 @@ descent_direction<SMEARING_TYPE>::restarted_sd(const mem_t& memspc,
   descent_direction_sd<mem_t, SMEARING_TYPE> functor(memspc, mu, dFdmu, sumfn, T, kappa, mo);
 
   auto [m_fr, z_x, z_eta] =
-      unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, S, Sinv, P, wk)));
+      unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, S, Sinv, wk)));
   slope_t fr = sum(m_fr, commk);
 
   return std::make_tuple(slope_t{.x = fr.x, .eta = fr.eta}, z_x, z_eta);
