@@ -77,7 +77,7 @@ struct is_on_device : std::integral_constant<bool, false>
 /// get memory_type enum of x
 template <typename X>
 memory_type
-get_mem_type(X&& x)
+get_mem_type([[maybe_unused]] X&& x)
 {
   memory_type mem_t{memory_type::none};
   constexpr bool is_host = is_on_host<X>::value;

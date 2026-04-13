@@ -280,7 +280,7 @@ struct make_mmatrix_return_type<mspc, xspc, std::enable_if_t<!std::is_same<mspc,
 template <class T, class X = T>
 mvector<typename make_mmatrix_return_type<T, X>::type>
 make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base,
-             std::enable_if_t<std::is_same<T, X>::value>* _ = nullptr)
+             [[maybe_unused]] std::enable_if_t<std::is_same<T, X>::value>* _ = nullptr)
 {
   static_assert(std::is_same<T, X>::value, "invalid template parameters");
   using memspace = T;
