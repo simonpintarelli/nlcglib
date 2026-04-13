@@ -31,23 +31,6 @@ struct advance_eta
   double t;
 };
 
-template <class exec_space>
-struct advance_x_eta
-{
-  // also needs overlap operator
-  advance_x_eta(double t)
-      : t(t)
-  {
-  }
-
-  template <class x_t, class eta_t, class g_X_t, class g_eta_t, class S_t>
-  void operator()(x_t&& X, eta_t&& eta, g_X_t&& g_X, g_eta_t&& g_eta, S_t&& S)
-  {
-    // Kokko
-  }
-
-  double t;
-};
 
 struct eigvals_and_vectors
 {
