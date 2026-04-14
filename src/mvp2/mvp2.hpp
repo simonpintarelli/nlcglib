@@ -153,7 +153,9 @@ public:
 
   /** Ultra-soft case, note that zxp is overwritten */
   template <class zxp_t, class x_t, class sx_t>
-  to_layout_left_t<std::remove_reference_t<zxp_t>> operator()(zxp_t&& zxp, x_t&& x [[maybe_unused]], sx_t&& sx)
+  to_layout_left_t<std::remove_reference_t<zxp_t>> operator()(zxp_t&& zxp,
+                                                              x_t&& x [[maybe_unused]],
+                                                              sx_t&& sx)
   {
     // TODO x is not used!
     // Zxp needs orthogonality updated
