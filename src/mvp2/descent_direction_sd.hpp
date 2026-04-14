@@ -26,8 +26,7 @@ public:
 
   /* interface routine, does memory transfers if needed, for CG restart (steepest descent) */
   template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t>
-  auto operator()(
-      x_t&& X, e_t&& en, f_t&& fn, hx_t&& hx, op1_t&& S, op2_t&& Sinv, double wk);
+  auto operator()(x_t&& X, e_t&& en, f_t&& fn, hx_t&& hx, op1_t&& S, op2_t&& Sinv, double wk);
 
 private:
   /* CG restart gradients */
