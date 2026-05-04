@@ -20,10 +20,6 @@ MACRO(NLCGLIB_SETUP_TARGET _target)
 
   target_link_libraries(${_target} PRIVATE fmt::fmt)
 
-  if(USE_ROCM)
-    target_compile_options(${_target} PUBLIC --offload-arch=gfx90a)
-  endif()
-
   target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_OPENMP}>:__USE_OPENMP>)
   target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_CUDA}>:__NLCGLIB__CUDA>)
   target_compile_definitions(${_target} PUBLIC $<$<BOOL:${USE_ROCM}>:__NLCGLIB__ROCM>)

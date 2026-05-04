@@ -3,6 +3,7 @@
 #include <Kokkos_Core.hpp>
 #include "la/lapack.hpp"
 #include "la/utils.hpp"
+#include "utils/profile.hpp"
 
 namespace nlcglib {
 
@@ -30,23 +31,6 @@ struct advance_eta
   double t;
 };
 
-template <class exec_space>
-struct advance_x_eta
-{
-  // also needs overlap operator
-  advance_x_eta(double t)
-      : t(t)
-  {
-  }
-
-  template <class x_t, class eta_t, class g_X_t, class g_eta_t, class S_t>
-  void operator()(x_t&& X, eta_t&& eta, g_X_t&& g_X, g_eta_t&& g_eta, S_t&& S)
-  {
-    // Kokko
-  }
-
-  double t;
-};
 
 struct eigvals_and_vectors
 {
@@ -154,6 +138,7 @@ auto
 geodesic_us(
     X_t& X, const eta_t& eta, const g_x_t& z_x, const g_eta_t& z_eta, const Op_t& S, double t)
 {
+  PROFILE("geodesic_us::exec");
   // compute eta_next <- eta + t* g_eta
   auto eta_next = local::advance_eta(t)(eta, z_eta);
   // get eigenvalues and eigenvectors of next eta
@@ -184,6 +169,7 @@ struct geodesic_us_functor
 
   {
     // todo
+    PROFILE("geodesic_us");
     auto X = create_mirror_view_and_copy(mem_space, X_h);
     auto eta = create_mirror_view_and_copy(mem_space, eta_h);
     auto z_x = create_mirror_view_and_copy(mem_space, z_x_h);
@@ -216,6 +202,7 @@ geodesic(const mem_space_t& mem_space,
          const Op_t& S,
          double t)
 {
+  PROFILE("geodesic");
   impl::geodesic_us_functor<mem_space_t> functor(mem_space, t);
 
   auto res = tapply_async(functor, X_h, eta_h, z_x_h, z_eta_h, S);

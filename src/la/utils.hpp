@@ -89,7 +89,7 @@ _zeros_like(const KokkosDVector<T**, LAYOUT, KOKKOS_ARGS...>& input)
 
 template <class T, class LAYOUT, class... KOKKOS_ARGS>
 auto
-_identity_like(const KokkosDVector<T**, LAYOUT, KOKKOS_ARGS...>& input)
+_identity_like(const KokkosDVector<T**, LAYOUT, KOKKOS_ARGS...>& input [[maybe_unused]])
 {
   throw std::runtime_error("not implemented");
 }

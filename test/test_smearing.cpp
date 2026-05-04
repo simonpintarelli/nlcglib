@@ -78,7 +78,7 @@ run(smearing_type smearing_t)
   }
 
   auto mu_fn = smearing.fn(ek);
-  double S = smearing.entropy(std::get<1>(mu_fn), ek, std::get<0>(mu_fn));
+  double S = smearing.entropy(ek, std::get<0>(mu_fn));
   double smax = comm.allreduce(S, mpi_op::max);
   if (S != smax) {
     throw std::runtime_error("entropy differs");

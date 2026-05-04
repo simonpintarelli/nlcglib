@@ -4,7 +4,7 @@
 #include "la/dvector.hpp"
 #include "mvp2/mvp2.hpp"
 #include "pseudo_hamiltonian/grad_eta.hpp"
-
+#include "utils/profile.hpp"
 
 namespace nlcglib {
 
@@ -120,6 +120,7 @@ descent_direction_conjugate<memspc_t, smearing_t>::exec_spc(x_t&& x,
                                                             ul_t&& ul,
                                                             double wk)
 {
+  PROFILE("nlcglib::cg_conjugate::exec");
   auto sx = s(x);
   auto llm = local::lmult()(x, sx, hx, p);
   auto gx = local::gradx()(sx, hx, f, llm, wk);
@@ -183,6 +184,7 @@ descent_direction_conjugate<memspc_t, smearing_t>::operator()(x_t&& X_h,
                                                               prec_t&& P,
                                                               double wk)
 {
+  PROFILE("nlcglib::cg_conjugate");
   // namespace of input an result
   using input_memspc = typename std::remove_reference_t<x_t>::storage_t::memory_space;
 

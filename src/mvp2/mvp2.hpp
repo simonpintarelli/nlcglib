@@ -13,7 +13,7 @@ namespace local {
 struct lmult
 {
   template <class x_t, class sx_t, class hx_t, class prec_t>
-  to_layout_left_t<std::remove_reference_t<x_t>> operator()(x_t&& x,
+  to_layout_left_t<std::remove_reference_t<x_t>> operator()(x_t&& x [[maybe_unused]],
                                                             sx_t&& sx,
                                                             hx_t&& hx,
                                                             prec_t&& prec)
@@ -153,7 +153,9 @@ public:
 
   /** Ultra-soft case, note that zxp is overwritten */
   template <class zxp_t, class x_t, class sx_t>
-  to_layout_left_t<std::remove_reference_t<zxp_t>> operator()(zxp_t&& zxp, x_t&& x, sx_t&& sx)
+  to_layout_left_t<std::remove_reference_t<zxp_t>> operator()(zxp_t&& zxp,
+                                                              x_t&& x [[maybe_unused]],
+                                                              sx_t&& sx)
   {
     // TODO x is not used!
     // Zxp needs orthogonality updated
@@ -281,7 +283,7 @@ slope_x(const gx_t& gx, zx_t& zx, const Communicator& commk)
 /// apply lagrange multipliers for Z^{(i-1)}
 template <class zxp_t, class x_t>
 auto
-conjugatex(zxp_t&& zxp, x_t&& x, double gamma)
+conjugatex(zxp_t&& zxp, x_t&& x)
 {
   return tapply_async(local::conjugatex(), zxp, x);
 }
@@ -289,7 +291,7 @@ conjugatex(zxp_t&& zxp, x_t&& x, double gamma)
 /// apply Lagrange multipliers for Z^{(i-1)}
 template <class zxp_t, class x_t, class sx_t>
 auto
-apply_lagrange_mult_us(zxp_t&& zxp, x_t&& x, sx_t&& sx, double gamma)
+apply_lagrange_mult_us(zxp_t&& zxp, x_t&& x, sx_t&& sx)
 {
   return tapply_async(local::conjugatex(), zxp, x, sx);
 }

@@ -1,9 +1,11 @@
 find_package(rocsolver REQUIRED)
 find_package(rocblas REQUIRED)
 find_package(hip REQUIRED)
+find_package(rocprofiler-sdk-roctx REQUIRED)
 
 if (NOT TARGET nlcglib::rocmlibs)
   add_library(nlcglib::rocmlibs INTERFACE IMPORTED)
   # target_link_libraries(nlcglib::rcomlibs INTERFACE roc::rocblas roc::rocsolver hip::device)
   target_link_libraries(nlcglib::rocmlibs INTERFACE roc::rocblas roc::rocsolver)
+  target_link_libraries(nlcglib::rocmlibs INTERFACE rocprofiler-sdk-roctx::rocprofiler-sdk-roctx)
 endif()

@@ -56,22 +56,6 @@ namespace rocm {
 
 template <class T>
 inline void
-potrf(rocblas_fill uplo, int n, T* A, int lda, int& Info)
-{
-  static_assert(std::is_same<T, std::complex<double>>::value ||
-                std::is_same<T, Kokkos::complex<double>>::value);
-  auto handle = rocblasHandle::get();
-
-  rocblas_double_complex* A_ptr = reinterpret_cast<rocblas_double_complex*>(A);
-
-  rocblas_int* dev_info{nullptr};
-  CALL_HIP(hipMalloc, (&dev_info, sizeof(rocblas_int)));
-  CALL_ROCBLAS(rocsolver_zpotrf, (handle, uplo, n, A_ptr, lda, dev_info));
-}
-
-
-template <class T>
-inline void
 potrs(rocblas_fill uplo, int n, int nrhs, T* A, int lda, T* B, int ldb)
 {
   static_assert(std::is_same<T, std::complex<double>>::value ||

@@ -77,7 +77,7 @@ struct is_on_device : std::integral_constant<bool, false>
 /// get memory_type enum of x
 template <typename X>
 memory_type
-get_mem_type(X&& x)
+get_mem_type([[maybe_unused]] X&& x)
 {
   memory_type mem_t{memory_type::none};
   constexpr bool is_host = is_on_host<X>::value;
@@ -140,7 +140,7 @@ public:
   using layout_t = LAYOUT;
   using storage_t = Kokkos::View<T, KOKKOS_ARGS...>;
   // figure out dimension of the underlying array
-  static const int dim = storage_t::dimension::rank;
+  static const int dim = storage_t::rank();
   using numeric_t = typename storage_t::value_type;
 
 public:

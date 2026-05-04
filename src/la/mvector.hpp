@@ -171,7 +171,7 @@ mvector<T>::allgather(Communicator comm) const
     throw std::runtime_error("mvector::allgather: most likely gave unintended communicator");
   }
 
-  static_assert(X::dimension::rank == 1, "implemented for 1D Views only.");
+  static_assert(X::rank() == 1, "implemented for 1D Views only.");
 
   using numeric_t = typename X::value_type;
 
@@ -280,7 +280,7 @@ struct make_mmatrix_return_type<mspc, xspc, std::enable_if_t<!std::is_same<mspc,
 template <class T, class X = T>
 mvector<typename make_mmatrix_return_type<T, X>::type>
 make_mmatrix(std::shared_ptr<MatrixBaseZ> matrix_base,
-             std::enable_if_t<std::is_same<T, X>::value>* _ = nullptr)
+             [[maybe_unused]] std::enable_if_t<std::is_same<T, X>::value>* _ = nullptr)
 {
   static_assert(std::is_same<T, X>::value, "invalid template parameters");
   using memspace = T;

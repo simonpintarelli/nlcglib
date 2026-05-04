@@ -4,6 +4,7 @@
 #include "la/dvector.hpp"
 #include "mvp2.hpp"
 #include "pseudo_hamiltonian/grad_eta.hpp"
+#include "utils/profile.hpp"
 
 // (unpreconditoned) steepest descent
 namespace nlcglib {
@@ -24,15 +25,14 @@ public:
   }
 
   /* interface routine, does memory transfers if needed, for CG restart (steepest descent) */
-  template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t, class prec_t>
-  auto operator()(
-      x_t&& X, e_t&& en, f_t&& fn, hx_t&& hx, op1_t&& S, op2_t&& Sinv, prec_t&& P, double wk);
+  template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t>
+  auto operator()(x_t&& X, e_t&& en, f_t&& fn, hx_t&& hx, op1_t&& S, op2_t&& Sinv, double wk);
 
 private:
   /* CG restart gradients */
-  template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t, class prec_t>
+  template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t>
   std::tuple<slope_t, to_layout_left_t<x_t>, to_layout_left_t<x_t>> exec_spc(
-      x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op1_t&& s, op2_t&& sinv, prec_t&& p, double wk);
+      x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op1_t&& s, op2_t&& sinv, double wk);
 
 private:
   using descent_direction_base<memspace_t, smearing_t>::memspc;
@@ -45,11 +45,12 @@ private:
 };
 
 template <class memspc_t, enum smearing_type smearing_t>
-template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t, class prec_t>
+template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t>
 std::tuple<slope_t, to_layout_left_t<x_t>, to_layout_left_t<x_t>>
 descent_direction_sd<memspc_t, smearing_t>::exec_spc(
-    x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op1_t&& s, op2_t&& sinv, prec_t&& p, double wk)
+    x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op1_t&& s, op2_t&& sinv, double wk)
 {
+  PROFILE("exec");
   auto hij = inner_()(x, hx, wk);
   auto cgx = sinv(hx);
   auto sx = s(x);
@@ -76,11 +77,12 @@ descent_direction_sd<memspc_t, smearing_t>::exec_spc(
 
 
 template <class memspc_t, enum smearing_type smearing_t>
-template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t, class prec_t>
+template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t>
 auto
 descent_direction_sd<memspc_t, smearing_t>::operator()(
-    x_t&& X_h, e_t&& en_h, f_t&& fn_h, hx_t&& hx_h, op1_t&& S, op2_t&& Sinv, prec_t&& P, double wk)
+    x_t&& X_h, e_t&& en_h, f_t&& fn_h, hx_t&& hx_h, op1_t&& S, op2_t&& Sinv, double wk)
 {
+  PROFILE("nlcglib::cg::steepest_descent");
   // namespace of input an result
   using input_memspc = typename std::remove_reference_t<x_t>::storage_t::memory_space;
 
@@ -89,7 +91,7 @@ descent_direction_sd<memspc_t, smearing_t>::operator()(
   auto fn = Kokkos::create_mirror_view_and_copy(memspc, fn_h);
   auto HX = create_mirror_view_and_copy(memspc, hx_h);
 
-  auto [fr, delta_x, delta_eta] = this->exec_spc(X, en, fn, HX, S, Sinv, P, wk);
+  auto [fr, delta_x, delta_eta] = this->exec_spc(X, en, fn, HX, S, Sinv, /* P, */ wk);
 
   // copy Δ to host
   auto delta_x_h = create_mirror_view_and_copy(input_memspc(), delta_x);
