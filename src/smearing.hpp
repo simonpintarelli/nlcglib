@@ -656,11 +656,9 @@ Smearing::ek(const mvector<X>& fn)
     }
     case smearing_type::METHFESSEL_PAXTON: {
       throw std::runtime_error("smearing_type::METHFESSEL_PAXTON not yet implemented");
-      break;
     }
     case smearing_type::COLD: {
       throw std::runtime_error("smearing_type::COLD not yet implemented");
-      break;
     }
     default:
       throw std::runtime_error("smearing::ek invalid smearing type given");
