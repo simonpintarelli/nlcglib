@@ -6,7 +6,6 @@
 #include <iostream>
 #include <list>
 #include <memory>
-#include <mutex>
 #include <string>
 
 #include "csingleton.hpp"
@@ -40,7 +39,6 @@ public:
   template <typename T>
   Logger& operator<<(const T& output)
   {
-    std::lock_guard<std::mutex> lock(std::mutex);
     sbuf_.str("");
 
     for (auto& v : prefixes_) {
@@ -68,27 +66,22 @@ public:
 
   void push_prefix(const std::string& tag)
   {
-    std::lock_guard<std::mutex> lock(std::mutex);
     prefixes_.push_back(tag);
   }
 
   void pop_prefix()
   {
-    std::lock_guard<std::mutex> lock(std::mutex);
     prefixes_.pop_back();
   }
 
   void clear_prefix()
   {
-    std::lock_guard<std::mutex> lock(std::mutex);
     prefixes_.clear();
   }
 
   void flush()
   {
     if (stream_ptr_) {
-      std::mutex mutex;
-      std::lock_guard<std::mutex> lock(mutex);
       auto& out = *(stream_ptr_.get());
       out.flush();
     }
