@@ -1,0 +1,20 @@
+sirius-env:
+  compiler: [gcc]
+  network:
+      mpi: cray-mpich@9.1.0+rocm
+      specs: [ 'libfabric@2.3 +rocm' ]
+  unify: true
+  specs:
+  - nlcglib+rocm
+  - kokkos@5+serial
+  - hip@7.1.0 ^mesa
+  variants:
+  - amdgpu_target=gfx942
+  - amdgpu_target_sram_ecc=gfx942
+  views:
+    sirius:
+      link: roots
+      uenv:
+        add_compilers: true
+        prefix_paths:
+          LD_LIBRARY_PATH: [lib, lib64]
