@@ -64,20 +64,11 @@ public:
     return log;
   }
 
-  void push_prefix(const std::string& tag)
-  {
-    prefixes_.push_back(tag);
-  }
+  void push_prefix(const std::string& tag) { prefixes_.push_back(tag); }
 
-  void pop_prefix()
-  {
-    prefixes_.pop_back();
-  }
+  void pop_prefix() { prefixes_.pop_back(); }
 
-  void clear_prefix()
-  {
-    prefixes_.clear();
-  }
+  void clear_prefix() { prefixes_.clear(); }
 
   void flush()
   {
