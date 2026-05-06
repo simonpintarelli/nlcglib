@@ -624,49 +624,6 @@ Smearing::fn(const mvector<X>& x)
   }
 }
 
-template <class X>
-auto
-Smearing::ek(const mvector<X>& fn)
-{
-  switch (smearing_t) {
-    case smearing_type::FERMI_DIRAC: {
-      auto ek = eval_threaded(tapply(
-          [occ = occ, kT = kT](auto fi) {
-            auto x = inverse_fermi_dirac(fi, occ);
-            using exec = typename decltype(fi)::execution_space;
-            Kokkos::parallel_for(Kokkos::RangePolicy<exec>(0, fi.size()),
-                                 [=](int i) { x(i) = x(i) * kT; });
-            return x;
-          },
-          fn));
-      /// copy only entries that are present in ek
-      return ek;
-    }
-    case smearing_type::GAUSSIAN_SPLINE: {
-      auto ek = tapply(
-          [occ = occ, kT = kT](auto fn) {
-            auto x = inverse_gaussian_spline(fn, occ);
-            using exec = typename decltype(fn)::execution_space;
-            Kokkos::parallel_for(Kokkos::RangePolicy<exec>(0, fn.size()),
-                                 [=](int i) { x(i) = x(i) * kT; });
-            return x;
-          },
-          fn);
-      return eval_threaded(ek);
-    }
-    case smearing_type::METHFESSEL_PAXTON: {
-      throw std::runtime_error("smearing_type::METHFESSEL_PAXTON not yet implemented");
-      break;
-    }
-    case smearing_type::COLD: {
-      throw std::runtime_error("smearing_type::COLD not yet implemented");
-      break;
-    }
-    default:
-      throw std::runtime_error("smearing::ek invalid smearing type given");
-  }
-}
-
 
 template <class X>
 double
