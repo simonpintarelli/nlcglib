@@ -2,12 +2,10 @@
 
 #include <mpi.h>
 #include <fstream>
-#include <iomanip>
 #include <iostream>
 #include <list>
 #include <memory>
 #include <string>
-
 #include "csingleton.hpp"
 
 namespace nlcglib {
