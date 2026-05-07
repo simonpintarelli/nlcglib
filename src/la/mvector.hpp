@@ -73,7 +73,11 @@ public:
 
   mvector empty_like();
 
-  mvector& operator=(std::map<key_t, T>&& data) { data_ = std::forward<std::map<key_t, T>>(data); }
+  mvector& operator=(std::map<key_t, T>&& data)
+  {
+    data_ = std::forward<std::map<key_t, T>>(data);
+    return *this;
+  }
 
   template <typename Z>
   mvector& operator=(mvector<Z>& other)
