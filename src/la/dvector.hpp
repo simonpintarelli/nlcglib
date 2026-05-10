@@ -144,7 +144,7 @@ public:
   using numeric_t = typename storage_t::value_type;
 
 public:
-  KokkosDVector(const Map<layout_t>& map, std::string label = std::string{})
+  KokkosDVector(const Map<layout_t>& map, const std::string& label = std::string{})
       : map_(map)
       , kokkos_(label, map.nrows(), map.ncols())
   {
