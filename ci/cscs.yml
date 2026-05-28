@@ -1,0 +1,41 @@
+include:
+  - remote: 'https://gitlab.com/cscs-ci/recipes/-/raw/master/templates/v2/.ci-ext.yml'
+
+stages:
+  - baseimage
+  - build
+  - test
+
+.f7t-secrets:
+  variables:
+    F7T_CLIENT_ID: $F7T_BEVERIN_CLIENT_ID
+    F7T_CLIENT_SECRET: $F7T_BEVERIN_CLIENT_SECRET
+
+build base uenv mi300:
+  extends: [.uenv-builder-beverin-mi300, .f7t-secrets]
+  stage: baseimage
+  timeout: 24h
+  variables:
+    UENV_NAME: nlcglib-mi300
+    UENV_RECIPE: ci/nlcglib-uenv-recipe-mi300/
+    UENV_VERSION: v1
+    SLURM_TIMELIMIT: 600
+
+build sirius mi300:
+  extends: [.uenv-runner-beverin-mi300, .f7t-secrets]
+  stage: build
+  needs: ["build base uenv mi300"]
+  image: sirius-mi300/v1:$CI_PIPELINE_ID
+  artifacts:
+    paths:
+      - builddir.tar
+  variables:
+    SPEC: nlcglib +rocm +tests build_type=RelWithDebInfo
+    ROCM_ARCH: gfx942
+  script:
+    - |
+      #
+      git clone --filter=tree:0 $(jq -r .spack.repo /user-environment/meta/configure.json) /dev/shm/spack-clone
+      git -C /dev/shm/spack-clone checkout $(jq -r .spack.commit /user-environment/meta/configure.json)
+      source /dev/shm/spack-clone/share/spack/setup-env.sh
+      bwrap --dev-bind / / --tmpfs ~ -- ./ci/build-rocm.sh
