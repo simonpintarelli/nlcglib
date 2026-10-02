@@ -5,7 +5,7 @@ on:
   pull_request: {}
 
 env:
-  KOKKOS_VERSION: 4.4.01
+  KOKKOS_VERSION: 5.2.1
 
 jobs:
   build:
