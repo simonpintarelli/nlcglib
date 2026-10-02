@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
-project(nlcglib LANGUAGES CXX VERSION 1.4.0)
+project(nlcglib LANGUAGES CXX VERSION 1.4.1)
 
 set(CMAKE_CXX_STANDARD 20)
 # user variables
