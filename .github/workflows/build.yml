@@ -1,0 +1,131 @@
+name: Build
+
+on:
+  push: {}
+  pull_request: {}
+
+env:
+  KOKKOS_VERSION: 4.4.01
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    container: ${{ matrix.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: gcc-cpu
+            cc: gcc
+            cxx: g++
+            use_cuda: "OFF"
+            use_openmp: "ON"
+            container: "ubuntu:24.04"
+          - name: gcc-cuda12
+            cc: gcc
+            cxx: g++
+            use_cuda: "ON"
+            use_openmp: "ON"
+            container: "nvidia/cuda:12.6.3-devel-ubuntu24.04"
+          - name: clang-cpu
+            cc: clang
+            cxx: clang++
+            use_cuda: "OFF"
+            # Ubuntu 24.04's default clang (18) can't compile a lambda that
+            # captures a structured binding when OpenMP is enabled -
+            # "capturing a structured binding is not yet supported in
+            # OpenMP" (fixed in later Clang; this repo isn't pinned to a
+            # specific Clang version, so avoid OpenMP for this leg instead
+            # of touching the structured bindings in src/nlcglib.cpp).
+            use_openmp: "OFF"
+            container: "ubuntu:24.04"
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            cmake build-essential clang git ninja-build \
+            libopenmpi-dev openmpi-bin \
+            libopenblas-dev liblapacke-dev nlohmann-json3-dev libfmt-dev libgtest-dev ca-certificates
+
+      - name: Clone Kokkos
+        run: git clone --depth 1 --branch ${KOKKOS_VERSION} https://github.com/kokkos/kokkos.git ~/kokkos-src
+
+      - name: Determine Kokkos compiler
+        id: kokkos-compiler
+        run: |
+          if [ "${{ matrix.use_cuda }}" = "ON" ] && [ "${{ matrix.cc }}" = "gcc" ]; then
+            echo "cxx=${HOME}/kokkos-src/bin/nvcc_wrapper" >> "$GITHUB_OUTPUT"
+          else
+            echo "cxx=${{ matrix.cxx }}" >> "$GITHUB_OUTPUT"
+          fi
+          # Clang auto-detects the GCC install dir by picking the highest
+          # version number under /usr/lib/gcc/<triple>/, which can be an
+          # incomplete preview package (no libstdc++) rather than the
+          # actual default g++. Pin it explicitly to the real default.
+          if [ "${{ matrix.cc }}" = "clang" ]; then
+            gcc_install_dir="/usr/lib/gcc/$(g++ -dumpmachine)/$(g++ -dumpversion | cut -d. -f1)"
+            echo "extra_cxx_flags=--gcc-install-dir=${gcc_install_dir}" >> "$GITHUB_OUTPUT"
+          else
+            echo "extra_cxx_flags=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cache Kokkos install
+        id: cache-kokkos
+        uses: actions/cache@v4
+        with:
+          path: ~/kokkos-install
+          key: ${{ matrix.name }}-kokkos-${{ env.KOKKOS_VERSION }}-${{ hashFiles('.github/workflows/build.yml') }}
+
+      - name: Build and install Kokkos
+        if: steps.cache-kokkos.outputs.cache-hit != 'true'
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cmake -S ~/kokkos-src -B ~/kokkos-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DCMAKE_INSTALL_PREFIX=${HOME}/kokkos-install \
+            -DCMAKE_CXX_COMPILER="${{ steps.kokkos-compiler.outputs.cxx }}" \
+            -DCMAKE_CXX_FLAGS="${{ steps.kokkos-compiler.outputs.extra_cxx_flags }}" \
+            -DKokkos_ENABLE_SERIAL=ON \
+            -DKokkos_ENABLE_OPENMP=${{ matrix.use_openmp }} \
+            $([ "${{ matrix.use_cuda }}" = "ON" ] && echo "-DKokkos_ENABLE_CUDA=ON -DKokkos_ARCH_AMPERE80=ON")
+          cmake --build ~/kokkos-build -j"$(nproc)"
+          cmake --install ~/kokkos-build
+
+      - name: Configure nlcglib
+        env:
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_CXX_COMPILER="${{ steps.kokkos-compiler.outputs.cxx }}" \
+            -DCMAKE_CXX_FLAGS="${{ steps.kokkos-compiler.outputs.extra_cxx_flags }}" \
+            -DCMAKE_PREFIX_PATH=${HOME}/kokkos-install \
+            -DUSE_CUDA=${{ matrix.use_cuda }} \
+            -DUSE_OPENMP=${{ matrix.use_openmp }} \
+            -DLAPACK_VENDOR=OpenBLAS \
+            -DBUILD_TESTS=ON
+
+      - name: Build nlcglib
+        run: cmake --build build -j"$(nproc)"
+
+      - name: Run tests (CPU only)
+        if: matrix.use_cuda == 'OFF'
+        # unit_tests/gtest is the project's only test binary wired up as an
+        # actual automated test suite. The ad-hoc executables under test/
+        # (no ctest, no enable_testing(), and some don't even call
+        # Kokkos::initialize()) are developer scratch programs, not meant
+        # to be run unattended, so they're built (to catch compile
+        # regressions) but not executed here.
+        run: ./build/unit_tests/gtest
+
+      - name: CUDA build complete (compile-only, no GPU on runner)
+        if: matrix.use_cuda == 'ON'
+        run: echo "CUDA build succeeded; skipping execution (no GPU available on this runner)."
