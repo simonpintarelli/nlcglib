@@ -1,9 +1,6 @@
 add_executable(test test.cpp)
 target_link_libraries(test PRIVATE nlcglib_core)
 
-add_executable(test3 test3.cpp)
-target_link_libraries(test3 PRIVATE nlcglib_core)
-
 add_executable(test_traits test_traits.cpp)
 target_link_libraries(test_traits PRIVATE nlcglib_core)
 

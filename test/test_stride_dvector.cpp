@@ -77,7 +77,7 @@ unmanaged_strided()
 
 
 int
-main(int argc, char* argv[])
+main(int, char*[])
 {
   Kokkos::initialize();
   auto x = unmanaged();

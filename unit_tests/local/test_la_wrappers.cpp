@@ -216,6 +216,23 @@ TEST_F(GPUKokkosVectors, TransformGPU)
 }
 
 
+namespace {
+// nvcc forbids defining an extended __host__ __device__ lambda inside a
+// function with private/protected access, which is what GTEST_TEST generates
+// for TestBody(); keep the kernel in a free function instead.
+template <typename ArrayT>
+void
+init_poisson_matrix(ArrayT A_array, int n)
+{
+  typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> mdrange_policy;
+  Kokkos::parallel_for(
+      "init", mdrange_policy({0, 0}, {n, n}), KOKKOS_LAMBDA(int i, int j) {
+        A_array(i, i) = 1;
+        if (std::abs(i - j) == 1) A_array(i, j) = -2;
+      });
+}
+}  // namespace
+
 TEST(EigenValues, EigHermitian)
 {
   // Poisson matrix: n =5, ones on diagonal, -2 on first off-diagonals
@@ -238,13 +255,8 @@ TEST(EigenValues, EigHermitian)
   Kokkos::deep_copy(Vref.array(), Vref_host);
 
   vector_t A(Map<>(Communicator(), SlabLayoutV({{0, 0, n, n}})));
-  typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> mdrange_policy;
   auto A_array = A.array();
-  Kokkos::parallel_for(
-      "init", mdrange_policy({0, 0}, {5, 5}), KOKKOS_LAMBDA(int i, int j) {
-        A_array(i, i) = 1;
-        if (std::abs(i - j) == 1) A_array(i, j) = -2;
-      });
+  init_poisson_matrix(A_array, n);
 
   //
   auto A_host = Kokkos::create_mirror(A_array);
@@ -266,7 +278,7 @@ TEST(EigenValues, EigHermitian)
 
   std::cout << "eigenvalues"
             << "\n";
-  for (int i = 0; i < wh.extent(0); ++i) {
+  for (size_t i = 0; i < wh.extent(0); ++i) {
     // double err = eigs[i] - wh(i);
     EXPECT_NEAR(wh(i), eigs[i], 1e-8);
   }

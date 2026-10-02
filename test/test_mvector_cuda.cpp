@@ -1,15 +1,12 @@
 #include <stdlib.h>
 #include <Kokkos_Core.hpp>
-#include <iostream>
-#include "la/mvector.hpp"
-#include "smearing.hpp"
 
 #ifdef __NLCGLIB__CUDA
 void
 run()
 {
   int n = 10;
-  using vector_t = Kokkos::View<double *, Kokkos::CudaSpace>;
+  using vector_t = Kokkos::View<double*, Kokkos::CudaSpace>;
   vector_t a_view("test", n);
 
 
@@ -33,7 +30,7 @@ run()
 
 
 int
-main(int argc, char *argv[])
+main(int, char*[])
 {
   Kokkos::initialize();
 

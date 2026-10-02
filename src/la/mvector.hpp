@@ -430,7 +430,7 @@ auto
 sum(const Kokkos::View<numeric_t*, ARGS...>& x)
 {
   using view_type = Kokkos::View<numeric_t*, ARGS...>;
-  static_assert(view_type::dimension::rank == 1, "KokkosView");
+  static_assert(view_type::rank() == 1, "KokkosView");
 
   auto host_mirror = Kokkos::create_mirror_view(x);
   Kokkos::deep_copy(host_mirror, x);
@@ -468,7 +468,7 @@ operator*(const mvector<T1>& a, const mvector<T2>& b)
 
 
 template <class numeric_t, class... ARGS>
-std::enable_if_t<Kokkos::View<numeric_t*, ARGS...>::dimension::rank == 1>
+std::enable_if_t<Kokkos::View<numeric_t*, ARGS...>::rank() == 1>
 print(const mvector<Kokkos::View<numeric_t*, ARGS...>>& vec)
 {
   for (auto& elem : vec) {

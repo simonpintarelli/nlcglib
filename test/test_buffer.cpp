@@ -1,23 +1,14 @@
 #include "la/dvector.hpp"
-#include "la/lapack.hpp"
 #include "la/mvector.hpp"
-#include "overlap.hpp"
-#include "ultrasoft_precond.hpp"
+
 
 using namespace nlcglib;
-
 typedef std::complex<double> complex_double;
 
 using typeX = KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace>;
 
-// template <typename mT>
-// const Matrix make_const(const mT &m)
-// {
-//   return make_const(m);
-// }
-
 int
-main(int argc, char *argv[])
+main(int, char *[])
 {
   KokkosDVector<complex_double **, SlabLayoutV, Kokkos::LayoutLeft, Kokkos::HostSpace> X(
       Map<>(Communicator(), SlabLayoutV({{0, 0, 200, 20}})));

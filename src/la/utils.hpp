@@ -183,7 +183,7 @@ void
 print(const Kokkos::View<T*, ARGS...>& x)
 {
   using vector_t = Kokkos::View<T*, ARGS...>;
-  static_assert(vector_t::dimension::rank == 1, "1d array expected");
+  static_assert(vector_t::rank() == 1, "1d array expected");
   auto xh = Kokkos::create_mirror_view(x);
   Kokkos::deep_copy(xh, x);
   for (int i = 0; i < xh.extent(0); ++i) {

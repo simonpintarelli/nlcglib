@@ -329,7 +329,7 @@ create_mirror_view_and_copy(const KokkosDVector<T*, LAYOUT, KOKKOS_ARGS...>& oth
 
 
 template <class T, class... ARGS, class O>
-std::enable_if_t<KokkosDVector<T**>::storage_t::dimension::rank == 2>
+std::enable_if_t<KokkosDVector<T**>::storage_t::rank() == 2>
 print(const KokkosDVector<T**, ARGS...>& mat, O&& out, int precision = 4)
 {
   double tol = 1e-18;
