@@ -45,11 +45,16 @@ find_package(MPI REQUIRED)
 if(LAPACK_VENDOR MATCHES OpenBLAS)
   message("find package openblas")
   find_package(OpenBLAS REQUIRED)
+  # On some distributions (e.g. Debian/Ubuntu) LAPACKE is split out of
+  # libopenblas into its own liblapacke; opportunistically pick it up when
+  # present. On distributions that already bundle it into libopenblas
+  # (e.g. via spack), this simply finds nothing and is a no-op.
+  find_library(LAPACKE_LIBRARY lapacke)
   if(NOT TARGET nlcg::cpu_lapack)
     add_library(nlcg::cpu_lapack INTERFACE IMPORTED)
     set_target_properties(nlcg::cpu_lapack PROPERTIES
       INTERFACE_INCLUDE_DIRECTORIES "${OpenBLAS_INCLUDE_DIRS}"
-      INTERFACE_LINK_LIBRARIES "${OpenBLAS_LIBRARIES}")
+      INTERFACE_LINK_LIBRARIES "${LAPACKE_LIBRARY};${OpenBLAS_LIBRARIES}")
   endif()
 elseif(LAPACK_VENDOR STREQUAL MKLONEAPI)
   message("LAPACK VENDOR MKL")

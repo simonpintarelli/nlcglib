@@ -121,7 +121,7 @@ void
 Communicator::allgather(T* buffer, const std::vector<int>& recvcounts) const
 {
   int nranks = this->size();
-  assert(recvcounts.size() == nranks);
+  assert(recvcounts.size() == static_cast<std::size_t>(nranks));
   std::vector<int> displs(nranks, 0);
   std::partial_sum(recvcounts.begin(), recvcounts.end() - 1, displs.begin() + 1);
 

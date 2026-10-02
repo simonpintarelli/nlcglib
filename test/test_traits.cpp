@@ -23,6 +23,6 @@ public:
 int
 main(int, char*[])
 {
-  auto x = eval(Foo());
+  eval(Foo());
   return 0;
 }

@@ -45,7 +45,7 @@ run()
 void
 run_2d()
 {
-  int n = 3;
+  constexpr int n = 3;
   double arr[n * n];
 
   Kokkos::View<double **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryUnmanaged> c(

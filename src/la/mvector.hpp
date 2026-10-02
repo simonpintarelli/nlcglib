@@ -216,7 +216,7 @@ mvector<T>::allgather(Communicator comm) const
       auto arr = elem.second;
       auto host_view = Kokkos::create_mirror_view(arr);
       Kokkos::deep_copy(host_view, arr);
-      assert(offsets[rank][i] < send_recv_buffer.size());
+      assert(static_cast<std::size_t>(offsets[rank][i]) < send_recv_buffer.size());
       std::copy(host_view.data(),
                 host_view.data() + host_view.size(),
                 send_recv_buffer.data() + offsets[rank][i]);
