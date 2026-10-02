@@ -21,7 +21,7 @@ public:
 
 
 int
-main(int argc, char* argv[])
+main(int, char*[])
 {
   auto x = eval(Foo());
   return 0;

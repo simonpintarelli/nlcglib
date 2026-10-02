@@ -19,7 +19,7 @@ test_unzip()
 
 
 int
-main(int argc, char *argv[])
+main(int, char*[])
 {
   test_unzip();
   return 0;

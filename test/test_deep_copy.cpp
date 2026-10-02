@@ -48,7 +48,8 @@ run_2d()
   int n = 3;
   double arr[n * n];
 
-  Kokkos::View<double **, Kokkos::LayoutLeft, Kokkos::MemoryUnmanaged> c(arr, n, n);
+  Kokkos::View<double **, Kokkos::LayoutLeft, Kokkos::HostSpace, Kokkos::MemoryUnmanaged> c(
+      arr, Kokkos::LayoutLeft(n, n));
   Kokkos::View<double **, Kokkos::HostSpace> a("A", n, n);
   Kokkos::View<double **, Kokkos::CudaSpace> a_device("A", n, n);
   Kokkos::View<double **, Kokkos::HostSpace> b("b", n, n);
@@ -89,7 +90,7 @@ run_2d()
 #endif
 
 int
-main(int argc, char *argv[])
+main(int, char*[])
 {
   Kokkos::initialize();
 #ifdef __NLCGLIB__CUDA

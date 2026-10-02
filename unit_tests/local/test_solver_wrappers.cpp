@@ -43,7 +43,7 @@ TestSymSolve<T>::SetUp()
 
   auto arr = X.array();
   auto host_view = Kokkos::create_mirror(arr);
-  for (int i = 0; i < host_view.size(); ++i) {
+  for (size_t i = 0; i < host_view.size(); ++i) {
     *(host_view.data() + i) = unif01(gen);
   }
   Kokkos::deep_copy(arr, host_view);
