@@ -90,7 +90,7 @@ run_2d()
 #endif
 
 int
-main(int, char*[])
+main(int, char *[])
 {
   Kokkos::initialize();
 #ifdef __NLCGLIB__CUDA
