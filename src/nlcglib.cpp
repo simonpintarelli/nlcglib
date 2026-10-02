@@ -630,36 +630,7 @@ nlcg_us_device([[maybe_unused]] EnergyBase& energy_base,
 #elif defined __NLCGLIB__ROCM
   switch (smearing) {
     case smearing_type::FERMI_DIRAC: {
-      auto info =
-          nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::FERMI_DIRAC>(energy_base,
-                                                                              us_precond_base,
-                                                                              overlap_base,
-                                                                              inverse_overlap_base,
-                                                                              temp,
-                                                                              maxiter,
-                                                                              tol,
-                                                                              kappa,
-                                                                              tau,
-                                                                              restart);
-      return info;
-    }
-    case smearing_type::GAUSSIAN_SPLINE: {
-      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::GAUSSIAN_SPLINE>(
-          energy_base,
-          us_precond_base,
-          overlap_base,
-          inverse_overlap_base,
-          temp,
-          maxiter,
-          tol,
-          kappa,
-          tau,
-          restart);
-      return info;
-    }
-    case smearing_type::GAUSS: {
-      auto info =
-          nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::GAUSS>(energy_base,
+      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::FERMI_DIRAC>(energy_base,
                                                                         us_precond_base,
                                                                         overlap_base,
                                                                         inverse_overlap_base,
@@ -671,31 +642,56 @@ nlcg_us_device([[maybe_unused]] EnergyBase& energy_base,
                                                                         restart);
       return info;
     }
+    case smearing_type::GAUSSIAN_SPLINE: {
+      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::GAUSSIAN_SPLINE>(energy_base,
+                                                                            us_precond_base,
+                                                                            overlap_base,
+                                                                            inverse_overlap_base,
+                                                                            temp,
+                                                                            maxiter,
+                                                                            tol,
+                                                                            kappa,
+                                                                            tau,
+                                                                            restart);
+      return info;
+    }
+    case smearing_type::GAUSS: {
+      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::GAUSS>(energy_base,
+                                                                  us_precond_base,
+                                                                  overlap_base,
+                                                                  inverse_overlap_base,
+                                                                  temp,
+                                                                  maxiter,
+                                                                  tol,
+                                                                  kappa,
+                                                                  tau,
+                                                                  restart);
+      return info;
+    }
     case smearing_type::METHFESSEL_PAXTON: {
-      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::METHFESSEL_PAXTON>(
-          energy_base,
-          us_precond_base,
-          overlap_base,
-          inverse_overlap_base,
-          temp,
-          maxiter,
-          tol,
-          kappa,
-          tau,
-          restart);
+      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::METHFESSEL_PAXTON>(energy_base,
+                                                                              us_precond_base,
+                                                                              overlap_base,
+                                                                              inverse_overlap_base,
+                                                                              temp,
+                                                                              maxiter,
+                                                                              tol,
+                                                                              kappa,
+                                                                              tau,
+                                                                              restart);
       return info;
     }
     case smearing_type::COLD: {
-      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::COLD>(energy_base,
-                                                                               us_precond_base,
-                                                                               overlap_base,
-                                                                               inverse_overlap_base,
-                                                                               temp,
-                                                                               maxiter,
-                                                                               tol,
-                                                                               kappa,
-                                                                               tau,
-                                                                               restart);
+      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::COLD>(energy_base,
+                                                                 us_precond_base,
+                                                                 overlap_base,
+                                                                 inverse_overlap_base,
+                                                                 temp,
+                                                                 maxiter,
+                                                                 tol,
+                                                                 kappa,
+                                                                 tau,
+                                                                 restart);
       return info;
     }
 
