@@ -544,17 +544,17 @@ nlcg_us_cpu(EnergyBase& energy_base,
 }
 
 nlcg_info
-nlcg_us_device(EnergyBase& energy_base,
-               UltrasoftPrecondBase& us_precond_base,
-               OverlapBase& overlap_base,
-               InverseOverlapBase& inverse_overlap_base,
-               smearing_type smearing,
-               double temp,
-               double tol,
-               double kappa,
-               double tau,
-               int maxiter,
-               int restart)
+nlcg_us_device([[maybe_unused]] EnergyBase& energy_base,
+               [[maybe_unused]] UltrasoftPrecondBase& us_precond_base,
+               [[maybe_unused]] OverlapBase& overlap_base,
+               [[maybe_unused]] InverseOverlapBase& inverse_overlap_base,
+               [[maybe_unused]] smearing_type smearing,
+               [[maybe_unused]] double temp,
+               [[maybe_unused]] double tol,
+               [[maybe_unused]] double kappa,
+               [[maybe_unused]] double tau,
+               [[maybe_unused]] int maxiter,
+               [[maybe_unused]] int restart)
 {
 #ifdef __NLCGLIB__CUDA
   switch (smearing) {

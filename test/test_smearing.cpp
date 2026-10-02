@@ -9,15 +9,9 @@ using namespace nlcglib;
 void
 run(smearing_type smearing_t)
 {
-  using cont = typename mvector<double>::container_t;
-
   int nk = 2;
-  // int num_electrons = 100;
-  // int num_bands = 200;
-
   int num_electrons = 30;
   int num_bands = 1500;
-
 
   Communicator comm(MPI_COMM_WORLD);
 
@@ -29,7 +23,6 @@ run(smearing_type smearing_t)
   if (pid == nranks - 1) {
     nk_loc = nk - (nranks - 1) * nk_loc;
   }
-
 
   mvector<double> wk(comm);
   {
@@ -91,7 +84,6 @@ main(int argc, char *argv[])
 {
   MPI_Init(&argc, &argv);
   Kokkos::initialize();
-  // run(smearing_type::GAUSSIAN_SPLINE);
   run(smearing_type::GAUSSIAN_SPLINE);
   Kokkos::finalize();
   MPI_Finalize();
