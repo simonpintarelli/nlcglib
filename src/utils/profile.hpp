@@ -1,8 +1,5 @@
 #pragma once
 
-
-#include <string>
-
 #if defined(__NLCGLIB__CUDA) && defined(__NLCGLIB__TX)
 #include <nvtx3/nvToolsExt.h>
 #endif
