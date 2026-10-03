@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
-#include "hip/hip_space.hpp"
 
 namespace nlcglib {
 

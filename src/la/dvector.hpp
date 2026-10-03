@@ -6,7 +6,6 @@
 #include <string>
 #include <type_traits>
 #include <utility>
-#include "hip/hip_space.hpp"
 #include "interface.hpp"
 #include "map.hpp"
 

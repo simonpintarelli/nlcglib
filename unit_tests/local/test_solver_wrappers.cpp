@@ -3,7 +3,7 @@
 #include <iostream>
 #include <random>
 #include "gtest/gtest.h"
-#include "hip/hip_space.hpp"
+#include <Kokkos_Core.hpp>
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
 

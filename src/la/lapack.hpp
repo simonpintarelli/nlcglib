@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Kokkos_Core.hpp>
 #include <mpi.h>
 #include <functional>
 #include <utility>
-#include "hip/hip_space.hpp"
 #include "la/map.hpp"
 #include "lapack_cpu.hpp"
 #include "mpi/communicator.hpp"

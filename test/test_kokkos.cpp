@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <Kokkos_Core.hpp>
 #include <iostream>
-#include "hip/hip_space.hpp"
 /// to have exp available on device
 #include <math.h>
 
