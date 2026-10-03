@@ -29,7 +29,7 @@ build nlcglib mi300:
     paths:
       - builddir.tar
   variables:
-    SPEC: nlcglib +rocm +tests build_type=RelWithDebInfo
+    SPEC: nlcglib +rocm +tx +tests build_type=RelWithDebInfo
     ROCM_ARCH: gfx942
   script:
     - |
