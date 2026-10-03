@@ -20,9 +20,9 @@ struct exec<Kokkos::CudaSpace>
 
 #ifdef __NLCGLIB__ROCM
 template <>
-struct exec<Kokkos::Experimental::HIPSpace>
+struct exec<Kokkos::HIPSpace>
 {
-  using type = Kokkos::Experimental::HIP;
+  using type = Kokkos::HIP;
 };
 #endif
 
