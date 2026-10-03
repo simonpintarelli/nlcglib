@@ -2,11 +2,11 @@
 
 check_diff() {
     local status=0
-	  for file in "$@"; do
-		    if ! diff -q "$file" <(clang-format "$file"); then
+    for file in "$@"; do
+        if ! diff -u "$file" <(clang-format "$file") --label "$file" --label "$file (clang-format)"; then
             status=1
         fi
-	  done
+    done
     return $status
 }
 
