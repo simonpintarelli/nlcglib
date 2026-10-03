@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
+#include <Kokkos_Core.hpp>
 #include <iomanip>
 #include <iostream>
-#include <Kokkos_Core.hpp>
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
 #include "la/magma.hpp"
