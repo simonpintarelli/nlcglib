@@ -61,9 +61,8 @@ struct is_on_device
 #elif defined __NLCGLIB__ROCM
 template <class T>
 struct is_on_device
-    : std::integral_constant<
-          bool,
-          Kokkos::SpaceAccessibility<Kokkos::Experimental::HIPSpace, memory_t<T>>::accessible>
+    : std::integral_constant<bool,
+                             Kokkos::SpaceAccessibility<Kokkos::HIPSpace, memory_t<T>>::accessible>
 {
 };
 #else

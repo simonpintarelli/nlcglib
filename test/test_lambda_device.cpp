@@ -9,7 +9,7 @@
 
 
 #ifdef __NLCGLIB__ROCM
-using device_space_t = Kokkos::Experimental::HIPSpace;
+using device_space_t = Kokkos::HIPSpace;
 #elif defined __NLCGLIB__CUDA
 using device_space_t = Kokkos::CudaSpace;
 #endif
