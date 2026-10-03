@@ -6,6 +6,7 @@ on:
 
 env:
   KOKKOS_VERSION: 5.2.1
+  OPENBLAS_VERSION: 0.3.34
 
 jobs:
   build:
@@ -48,9 +49,9 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            cmake build-essential clang git ninja-build \
+            cmake build-essential gfortran clang git ninja-build curl \
             libopenmpi-dev openmpi-bin \
-            libopenblas-dev liblapacke-dev nlohmann-json3-dev libfmt-dev libgtest-dev ca-certificates
+            nlohmann-json3-dev libfmt-dev libgtest-dev ca-certificates
 
       - name: Clone Kokkos
         run: git clone --depth 1 --branch ${KOKKOS_VERSION} https://github.com/kokkos/kokkos.git ~/kokkos-src
@@ -99,6 +100,28 @@ jobs:
           cmake --build ~/kokkos-build -j"$(nproc)"
           cmake --install ~/kokkos-build
 
+      - name: Cache OpenBLAS install
+        id: cache-openblas
+        uses: actions/cache@v4
+        with:
+          path: ~/openblas-install
+          key: ${{ matrix.name }}-openblas-${{ env.OPENBLAS_VERSION }}
+
+      - name: Build and install OpenBLAS
+        # Debian/Ubuntu's libopenblas-dev/liblapacke-dev split LAPACKE out
+        # into its own package, which OpenBLASConfig.cmake doesn't account
+        # for. Building upstream OpenBLAS ourselves bundles LAPACKE into
+        # libopenblas directly (its default behavior, same as the spack
+        # build this project also targets), so plain find_package(OpenBLAS)
+        # works with no extra find_library() needed in CMakeLists.txt.
+        if: steps.cache-openblas.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL -o /tmp/openblas.tar.gz \
+            https://github.com/OpenMathLib/OpenBLAS/releases/download/v${OPENBLAS_VERSION}/OpenBLAS-${OPENBLAS_VERSION}.tar.gz
+          tar xzf /tmp/openblas.tar.gz -C /tmp
+          make -C /tmp/OpenBLAS-${OPENBLAS_VERSION} -j"$(nproc)"
+          make -C /tmp/OpenBLAS-${OPENBLAS_VERSION} install PREFIX="${HOME}/openblas-install"
+
       - name: Configure nlcglib
         env:
           CC: ${{ matrix.cc }}
@@ -107,7 +130,7 @@ jobs:
           cmake -S . -B build -G Ninja \
             -DCMAKE_CXX_COMPILER="${{ steps.kokkos-compiler.outputs.cxx }}" \
             -DCMAKE_CXX_FLAGS="${{ steps.kokkos-compiler.outputs.extra_cxx_flags }}" \
-            -DCMAKE_PREFIX_PATH=${HOME}/kokkos-install \
+            -DCMAKE_PREFIX_PATH="${HOME}/kokkos-install;${HOME}/openblas-install" \
             -DUSE_CUDA=${{ matrix.use_cuda }} \
             -DUSE_OPENMP=${{ matrix.use_openmp }} \
             -DLAPACK_VENDOR=OpenBLAS \
