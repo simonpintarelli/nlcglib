@@ -22,10 +22,10 @@ namespace nlcglib {
 /// Hermitian eigenvalue problem CUDA
 template <class T, class LAYOUT, class... KOKKOS>
 std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space,
-                              Kokkos::Experimental::HIPSpace>::value,
+                              Kokkos::HIPSpace>::value,
                  void>
 eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
-     Kokkos::View<double*, Kokkos::Experimental::HIPSpace>& w,
+     Kokkos::View<double*, Kokkos::HIPSpace>& w,
      const KokkosDVector<T, LAYOUT, KOKKOS...>& S)
 {
   if (U.map().is_local() && S.map().is_local()) {
@@ -70,7 +70,7 @@ eigh(KokkosDVector<T, LAYOUT, KOKKOS...>& U,
 /// stores result in RHS, after the call A will contain the cholesky factorization of a
 template <class T, class LAYOUT, class... KOKKOS>
 std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space,
-                              Kokkos::Experimental::HIPSpace>::value>
+                              Kokkos::HIPSpace>::value>
 cholesky(KokkosDVector<T, LAYOUT, KOKKOS...>& A)
 {
   if (A.map().is_local()) {
@@ -92,7 +92,7 @@ cholesky(KokkosDVector<T, LAYOUT, KOKKOS...>& A)
 /// stores result in RHS, after the call A will contain the cholesky factorization of a
 template <class T, class LAYOUT, class... KOKKOS>
 std::enable_if_t<std::is_same<typename KokkosDVector<T, LAYOUT, KOKKOS...>::storage_t::memory_space,
-                              Kokkos::Experimental::HIPSpace>::value>
+                              Kokkos::HIPSpace>::value>
 solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A, KokkosDVector<T, LAYOUT, KOKKOS...>& RHS)
 {
   auto A_host = create_mirror_view_and_copy(Kokkos::HostSpace(), A);
@@ -127,9 +127,7 @@ solve_sym(KokkosDVector<T, LAYOUT, KOKKOS...>& A, KokkosDVector<T, LAYOUT, KOKKO
 
 /// Inner product c = a^H * b, on GPU
 template <class M0, class M1, class M2>
-std::enable_if_t<
-    std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value,
-    void>
+std::enable_if_t<std::is_same<typename M0::storage_t::memory_space, Kokkos::HIPSpace>::value, void>
 inner(M0& c,
       const M1& a,
       const M2& b,
@@ -175,9 +173,7 @@ inner(M0& c,
 
 /// Inner product c = a^H * b, on GPU
 template <class M0, class M1, class M2>
-std::enable_if_t<
-    std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value,
-    void>
+std::enable_if_t<std::is_same<typename M0::storage_t::memory_space, Kokkos::HIPSpace>::value, void>
 outer(M0& c,
       const M1& a,
       const M2& b,
@@ -223,9 +219,7 @@ outer(M0& c,
 
 /// C <- beta * C + alpha * A @ B
 template <class M0, class M1, class M2>
-std::enable_if_t<
-    std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value,
-    void>
+std::enable_if_t<std::is_same<typename M0::storage_t::memory_space, Kokkos::HIPSpace>::value, void>
 transform(
     M0& C, typename M0::numeric_t beta, typename M0::numeric_t alpha, const M1& A, const M2& B)
 {
@@ -267,9 +261,7 @@ transform(
 
 /// add C <- alpha * A + beta * C
 template <class M0, class M1>
-std::enable_if_t<
-    std::is_same<typename M0::storage_t::memory_space, Kokkos::Experimental::HIPSpace>::value,
-    void>
+std::enable_if_t<std::is_same<typename M0::storage_t::memory_space, Kokkos::HIPSpace>::value, void>
 add(M0& C,
     const M1& A,
     typename M0::numeric_t alpha,

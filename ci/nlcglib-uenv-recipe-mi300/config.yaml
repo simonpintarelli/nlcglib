@@ -1,0 +1,10 @@
+name: nlcglib-uenv-base
+version: 2
+spack:
+  commit: releases/v1.2
+  repo: https://github.com/spack/spack.git
+  packages:
+    repo: https://github.com/spack/spack-packages.git
+    commit: 5cd1eec301cf10d545309edff0afd1adfa2ee12b # Oct 3
+store: /user-environment
+description: nlcglib dependencies for nlcglib CI
