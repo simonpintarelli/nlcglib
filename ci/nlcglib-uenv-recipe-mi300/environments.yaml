@@ -1,4 +1,4 @@
-sirius-env:
+nlcglib-env:
   compiler: [gcc]
   network:
       mpi: cray-mpich@9.1.0+rocm
@@ -7,12 +7,12 @@ sirius-env:
   specs:
   - nlcglib+rocm
   - kokkos@5+serial
-  - hip@7.1.0 ^mesa
+  - hip@7.2.3 ^mesa
   variants:
   - amdgpu_target=gfx942
   - amdgpu_target_sram_ecc=gfx942
   views:
-    sirius:
+    nlcglib:
       link: roots
       uenv:
         add_compilers: true
