@@ -2,9 +2,10 @@ nlcglib-env:
   compiler: [gcc]
   network:
       mpi: cray-mpich@9.1.0+rocm
+      specs: [ 'libfabric +rocm' ]
   unify: true
   specs:
-  - nlcglib+rocm
+  - nlcglib@1.4.2+rocm
   - kokkos@5+serial
   - hip@7.2.3 ^mesa
   variants:
