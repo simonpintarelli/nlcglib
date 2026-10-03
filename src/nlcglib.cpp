@@ -64,24 +64,23 @@ print_info(
   auto& logger = Logger::GetInstance();
   //                       fmt::arg("slope_tot", slope_tot));
   logger << TO_STDOUT
-         << fmt::format(
-                "{iter:<6d}"
-                R"(Etot     : {F:20.10f} [Ha]
+         << fmt::format(fmt::runtime("{iter:<6d}"
+                                     R"(Etot     : {F:20.10f} [Ha]
       Residual : {slope_tot:>20.5e}
       kT * S   : {entropy:>20.8f} [Ha]
       Efermi   : {efermi:>20.8f} [Ha]
       KS energy: {ks_energy:>20.8f} [Ha]
       slope x  : {slope_x:>20.5e}
       slope eta: {slope_eta:>20.5e}
-)",
-                fmt::arg("iter", step),
-                fmt::arg("F", free_energy),
-                fmt::arg("slope_tot", slope_tot),
-                fmt::arg("entropy", entropy),
-                fmt::arg("efermi", efermi),
-                fmt::arg("ks_energy", ks_energy),
-                fmt::arg("slope_x", slope.x),
-                fmt::arg("slope_eta", slope.eta));
+)"),
+                        fmt::arg("iter", step),
+                        fmt::arg("F", free_energy),
+                        fmt::arg("slope_tot", slope_tot),
+                        fmt::arg("entropy", entropy),
+                        fmt::arg("efermi", efermi),
+                        fmt::arg("ks_energy", ks_energy),
+                        fmt::arg("slope_x", slope.x),
+                        fmt::arg("slope_eta", slope.eta));
 
   nlcg_info info;
   info.F = free_energy;
@@ -368,7 +367,7 @@ nlcg_us(EnergyBase& energy_base,
          state == cg_state::CG)) {
       // attempt preconditioned SD
       logger << fmt::format(
-          "WARNING: iter={:d} slope={:.5e} ({:.5e},{:.5e}) > 0 detected -> restart\n",
+          fmt::runtime("WARNING: iter={:d} slope={:.5e} ({:.5e},{:.5e}) > 0 detected -> restart\n"),
           cg_iter,
           slope.x + slope.eta,
           slope.x,
@@ -383,7 +382,7 @@ nlcg_us(EnergyBase& energy_base,
     if (!ls_result && ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::pSD) {
       // attempt steepest descent
       logger << fmt::format(
-          "WARNING: iter={:d} slope={:.5e} ({:.5e},{:.5e}) > 0 detected -> restart\n",
+          fmt::runtime("WARNING: iter={:d} slope={:.5e} ({:.5e},{:.5e}) > 0 detected -> restart\n"),
           cg_iter,
           slope.x + slope.eta,
           slope.x,
@@ -431,7 +430,7 @@ nlcg_us(EnergyBase& energy_base,
     }
 
     if (cg_iter % restart == 0) {
-      logger << fmt::format("i={:d} cg_restart({:d})\n", cg_iter, restart);
+      logger << fmt::format(fmt::runtime("i={:d} cg_restart({:d})\n"), cg_iter, restart);
       std::tie(slope, z_x, z_eta) =
           dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
       fr = slope;
@@ -452,7 +451,7 @@ nlcg_us(EnergyBase& energy_base,
           dd.conjugated(xspace(), fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
       state = cg_state::CG;
     } else {
-      throw std::runtime_error(fmt::format("Unhandled line-search error occured."));
+      throw std::runtime_error(fmt::format(fmt::runtime("Unhandled line-search error occured.")));
     }
   }
   return info;
