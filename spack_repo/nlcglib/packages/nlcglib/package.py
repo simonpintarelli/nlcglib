@@ -21,6 +21,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
     license("BSD-3-Clause")
 
     version("develop", branch="develop")
+    version("1.4.2", sha256="ec036bca8f9386af21b6fe887b0aaa0c76084b0866a771cddf83d24558c22959")
     version("1.4.1", sha256="63c46aa860e4ea518e229a616ef84721e090207828ee685e8a7cbc779c12a722")
     version("1.3.0", sha256="d6adfe97407be2ecf41eda6f530e9724052f5298c5f884113969a9204530a745")
     version("1.2.0", sha256="bb3676472cf7cc9effe06e416ecf4ef38e6c58c3e423dc70b8b6b32890bc89f2")
