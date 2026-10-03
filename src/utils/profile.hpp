@@ -1,14 +1,11 @@
 #pragma once
 
-
-#include <string>
-
-#if defined(__NLCGLIB__CUDA)
+#if defined(__NLCGLIB__CUDA) && defined(__NLCGLIB__TX)
 #include <nvtx3/nvToolsExt.h>
 #endif
 
-#if defined(__NLCGLIB__ROCM)
-#include <roctracer/roctx.h>
+#if defined(__NLCGLIB__ROCM) && defined(__NLCGLIB__TX)
+#include <rocprofiler-sdk-roctx/roctx.h>
 #endif
 
 #define PROFILER_CONCAT_IMPL(x, y) x##y
@@ -32,8 +29,12 @@ template <>
 class TimerVendor<_vendor::cuda>
 {
 public:
+#if defined(__NLCGLIB__TX)
   TimerVendor(const std::string& str) { nvtxRangePush(str.c_str()); }
   ~TimerVendor() { nvtxRangePop(); }
+#else
+  TimerVendor(const std::string&) {}
+#endif /* __NLCGLIB__TX */
 };
 
 using Timer = TimerVendor<_vendor::cuda>;
@@ -44,8 +45,12 @@ template <>
 class TimerVendor<_vendor::rocm>
 {
 public:
+#if defined(__NLCGLIB__TX)
   TimerVendor(const std::string& str) { roctxRangePush(str.c_str()); }
   ~TimerVendor() { roctxRangePop(); }
+#else
+  TimerVendor(const std::string&) {}
+#endif /* __NLCGLIB__TX */
 };
 using Timer = TimerVendor<_vendor::rocm>;
 #endif /* __NLCGLIB__ROCM */

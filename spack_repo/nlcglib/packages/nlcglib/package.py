@@ -73,13 +73,15 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         conflicts("+rocm")
         conflicts("^kokkos@4:")
 
+    variant("tx", default=False, description="Enable vendor profiling markers (nvtx/roctx)")
+
     with when("+rocm"):
         variant("magma", default=True, description="Use magma eigenvalue solver (AMDGPU)")
         depends_on("magma+rocm", when="+magma")
         depends_on("kokkos+rocm")
         depends_on("rocblas")
         depends_on("rocsolver")
-        depends_on("rocprofiler-sdk", when="@1.4:")
+        depends_on("rocprofiler-sdk", when="@1.4:+tx")
 
     with when("+cuda"):
         depends_on("kokkos+wrapper", when="%gcc")
@@ -95,6 +97,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
             self.define_from_variant("USE_GPU_DIRECT", "gpu_direct"),
             self.define_from_variant("USE_MAGMA", "magma"),
             self.define_from_variant("USE_CUDA", "cuda"),
+            self.define_from_variant("USE_TX", "tx"),
         ]
 
         if self.spec.satisfies("^[virtuals=lapack] intel-oneapi-mkl"):

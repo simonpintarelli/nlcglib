@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
-project(nlcglib LANGUAGES CXX VERSION 1.4.2)
+project(nlcglib LANGUAGES CXX VERSION 1.4.3)
 
 set(CMAKE_CXX_STANDARD 20)
 # user variables
@@ -8,6 +8,7 @@ set(USE_CUDA Off CACHE BOOL "use cuda")
 set(USE_ROCM Off CACHE BOOL "use amd gpus")
 set(USE_MAGMA Off CACHE BOOL "use magma eigensolver for amd gpus")
 set(USE_GPU_DIRECT Off CACHE BOOL "use gpu direct")
+set(USE_TX Off CACHE BOOL "enable vendor profiling markers (nvtx for CUDA, roctx for ROCm)")
 
 set(BUILD_TESTS OFF CACHE BOOL "build tests")
 set(LAPACK_VENDOR "OpenBLAS" CACHE STRING "lapack vendor")
