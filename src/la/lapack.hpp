@@ -255,7 +255,8 @@ struct innerh_tr
   template <class M1, class M2>
   std::enable_if_t<
       !Kokkos::SpaceAccessibility<Kokkos::Serial, typename M1::storage_t::memory_space>::accessible,
-      typename M1::numeric_t> operator()(const M1& X, const M2& Y)
+      typename M1::numeric_t>
+  operator()(const M1& X, const M2& Y)
   {
     int nrows = X.array().extent(0);
     int ncols = X.array().extent(1);
@@ -293,7 +294,8 @@ struct innerh_tr
   template <class M1, class M2>
   std::enable_if_t<
       Kokkos::SpaceAccessibility<Kokkos::Serial, typename M1::storage_t::memory_space>::accessible,
-      typename M1::numeric_t> operator()(const M1& X, const M2& Y)
+      typename M1::numeric_t>
+  operator()(const M1& X, const M2& Y)
   {
     // CPU version
     int nrows = X.array().extent(0);
