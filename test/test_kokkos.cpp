@@ -96,8 +96,8 @@ kokkos_reduction_device()
   using space = Kokkos::CudaSpace;
   using exec_space = Kokkos::Cuda;
 #elif defined __NLCGLIB__ROCM
-  using space = Kokkos::Experimental::HIPSpace;
-  using exec_space = Kokkos::Experimental::HIP;
+  using space = Kokkos::HIPSpace;
+  using exec_space = Kokkos::HIP;
 #else
   using space = Kokkos::HostSpace;
   using exec_space = Kokkos::Serial;

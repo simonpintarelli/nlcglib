@@ -630,7 +630,7 @@ nlcg_us_device([[maybe_unused]] EnergyBase& energy_base,
   switch (smearing) {
     case smearing_type::FERMI_DIRAC: {
       auto info =
-          nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::FERMI_DIRAC>(energy_base,
+          nlcg_us<Kokkos::HIPSpace, smearing_type::FERMI_DIRAC>(energy_base,
                                                                               us_precond_base,
                                                                               overlap_base,
                                                                               inverse_overlap_base,
@@ -643,7 +643,7 @@ nlcg_us_device([[maybe_unused]] EnergyBase& energy_base,
       return info;
     }
     case smearing_type::GAUSSIAN_SPLINE: {
-      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::GAUSSIAN_SPLINE>(
+      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::GAUSSIAN_SPLINE>(
           energy_base,
           us_precond_base,
           overlap_base,
@@ -658,7 +658,7 @@ nlcg_us_device([[maybe_unused]] EnergyBase& energy_base,
     }
     case smearing_type::GAUSS: {
       auto info =
-          nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::GAUSS>(energy_base,
+          nlcg_us<Kokkos::HIPSpace, smearing_type::GAUSS>(energy_base,
                                                                         us_precond_base,
                                                                         overlap_base,
                                                                         inverse_overlap_base,
@@ -671,7 +671,7 @@ nlcg_us_device([[maybe_unused]] EnergyBase& energy_base,
       return info;
     }
     case smearing_type::METHFESSEL_PAXTON: {
-      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::METHFESSEL_PAXTON>(
+      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::METHFESSEL_PAXTON>(
           energy_base,
           us_precond_base,
           overlap_base,
@@ -685,7 +685,7 @@ nlcg_us_device([[maybe_unused]] EnergyBase& energy_base,
       return info;
     }
     case smearing_type::COLD: {
-      auto info = nlcg_us<Kokkos::Experimental::HIPSpace, smearing_type::COLD>(energy_base,
+      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::COLD>(energy_base,
                                                                                us_precond_base,
                                                                                overlap_base,
                                                                                inverse_overlap_base,

@@ -61,7 +61,7 @@ using KokkosMemTypes = ::testing::Types<Kokkos::CudaSpace, Kokkos::HostSpace>;
 #endif
 
 #ifdef __NLCGLIB__ROCM
-using KokkosMemTypes = ::testing::Types<Kokkos::Experimental::HIPSpace, Kokkos::HostSpace>;
+using KokkosMemTypes = ::testing::Types<Kokkos::HIPSpace, Kokkos::HostSpace>;
 #endif
 
 TYPED_TEST_SUITE_P(TestSymSolve);

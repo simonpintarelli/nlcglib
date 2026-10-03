@@ -112,7 +112,7 @@ TEST_F(CPUKokkosVectors, TransformCPU)
 #if defined(__NLCGLIB__ROCM) || defined(__NLCGLIB__CUDA)
 
 #ifdef __NLCGLIB__ROCM
-using device_space_t = Kokkos::Experimental::HIPSpace;
+using device_space_t = Kokkos::HIPSpace;
 #else
 using device_space_t = Kokkos::CudaSpace;
 #endif

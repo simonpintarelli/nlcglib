@@ -63,7 +63,7 @@ template <class T>
 struct is_on_device
     : std::integral_constant<
           bool,
-          Kokkos::SpaceAccessibility<Kokkos::Experimental::HIPSpace, memory_t<T>>::accessible>
+          Kokkos::SpaceAccessibility<Kokkos::HIPSpace, memory_t<T>>::accessible>
 {
 };
 #else

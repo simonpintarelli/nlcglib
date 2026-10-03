@@ -9,7 +9,7 @@
 using namespace nlcglib;
 
 #ifdef __NLCGLIB__ROCM
-using memory_space_t = Kokkos::Experimental::HIPSpace;
+using memory_space_t = Kokkos::HIPSpace;
 #elif defined __NLCGLIB__CUDA
 using memory_space_t = Kokkos::CudaSpace;
 #else
