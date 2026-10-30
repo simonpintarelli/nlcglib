@@ -26,17 +26,18 @@ add_executable(test_buffer test_buffer.cpp)
 target_link_libraries(test_buffer PRIVATE nlcglib_core)
 
 if(USE_CUDA OR USE_ROCM)
-add_executable(test_dvector_mirror_view_and_copy test_dvector_mirror_view_and_copy.cpp)
-target_link_libraries(test_dvector_mirror_view_and_copy PRIVATE nlcglib_core)
+  add_executable(test_dvector_mirror_view_and_copy
+                 test_dvector_mirror_view_and_copy.cpp)
+  target_link_libraries(test_dvector_mirror_view_and_copy PRIVATE nlcglib_core)
 
-add_executable(test_lambda_device test_lambda_device.cpp)
-target_link_libraries(test_lambda_device PRIVATE nlcglib_core)
+  add_executable(test_lambda_device test_lambda_device.cpp)
+  target_link_libraries(test_lambda_device PRIVATE nlcglib_core)
 
-add_executable(test_gpu test_gpu.cpp)
-target_link_libraries(test_gpu PRIVATE nlcglib_core)
+  add_executable(test_gpu test_gpu.cpp)
+  target_link_libraries(test_gpu PRIVATE nlcglib_core)
 
-add_executable(test_solver test_solver.cpp)
-target_link_libraries(test_solver PRIVATE nlcglib_core)
+  add_executable(test_solver test_solver.cpp)
+  target_link_libraries(test_solver PRIVATE nlcglib_core)
 endif()
 
 add_executable(test_utils test_utils.cpp)

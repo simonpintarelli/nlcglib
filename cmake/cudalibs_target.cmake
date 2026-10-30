@@ -1,8 +1,9 @@
 find_package(CUDAToolkit REQUIRED)
-if (NOT TARGET nlcglib::cudalibs)
+if(NOT TARGET nlcglib::cudalibs)
   add_library(nlcglib::cudalibs INTERFACE IMPORTED)
-  target_link_libraries(nlcglib::cudalibs INTERFACE CUDA::cudart CUDA::cublas CUDA::cusolver)
-  if (USE_TX)
+  target_link_libraries(nlcglib::cudalibs INTERFACE CUDA::cudart CUDA::cublas
+                                                    CUDA::cusolver)
+  if(USE_TX)
     target_link_libraries(nlcglib::cudalibs INTERFACE CUDA::nvtx3)
     target_compile_definitions(nlcglib::cudalibs INTERFACE __NLCGLIB__TX)
   endif()

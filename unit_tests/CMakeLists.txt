@@ -5,7 +5,8 @@ if(BUILD_TESTS AND NOT GTEST_FOUND)
 endif()
 
 if(BUILD_TESTS)
-  add_executable(gtest local/test_la_wrappers.cpp local/test_solver_wrappers.cpp)
+  add_executable(gtest local/test_la_wrappers.cpp
+                       local/test_solver_wrappers.cpp)
   target_link_libraries(gtest PUBLIC nlcglib_core)
   target_link_libraries(gtest PRIVATE GTest::gtest GTest::gtest_main)
 endif()

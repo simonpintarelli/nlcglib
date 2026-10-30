@@ -1,31 +1,26 @@
-set(SOURCES
-  la/cusolver.cpp
-  gpu/acc.cpp
-  la/magma.cpp
-  utils/step_logger.cpp
-)
+set(SOURCES la/cusolver.cpp gpu/acc.cpp la/magma.cpp utils/step_logger.cpp)
 
 add_library(nlcglib_core ${SOURCES})
 nlcglib_setup_target(nlcglib_core)
 
 add_library(nlcglib SHARED nlcglib.cpp)
-target_include_directories(nlcglib PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+target_include_directories(
+  nlcglib PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+                 $<INSTALL_INTERFACE:include>)
 target_link_libraries(nlcglib PRIVATE fmt::fmt nlcglib_core)
 
-set_target_properties(nlcglib PROPERTIES PUBLIC_HEADER
-  ${CMAKE_SOURCE_DIR}/include/nlcglib.hpp
-)
+set_target_properties(
+  nlcglib PROPERTIES PUBLIC_HEADER ${CMAKE_SOURCE_DIR}/include/nlcglib.hpp)
 
 include(GNUInstallDirs)
 
-install(TARGETS nlcglib
+install(
+  TARGETS nlcglib
   EXPORT nlcglib_targets
   LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
   PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nlcglib"
-  INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nlcglib")
-install(
-  FILES
-  ${PROJECT_SOURCE_DIR}/include/interface.hpp
-  DESTINATION "${CMAKE_INSTALL_PREFIX}/include/nlcglib"
-)
+  INCLUDES
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/nlcglib")
+install(FILES ${PROJECT_SOURCE_DIR}/include/interface.hpp
+        DESTINATION "${CMAKE_INSTALL_PREFIX}/include/nlcglib")

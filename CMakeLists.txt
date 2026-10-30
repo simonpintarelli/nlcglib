@@ -1,17 +1,37 @@
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
-project(nlcglib LANGUAGES CXX VERSION 1.4.3)
+project(
+  nlcglib
+  LANGUAGES CXX
+  VERSION 1.4.3)
 
 set(CMAKE_CXX_STANDARD 20)
 # user variables
-set(USE_OPENMP On CACHE BOOL "use OpenMP")
-set(USE_CUDA Off CACHE BOOL "use cuda")
-set(USE_ROCM Off CACHE BOOL "use amd gpus")
-set(USE_MAGMA Off CACHE BOOL "use magma eigensolver for amd gpus")
-set(USE_GPU_DIRECT Off CACHE BOOL "use gpu direct")
-set(USE_TX Off CACHE BOOL "enable vendor profiling markers (nvtx for CUDA, roctx for ROCm)")
+set(USE_OPENMP
+    On
+    CACHE BOOL "use OpenMP")
+set(USE_CUDA
+    Off
+    CACHE BOOL "use cuda")
+set(USE_ROCM
+    Off
+    CACHE BOOL "use amd gpus")
+set(USE_MAGMA
+    Off
+    CACHE BOOL "use magma eigensolver for amd gpus")
+set(USE_GPU_DIRECT
+    Off
+    CACHE BOOL "use gpu direct")
+set(USE_TX
+    Off
+    CACHE BOOL
+          "enable vendor profiling markers (nvtx for CUDA, roctx for ROCm)")
 
-set(BUILD_TESTS OFF CACHE BOOL "build tests")
-set(LAPACK_VENDOR "OpenBLAS" CACHE STRING "lapack vendor")
+set(BUILD_TESTS
+    OFF
+    CACHE BOOL "build tests")
+set(LAPACK_VENDOR
+    "OpenBLAS"
+    CACHE STRING "lapack vendor")
 set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS "OpenBLAS" "MKL" "MKLONEAPI")
 
 find_package(MPI REQUIRED)
@@ -48,15 +68,22 @@ if(LAPACK_VENDOR MATCHES OpenBLAS)
   find_package(OpenBLAS REQUIRED)
   if(NOT TARGET nlcg::cpu_lapack)
     add_library(nlcg::cpu_lapack INTERFACE IMPORTED)
-    set_target_properties(nlcg::cpu_lapack PROPERTIES
-      INTERFACE_INCLUDE_DIRECTORIES "${OpenBLAS_INCLUDE_DIRS}"
-      INTERFACE_LINK_LIBRARIES "${OpenBLAS_LIBRARIES}")
+    set_target_properties(
+      nlcg::cpu_lapack
+      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${OpenBLAS_INCLUDE_DIRS}"
+                 INTERFACE_LINK_LIBRARIES "${OpenBLAS_LIBRARIES}")
   endif()
 elseif(LAPACK_VENDOR STREQUAL MKLONEAPI)
   message("LAPACK VENDOR MKL")
-  set(MKL_INTERFACE "lp64" CACHE STRING "")
-  set(MKL_THREADING "sequential" CACHE STRING "")
-  set(MKL_MPI "mpich" CACHE STRING "")
+  set(MKL_INTERFACE
+      "lp64"
+      CACHE STRING "")
+  set(MKL_THREADING
+      "sequential"
+      CACHE STRING "")
+  set(MKL_MPI
+      "mpich"
+      CACHE STRING "")
   find_package(MKL CONFIG REQUIRED)
   if(NOT TARGET nlcg::cpu_lapack)
     add_library(nlcg::cpu_lapack INTERFACE IMPORTED)
@@ -67,7 +94,8 @@ elseif(LAPACK_VENDOR STREQUAL MKL)
   find_package(MKL REQUIRED NO_MODULE)
   if(NOT TARGET nlcg::cpu_lapack)
     add_library(nlcg::cpu_lapack INTERFACE IMPORTED)
-    target_link_libraries(nlcg::cpu_lapack INTERFACE mkl::mkl_intel_32bit_omp_dyn)
+    target_link_libraries(nlcg::cpu_lapack
+                          INTERFACE mkl::mkl_intel_32bit_omp_dyn)
     target_compile_definitions(nlcg::cpu_lapack INTERFACE __USE_MKL)
   endif()
 elseif(LAPACK_VENDOR STREQUAL CRAY_LIBSCI)
@@ -75,9 +103,10 @@ elseif(LAPACK_VENDOR STREQUAL CRAY_LIBSCI)
   find_package(SCI REQUIRED)
   if(NOT TARGET nlcg::cpu_lapack)
     add_library(nlcg::cpu_lapack INTERFACE IMPORTED)
-    set_target_properties(nlcg::cpu_lapack PROPERTIES
-      INTERFACE_INCLUDE_DIRECTORIES "${SCI_INCLUDE_DIRS}"
-      INTERFACE_LINK_LIBRARIES "${SCI_LIBRARIES}")
+    set_target_properties(
+      nlcg::cpu_lapack
+      PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${SCI_INCLUDE_DIRS}"
+                 INTERFACE_LINK_LIBRARIES "${SCI_LIBRARIES}")
   endif()
 else()
   message(FATAL_ERROR "must specify a LAPACK_VENDOR")
@@ -97,7 +126,7 @@ endif()
 # use `CMAKE_SKIP_INSTALL_RPATH` to skip this
 # https://spack.readthedocs.io/en/latest/workflows.html#write-the-cmake-build
 list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES
-          "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}" isSystemDir)
+     "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}" isSystemDir)
 # skip RPATH if nlcglib is installed to system directories
 if(isSystemDir STREQUAL "-1")
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -107,12 +136,13 @@ if(isSystemDir STREQUAL "-1")
     set(basePoint $ORIGIN)
   endif()
   file(RELATIVE_PATH relDir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}
-                            ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+       ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
   set(CMAKE_INSTALL_RPATH ${basePoint} ${basePoint}/${relDir})
 endif()
 
 include(CMakePackageConfigHelpers)
-install(EXPORT nlcglib_targets
+install(
+  EXPORT nlcglib_targets
   FILE nlcglib-targets.cmake
   NAMESPACE nlcglib::
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/nlcglib")
@@ -120,18 +150,13 @@ install(EXPORT nlcglib_targets
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/cmake/nlcglib/nlcglibConfigVersion.cmake"
   VERSION ${PACKAGE_VERSION}
-  COMPATIBILITY AnyNewerVersion
-  )
+  COMPATIBILITY AnyNewerVersion)
 
 configure_package_config_file(
-  cmake/nlcglib-config.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/nlcglib-config.cmake
-  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nlcglib
-  )
+  cmake/nlcglib-config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/nlcglib-config.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nlcglib)
 
 install(
-  FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/nlcglib-config.cmake
-  ${CMAKE_CURRENT_BINARY_DIR}/cmake/nlcglib/nlcglibConfigVersion.cmake
-  DESTINATION
-  ${CMAKE_INSTALL_LIBDIR}/cmake/nlcglib)
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/nlcglib-config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/cmake/nlcglib/nlcglibConfigVersion.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/nlcglib)

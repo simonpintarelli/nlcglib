@@ -101,10 +101,11 @@ cmake_minimum_required(VERSION 3.12)
 #
 include(FindPackageHandleStandardArgs)
 
-if(NOT (CMAKE_C_COMPILER_LOADED OR
-        CMAKE_CXX_COMPILER_LOADED OR
-        CMAKE_Fortran_COMPILER_LOADED))
-    message(FATAL_ERROR "FindMKL requires Fortran, C, or C++ to be enabled.")
+if(NOT
+   (CMAKE_C_COMPILER_LOADED
+    OR CMAKE_CXX_COMPILER_LOADED
+    OR CMAKE_Fortran_COMPILER_LOADED))
+  message(FATAL_ERROR "FindMKL requires Fortran, C, or C++ to be enabled.")
 endif()
 
 # Dependencies
@@ -116,64 +117,65 @@ find_package(MPI COMPONENTS CXX)
 # If MKL_ROOT is not set, set it via the env variable MKLROOT.
 #
 if(NOT DEFINED MKL_ROOT)
-    set(MKL_ROOT $ENV{MKLROOT} CACHE PATH "MKL's root directory.")
+  set(MKL_ROOT
+      $ENV{MKLROOT}
+      CACHE PATH "MKL's root directory.")
 endif()
 
 # Determine MKL's library folder
 #
 set(_mkl_libpath_suffix "lib/intel64")
 if(CMAKE_SIZEOF_VOID_P EQUAL 4) # 32 bit
-    set(_mkl_libpath_suffix "lib/ia32")
+  set(_mkl_libpath_suffix "lib/ia32")
 endif()
 
 if(WIN32)
-    string(APPEND _mkl_libpath_suffix "_win")
-    set(_mkl_libname_prefix "")
-    set(_mkl_shared_lib "_dll.lib")
-    set(_mkl_static_lib ".lib")
+  string(APPEND _mkl_libpath_suffix "_win")
+  set(_mkl_libname_prefix "")
+  set(_mkl_shared_lib "_dll.lib")
+  set(_mkl_static_lib ".lib")
 elseif(APPLE)
-    string(APPEND _mkl_libpath_suffix "_mac")
-    set(_mkl_libname_prefix "lib")
-    set(_mkl_shared_lib ".dylib")
-    set(_mkl_static_lib ".a")
+  string(APPEND _mkl_libpath_suffix "_mac")
+  set(_mkl_libname_prefix "lib")
+  set(_mkl_shared_lib ".dylib")
+  set(_mkl_static_lib ".a")
 else() # LINUX
-    string(APPEND _mkl_libpath_suffix "_lin")
-    set(_mkl_libname_prefix "lib")
-    set(_mkl_shared_lib ".so")
-    set(_mkl_static_lib ".a")
+  string(APPEND _mkl_libpath_suffix "_lin")
+  set(_mkl_libname_prefix "lib")
+  set(_mkl_shared_lib ".so")
+  set(_mkl_static_lib ".a")
 endif()
-set(_mkl_search_paths "${MKL_ROOT}"
-                      "${MKL_ROOT}/lib"
-                      "${MKL_ROOT}/mkl/lib"
+set(_mkl_search_paths "${MKL_ROOT}" "${MKL_ROOT}/lib" "${MKL_ROOT}/mkl/lib"
                       "${MKL_ROOT}/compiler/lib")
 
 # Functions: finds both static and shared MKL libraries
 #
 function(__mkl_find_library _varname _libname)
-    find_library(${_varname}_DYN
-          NAMES ${_mkl_libname_prefix}${_libname}${_mkl_shared_lib}
-          HINTS ${_mkl_search_paths}
-          PATH_SUFFIXES ${_mkl_libpath_suffix})
-    mark_as_advanced(${_varname}_DYN)
-    find_library(${_varname}_ST
-          NAMES ${_mkl_libname_prefix}${_libname}${_mkl_static_lib}
-          HINTS ${_mkl_search_paths}
-          PATH_SUFFIXES ${_mkl_libpath_suffix})
-    mark_as_advanced(${_varname}_ST)
+  find_library(
+    ${_varname}_DYN
+    NAMES ${_mkl_libname_prefix}${_libname}${_mkl_shared_lib}
+    HINTS ${_mkl_search_paths}
+    PATH_SUFFIXES ${_mkl_libpath_suffix})
+  mark_as_advanced(${_varname}_DYN)
+  find_library(
+    ${_varname}_ST
+    NAMES ${_mkl_libname_prefix}${_libname}${_mkl_static_lib}
+    HINTS ${_mkl_search_paths}
+    PATH_SUFFIXES ${_mkl_libpath_suffix})
+  mark_as_advanced(${_varname}_ST)
 endfunction()
 
 # Find MKL headers
 #
-find_path(MKL_INCLUDE_DIR mkl.h
-    HINTS ${MKL_ROOT}/include
-          ${MKL_ROOT}/mkl/include)
+find_path(MKL_INCLUDE_DIR mkl.h HINTS ${MKL_ROOT}/include
+                                      ${MKL_ROOT}/mkl/include)
 mark_as_advanced(MKL_INCLUDE_DIR)
 
 # Group flags for static libraries on Linux (GNU, PGI, ICC -> same linker)
 #
 if(UNIX AND NOT APPLE)
-    set(_mkl_linker_pre_flags_ST "-Wl,--start-group")
-    set(_mkl_linker_post_flags_ST "-Wl,--end-group")
+  set(_mkl_linker_pre_flags_ST "-Wl,--start-group")
+  set(_mkl_linker_post_flags_ST "-Wl,--end-group")
 endif()
 
 # Core MKL
@@ -184,32 +186,34 @@ __mkl_find_library(MKL_CORE_LIB mkl_core)
 #
 __mkl_find_library(MKL_INTERFACE_INTEL_32BIT_LIB mkl_intel_lp64)
 __mkl_find_library(MKL_INTERFACE_INTEL_64BIT_LIB mkl_intel_ilp64)
-if(NOT APPLE AND CMAKE_Fortran_COMPILER_LOADED
-             AND CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
-    __mkl_find_library(MKL_INTERFACE_GF_32BIT_LIB mkl_gf_lp64)
-    __mkl_find_library(MKL_INTERFACE_GF_64BIT_LIB mkl_gf_ilp64)
+if(NOT APPLE
+   AND CMAKE_Fortran_COMPILER_LOADED
+   AND CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+  __mkl_find_library(MKL_INTERFACE_GF_32BIT_LIB mkl_gf_lp64)
+  __mkl_find_library(MKL_INTERFACE_GF_64BIT_LIB mkl_gf_ilp64)
 endif()
 
 # Threading
 #
 __mkl_find_library(MKL_SEQ_LIB mkl_sequential)
-if(NOT APPLE AND (CMAKE_C_COMPILER_ID STREQUAL "GNU" OR
-                  CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR
-                  CMAKE_Fortran_COMPILER_ID STREQUAL "GNU"))
-    __mkl_find_library(MKL_OMP_LIB mkl_gnu_thread)
+if(NOT APPLE
+   AND (CMAKE_C_COMPILER_ID STREQUAL "GNU"
+        OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU"
+        OR CMAKE_Fortran_COMPILER_ID STREQUAL "GNU"))
+  __mkl_find_library(MKL_OMP_LIB mkl_gnu_thread)
 else()
-    __mkl_find_library(MKL_OMP_LIB mkl_intel_thread)
+  __mkl_find_library(MKL_OMP_LIB mkl_intel_thread)
 endif()
 __mkl_find_library(MKL_TBB_LIB mkl_tbb_thread)
 
 # BLACS
 #
 if(APPLE)
-    __mkl_find_library(MKL_BLACS_MPICH_32BIT_LIB mkl_blacs_mpich_lp64)
-    __mkl_find_library(MKL_BLACS_MPICH_64BIT_LIB mkl_blacs_mpich_ilp64)
+  __mkl_find_library(MKL_BLACS_MPICH_32BIT_LIB mkl_blacs_mpich_lp64)
+  __mkl_find_library(MKL_BLACS_MPICH_64BIT_LIB mkl_blacs_mpich_ilp64)
 else()
-    __mkl_find_library(MKL_BLACS_MPICH_32BIT_LIB mkl_blacs_intelmpi_lp64)
-    __mkl_find_library(MKL_BLACS_MPICH_64BIT_LIB mkl_blacs_intelmpi_ilp64)
+  __mkl_find_library(MKL_BLACS_MPICH_32BIT_LIB mkl_blacs_intelmpi_lp64)
+  __mkl_find_library(MKL_BLACS_MPICH_64BIT_LIB mkl_blacs_intelmpi_ilp64)
 endif()
 __mkl_find_library(MKL_BLACS_OMPI_32BIT_LIB mkl_blacs_openmpi_lp64)
 __mkl_find_library(MKL_BLACS_OMPI_64BIT_LIB mkl_blacs_openmpi_ilp64)
@@ -237,73 +241,81 @@ set(_mkl_dep_found_OMP TRUE)
 # Define all blas, blacs and scalapack
 #
 foreach(_libtype "ST" "DYN")
-    set(_mkl_core_lib ${MKL_CORE_LIB_${_libtype}})
-    foreach(_bits "32BIT" "64BIT")
-        set(_mkl_scalapack_lib ${MKL_SCALAPACK_${_bits}_LIB_${_libtype}})
-        foreach(_iface "INTEL" "GF")
-            set(_mkl_interface_lib ${MKL_INTERFACE_${_iface}_${_bits}_LIB_${_libtype}})
-            foreach(_threading "SEQ" "OMP" "TBB")
-                set(_mkl_threading_lib ${MKL_${_threading}_LIB_${_libtype}})
+  set(_mkl_core_lib ${MKL_CORE_LIB_${_libtype}})
+  foreach(_bits "32BIT" "64BIT")
+    set(_mkl_scalapack_lib ${MKL_SCALAPACK_${_bits}_LIB_${_libtype}})
+    foreach(_iface "INTEL" "GF")
+      set(_mkl_interface_lib
+          ${MKL_INTERFACE_${_iface}_${_bits}_LIB_${_libtype}})
+      foreach(_threading "SEQ" "OMP" "TBB")
+        set(_mkl_threading_lib ${MKL_${_threading}_LIB_${_libtype}})
 
-                string(TOLOWER "${_iface}_${_bits}_${_threading}_${_libtype}" _tgt_config)
-                set(_mkl_tgt mkl::mkl_${_tgt_config})
+        string(TOLOWER "${_iface}_${_bits}_${_threading}_${_libtype}"
+                       _tgt_config)
+        set(_mkl_tgt mkl::mkl_${_tgt_config})
 
-                if(MKL_FOUND
-                   AND _mkl_interface_lib
-                   AND _mkl_threading_lib
-                   AND _mkl_core_lib
-                   AND _mkl_dep_found_${_threading}
-                   AND NOT TARGET ${_mkl_tgt})
-                    set(_mkl_libs "${_mkl_linker_pre_flags_${_threading}}"
-                                  "${_mkl_interface_lib}"
-                                  "${_mkl_threading_lib}"
-                                  "${_mkl_core_lib}"
-                                  "${_mkl_linker_post_flags_${_threading}}"
-                                  "${_mkl_dep_${_threading}}"
-                                  "Threads::Threads")
-                    add_library(${_mkl_tgt} INTERFACE IMPORTED)
-                    set_target_properties(${_mkl_tgt} PROPERTIES
-                      INTERFACE_INCLUDE_DIRECTORIES "${MKL_INCLUDE_DIR}"
-                      INTERFACE_LINK_LIBRARIES "${_mkl_libs}")
-                endif()
+        if(MKL_FOUND
+           AND _mkl_interface_lib
+           AND _mkl_threading_lib
+           AND _mkl_core_lib
+           AND _mkl_dep_found_${_threading}
+           AND NOT TARGET ${_mkl_tgt})
+          set(_mkl_libs
+              "${_mkl_linker_pre_flags_${_threading}}"
+              "${_mkl_interface_lib}"
+              "${_mkl_threading_lib}"
+              "${_mkl_core_lib}"
+              "${_mkl_linker_post_flags_${_threading}}"
+              "${_mkl_dep_${_threading}}"
+              "Threads::Threads")
+          add_library(${_mkl_tgt} INTERFACE IMPORTED)
+          set_target_properties(
+            ${_mkl_tgt}
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${MKL_INCLUDE_DIR}"
+                       INTERFACE_LINK_LIBRARIES "${_mkl_libs}")
+        endif()
 
-                foreach(_mpi_impl "MPICH" "OMPI")
-                    set(_mkl_blacs_lib ${MKL_BLACS_${_mpi_impl}_${_bits}_LIB_${_libtype}})
+        foreach(_mpi_impl "MPICH" "OMPI")
+          set(_mkl_blacs_lib ${MKL_BLACS_${_mpi_impl}_${_bits}_LIB_${_libtype}})
 
-                    string(TOLOWER "${_mpi_impl}_${_iface}_${_bits}_${_threading}_${_libtype}" _tgt_config)
-                    set(_blacs_tgt mkl::blacs_${_tgt_config})
-                    set(_scalapack_tgt mkl::scalapack_${_tgt_config})
+          string(
+            TOLOWER "${_mpi_impl}_${_iface}_${_bits}_${_threading}_${_libtype}"
+                    _tgt_config)
+          set(_blacs_tgt mkl::blacs_${_tgt_config})
+          set(_scalapack_tgt mkl::scalapack_${_tgt_config})
 
-                    if(_mkl_blacs_lib
-                       AND TARGET ${_mkl_tgt}
-                       AND TARGET MPI::MPI_CXX
-                       AND NOT TARGET ${_blacs_tgt})
-                        set(_blacs_libs "${_mkl_linker_pre_flags_${_libtype}}"
-                                        "${_mkl_interface_lib}"
-                                        "${_mkl_threading_lib}"
-                                        "${_mkl_core_lib}"
-                                        "${_mkl_blacs_lib}"
-                                        "${_mkl_linker_post_flags_${_libtype}}"
-                                        "MPI::MPI_CXX"
-                                        "${_mkl_dep_${_threading}}"
-                                        "Threads::Threads")
-                        add_library(${_blacs_tgt} INTERFACE IMPORTED)
-                        set_target_properties(${_blacs_tgt} PROPERTIES
-                            INTERFACE_INCLUDE_DIRECTORIES "${MKL_INCLUDE_DIR}"
-                            INTERFACE_LINK_LIBRARIES "${_blacs_libs}")
-                    endif()
+          if(_mkl_blacs_lib
+             AND TARGET ${_mkl_tgt}
+             AND TARGET MPI::MPI_CXX
+             AND NOT TARGET ${_blacs_tgt})
+            set(_blacs_libs
+                "${_mkl_linker_pre_flags_${_libtype}}"
+                "${_mkl_interface_lib}"
+                "${_mkl_threading_lib}"
+                "${_mkl_core_lib}"
+                "${_mkl_blacs_lib}"
+                "${_mkl_linker_post_flags_${_libtype}}"
+                "MPI::MPI_CXX"
+                "${_mkl_dep_${_threading}}"
+                "Threads::Threads")
+            add_library(${_blacs_tgt} INTERFACE IMPORTED)
+            set_target_properties(
+              ${_blacs_tgt}
+              PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${MKL_INCLUDE_DIR}"
+                         INTERFACE_LINK_LIBRARIES "${_blacs_libs}")
+          endif()
 
-                    if(_mkl_scalapack_lib
-                       AND TARGET ${_blacs_tgt}
-                       AND NOT TARGET ${_scalapack_tgt})
-                        set(_scalapack_libs "${_mkl_scalapack_lib}"
-                                            "${_blacs_tgt}")
-                        add_library(${_scalapack_tgt} INTERFACE IMPORTED)
-                        set_target_properties(${_scalapack_tgt} PROPERTIES
-                            INTERFACE_LINK_LIBRARIES "${_scalapack_libs}")
-                    endif()
-                endforeach()
-            endforeach()
+          if(_mkl_scalapack_lib
+             AND TARGET ${_blacs_tgt}
+             AND NOT TARGET ${_scalapack_tgt})
+            set(_scalapack_libs "${_mkl_scalapack_lib}" "${_blacs_tgt}")
+            add_library(${_scalapack_tgt} INTERFACE IMPORTED)
+            set_target_properties(
+              ${_scalapack_tgt} PROPERTIES INTERFACE_LINK_LIBRARIES
+                                           "${_scalapack_libs}")
+          endif()
         endforeach()
+      endforeach()
     endforeach()
+  endforeach()
 endforeach()
