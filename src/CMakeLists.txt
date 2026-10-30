@@ -2,9 +2,9 @@ set(nlcglib_private_libraries Kokkos::kokkos fmt::fmt
                               $<BUILD_INTERFACE:nlohmann_json::nlohmann_json>)
 set(nlcglib_private_definitions)
 
-if(LAPACK_VENDOR STREQUAL "OpenBLAS")
+if(_lapack_vendor STREQUAL "OpenBLAS")
   list(APPEND nlcglib_private_libraries OpenBLAS::LAPACKE)
-elseif(LAPACK_VENDOR STREQUAL "MKL" OR LAPACK_VENDOR STREQUAL "MKLONEAPI")
+elseif(_lapack_vendor STREQUAL "MKL")
   list(APPEND nlcglib_private_libraries MKL::MKL)
   list(APPEND nlcglib_private_definitions __USE_MKL)
 else()

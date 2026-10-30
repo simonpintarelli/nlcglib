@@ -13,10 +13,11 @@ option(USE_MAGMA "Use the MAGMA eigensolver for AMD GPUs" OFF)
 option(USE_GPU_DIRECT "Use GPU-aware MPI" OFF)
 option(USE_TX "Enable vendor profiling markers (NVTX for CUDA, roctx for ROCm)"
        OFF)
+
 set(LAPACK_VENDOR
-    "OpenBLAS"
+    "AUTO"
     CACHE STRING "LAPACK provider")
-set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS OpenBLAS MKL CRAY_LIBSCI)
+set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS AUTO OpenBLAS MKL CRAY_LIBSCI)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE
@@ -52,9 +53,19 @@ else()
   kokkos_check(DEVICES Serial)
 endif()
 
-if(LAPACK_VENDOR STREQUAL "OpenBLAS")
+if(LAPACK_VENDOR STREQUAL "AUTO")
+  if(DEFINED MKLROOT OR DEFINED ENV{MKLROOT})
+    set(_lapack_vendor "MKL")
+  else()
+    set(_lapack_vendor "OpenBLAS")
+  endif()
+else()
+  set(_lapack_vendor "${LAPACK_VENDOR}")
+endif()
+
+if(_lapack_vendor STREQUAL "OpenBLAS")
   find_package(OpenBLAS REQUIRED MODULE)
-elseif(LAPACK_VENDOR STREQUAL "MKL")
+elseif(_lapack_vendor STREQUAL "MKL")
   set(MKL_INTERFACE
       "lp64"
       CACHE STRING "MKL integer interface")
@@ -68,7 +79,7 @@ elseif(LAPACK_VENDOR STREQUAL "MKL")
     message(FATAL_ERROR "nlcglib requires the MKL LP64 interface")
   endif()
   find_package(MKL REQUIRED CONFIG)
-elseif(LAPACK_VENDOR STREQUAL "CRAY_LIBSCI")
+elseif(_lapack_vendor STREQUAL "CRAY_LIBSCI")
   set(SCI_USE_OPENMP ${USE_OPENMP})
   find_package(SCI REQUIRED MODULE)
 else()
