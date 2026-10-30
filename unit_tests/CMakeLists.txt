@@ -1,12 +1,7 @@
 find_package(GTest REQUIRED)
 
-if(BUILD_TESTS AND NOT GTEST_FOUND)
-  message(FATAL_ERROR "Could not find googletest.")
-endif()
-
-if(BUILD_TESTS)
-  add_executable(gtest local/test_la_wrappers.cpp
-                       local/test_solver_wrappers.cpp)
-  target_link_libraries(gtest PUBLIC nlcglib_core)
-  target_link_libraries(gtest PRIVATE GTest::gtest GTest::gtest_main)
-endif()
+add_executable(nlcglib_unit_tests local/test_la_wrappers.cpp
+                                  local/test_solver_wrappers.cpp)
+target_link_libraries(nlcglib_unit_tests PRIVATE nlcglib_test_support
+                                                 GTest::gtest)
+add_test(NAME nlcglib.unit_tests COMMAND nlcglib_unit_tests)

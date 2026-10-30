@@ -62,9 +62,9 @@ endif()
 
 set(_sci_mpi_lib ${_sci_lib}_mpi)
 
-# use multi-threaded version if OpenMP available
-find_package(OpenMP QUIET COMPONENTS CXX)
-if(TARGET OpenMP::OpenMP_CXX)
+# Use the multithreaded version when requested.
+if(SCI_USE_OPENMP)
+  find_package(OpenMP REQUIRED COMPONENTS CXX)
   set(_sci_lib ${_sci_lib}_mp ${_sci_lib})
   set(_sci_mpi_lib ${_sci_mpi_lib}_mp ${_sci_mpi_lib})
 endif()
@@ -90,7 +90,7 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(SCI REQUIRED_VARS SCI_INCLUDE_DIRS
                                                     SCI_LIBRARIES)
 
-if(SCI_LIBRARIES AND TARGET OpenMP::OpenMP_CXX)
+if(SCI_LIBRARIES AND SCI_USE_OPENMP)
   list(APPEND SCI_LIBRARIES $<LINK_ONLY:OpenMP::OpenMP_CXX>)
 endif()
 
