@@ -277,7 +277,7 @@ struct methfessel_paxton_smearing : summed<methfessel_paxton_smearing>, non_mono
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
   {
     double sqrtpi = std::sqrt(constants::pi);
-    return mo * std::exp(-x * x) * (2 * x * x - 5) / sqrtpi;
+    return mo * std::exp(-x * x) * x * (2 * x * x - 5) / sqrtpi;
   }
 
   KOKKOS_INLINE_FUNCTION static double entropy(double x, double mo)

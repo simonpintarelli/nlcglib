@@ -84,7 +84,7 @@ main(int argc, char *argv[])
 {
   MPI_Init(&argc, &argv);
   Kokkos::initialize();
-  run(smearing_type::GAUSSIAN_SPLINE);
+  run(smearing_type::FERMI_DIRAC);
   Kokkos::finalize();
   MPI_Finalize();
   return 0;
