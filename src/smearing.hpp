@@ -214,6 +214,7 @@ struct gaussian_spline : summed<gaussian_spline>
 };
 
 /// Cold smearing
+/// https://doi.org/10.1103/PhysRevLett.82.3296
 struct cold_smearing : summed<cold_smearing>, non_monotonous
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
@@ -258,6 +259,7 @@ struct cold_smearing : summed<cold_smearing>, non_monotonous
 };
 
 /// first order MP smearing
+/// https://doi.org/10.1103/PhysRevB.40.3616
 struct methfessel_paxton_smearing : summed<methfessel_paxton_smearing>, non_monotonous
 {
   KOKKOS_INLINE_FUNCTION static double fn(double x, double mo)
