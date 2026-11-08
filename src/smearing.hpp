@@ -201,12 +201,12 @@ struct gaussian_spline : summed<gaussian_spline>
 
   KOKKOS_INLINE_FUNCTION static double dxdelta(double x, double mo)
   {
-    double sqrt2 = std::sqrt(2);
+    double sqrt2 = std::sqrt(2.0);
 
     if (x > 8 || x < -8) return 0;
 
     if (x <= 0) {
-      return -2 * mo * std::exp((sqrt2 - x) * x) * (sqrt2 - x);
+      return -2 * mo * std::exp((sqrt2 - x) * x) * x * (sqrt2 - x);
     } else {
       return -2 * mo * std::exp(-x * (sqrt2 + x)) * x * (sqrt2 + x);
     }

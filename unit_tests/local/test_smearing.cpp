@@ -41,8 +41,8 @@ protected:
   static constexpr bool monotonous = !std::is_base_of<non_monotonous, S>::value;
 };
 
-using kernel_types =
-    ::testing::Types<fermi_dirac, gauss_smearing, cold_smearing, methfessel_paxton_smearing>;
+using kernel_types = ::testing::
+    Types<fermi_dirac, gauss_smearing, gaussian_spline, cold_smearing, methfessel_paxton_smearing>;
 
 class KernelNames
 {
@@ -52,6 +52,7 @@ public:
   {
     if (std::is_same<T, fermi_dirac>::value) return "FermiDirac";
     if (std::is_same<T, gauss_smearing>::value) return "Gauss";
+    if (std::is_same<T, gaussian_spline>::value) return "GaussianSpline";
     if (std::is_same<T, cold_smearing>::value) return "Cold";
     if (std::is_same<T, methfessel_paxton_smearing>::value) return "MethfesselPaxton";
     return "unknown";
@@ -204,8 +205,9 @@ TEST_P(SmearingClass, ElectronCount)
     }
     EXPECT_NEAR(ne, num_electrons, 1e-8) << "mo = " << mo << ", mu = " << mu;
 
-    bool monotonous =
-        GetParam() == smearing_type::FERMI_DIRAC || GetParam() == smearing_type::GAUSS;
+    bool monotonous = GetParam() == smearing_type::FERMI_DIRAC ||
+                      GetParam() == smearing_type::GAUSS ||
+                      GetParam() == smearing_type::GAUSSIAN_SPLINE;
     if (monotonous) {
       for (auto& [key, fnk] : fn) {
         for (size_t ib = 0; ib < fnk.extent(0); ++ib) {
@@ -224,6 +226,7 @@ INSTANTIATE_TEST_SUITE_P(AllSmearings,
                          SmearingClass,
                          ::testing::Values(smearing_type::FERMI_DIRAC,
                                            smearing_type::GAUSS,
+                                           smearing_type::GAUSSIAN_SPLINE,
                                            smearing_type::COLD,
                                            smearing_type::METHFESSEL_PAXTON),
                          [](const auto& info) {
@@ -232,6 +235,8 @@ INSTANTIATE_TEST_SUITE_P(AllSmearings,
                                return std::string("FermiDirac");
                              case smearing_type::GAUSS:
                                return std::string("Gauss");
+                             case smearing_type::GAUSSIAN_SPLINE:
+                               return std::string("GaussianSpline");
                              case smearing_type::COLD:
                                return std::string("Cold");
                              case smearing_type::METHFESSEL_PAXTON:
@@ -240,3 +245,28 @@ INSTANTIATE_TEST_SUITE_P(AllSmearings,
                                return std::string("unknown");
                            }
                          });
+
+/* ------------------------------------------------------------------------------------------
+ * Guards
+ * ------------------------------------------------------------------------------------------ */
+
+TEST(FindChemicalPotential, MonotoneRoot)
+{
+  // find_chemical_potential expects fun(mu) > 0 => mu too small (number of electrons missing)
+  auto fun = [](double mu) { return std::tanh(1.3 - mu); };
+  double mu = find_chemical_potential(fun, 0.0, 1e-12);
+  EXPECT_NEAR(mu, 1.3, 1e-10);
+}
+
+TEST(FindChemicalPotential, ThrowsWithoutRoot)
+{
+  auto fun = [](double mu) { return 1 + mu * mu; };
+  EXPECT_THROW(find_chemical_potential(fun, 0.0, 1e-12), std::runtime_error);
+}
+
+TEST(SmearingClassGuards, ZeroTemperatureThrows)
+{
+  mvector<double> wk{Communicator()};
+  wk[std::make_pair(0, 0)] = 1.0;
+  EXPECT_THROW(Smearing(0, 10, 2.0, wk, smearing_type::FERMI_DIRAC), std::runtime_error);
+}

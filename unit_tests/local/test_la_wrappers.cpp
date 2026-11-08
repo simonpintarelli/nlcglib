@@ -2,9 +2,11 @@
 #include <Kokkos_Core.hpp>
 #include <iomanip>
 #include <iostream>
+#include "constants.hpp"
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
 #include "la/magma.hpp"
+#include "test_common.hpp"
 
 using namespace nlcglib;
 
@@ -100,22 +102,12 @@ TEST_F(CPUKokkosVectors, TransformCPU)
                   << "\nfail: got " << x << " expected " << xRef << "\n";
       }
     }
-  // compare c=a_*u_ with a_, since u_ is the identity.
-  // for (int i = 0; i < c.map().nrows(); ++i)
-  //   for (int j = 0; j < c.map().ncols(); ++j) {
-  //     // std::cout << h_cRef.array()(i, j) << " ";
-  //     std::cout << h_c.array()(i, j) << " ";
-  //   }
   std::cout << "\n";
 }
 
 #if defined(__NLCGLIB__ROCM) || defined(__NLCGLIB__CUDA)
 
-#ifdef __NLCGLIB__ROCM
-using device_space_t = Kokkos::HIPSpace;
-#else
-using device_space_t = Kokkos::CudaSpace;
-#endif
+using nlcglib::test::device_space_t;
 
 class GPUKokkosVectors : public ::testing::Test
 {
@@ -216,74 +208,155 @@ TEST_F(GPUKokkosVectors, TransformGPU)
 }
 
 
-namespace {
-// nvcc forbids defining an extended __host__ __device__ lambda inside a
-// function with private/protected access, which is what GTEST_TEST generates
-// for TestBody(); keep the kernel in a free function instead.
-template <typename ArrayT>
-void
-init_poisson_matrix(ArrayT A_array, int n)
+#endif
+
+/* ------------------------------------------------------------------------------------------
+ * Typed tests, instantiated for host and (if enabled) device memory.
+ * ------------------------------------------------------------------------------------------ */
+
+using namespace nlcglib::test;
+
+template <class memspace>
+class LinAlg : public ::testing::Test
 {
-  typedef Kokkos::MDRangePolicy<Kokkos::Rank<2>> mdrange_policy;
-  Kokkos::parallel_for(
-      "init", mdrange_policy({0, 0}, {n, n}), KOKKOS_LAMBDA(int i, int j) {
-        A_array(i, i) = 1;
-        if (std::abs(i - j) == 1) A_array(i, j) = -2;
-      });
-}
-}  // namespace
+protected:
+  using matrix_t = cmatrix_t<memspace>;
+};
 
-TEST(EigenValues, EigHermitian)
+TYPED_TEST_SUITE(LinAlg, KokkosMemTypes, MemSpaceNames);
+
+/// Hermitian eigenvalue problem for the tridiagonal matrix tridiag(-2, 1, -2), whose
+/// eigenvalues are 1 - 4 cos(k pi / (n+1)), k = 1..n (ascending).
+TYPED_TEST(LinAlg, EigHermitian)
 {
-  // Poisson matrix: n =5, ones on diagonal, -2 on first off-diagonals
-  typedef std::complex<double> numeric_t;
-  typedef KokkosDVector<numeric_t **, SlabLayoutV, Kokkos::LayoutLeft, device_space_t> vector_t;
+  const int n = 20;
+  auto A = make_matrix<TypeParam>(n, n);
+  {
+    auto A_host = Kokkos::create_mirror(A.array());
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < n; ++j) {
+        A_host(i, j) = (i == j) ? 1.0 : ((i - j == 1 || j - i == 1) ? -2.0 : 0.0);
+      }
+    }
+    Kokkos::deep_copy(A.array(), A_host);
+  }
 
-  const std::vector<numeric_t> _Varr = {
-      2.88675135e-01,  5.00000000e-01,  5.77350269e-01,  5.00000000e-01, 2.88675135e-01,
-      -5.00000000e-01, -5.00000000e-01, 2.26646689e-16,  5.00000000e-01, 5.00000000e-01,
-      5.77350269e-01,  -1.82365965e-16, -5.77350269e-01, 1.24197014e-16, 5.77350269e-01,
-      5.00000000e-01,  -5.00000000e-01, 1.14137498e-17,  5.00000000e-01, -5.00000000e-01,
-      -2.88675135e-01, 5.00000000e-01,  -5.77350269e-01, 5.00000000e-01, -2.88675135e-01};
-  const std::vector<double> eigs = {-2.46410162, -1., 1., 3., 4.46410162};
-  int n = eigs.size();
-
-  vector_t Vref(Map<>(Communicator(), SlabLayoutV({{0, 0, n, n}})));
-  auto Vref_host = Kokkos::create_mirror(Vref.array());
-
-  std::memcpy(Vref_host.data(), _Varr.data(), n * n);
-  Kokkos::deep_copy(Vref.array(), Vref_host);
-
-  vector_t A(Map<>(Communicator(), SlabLayoutV({{0, 0, n, n}})));
-  auto A_array = A.array();
-  init_poisson_matrix(A_array, n);
-
-  //
-  auto A_host = Kokkos::create_mirror(A_array);
-  Kokkos::deep_copy(A_host, A_array);
-
-  vector_t V(Map<>(Communicator(), SlabLayoutV({{0, 0, n, n}})));
-  Kokkos::View<double *, device_space_t> w("w", n);
+  auto V = make_matrix<TypeParam>(n, n);
+  Kokkos::View<double *, TypeParam> w("w", n);
   eigh(V, w, A);
 
-  // copy to host
-  auto Vh = Kokkos::create_mirror(V.array());
-  Kokkos::deep_copy(Vh, V.array());
+  auto w_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), w);
+  for (int k = 1; k <= n; ++k) {
+    double ref = 1 - 4 * std::cos(k * constants::pi / (n + 1));
+    EXPECT_NEAR(w_host(k - 1), ref, 1e-12) << "k = " << k;
+  }
 
-  std::cout << std::setprecision(4);
+  // eigenvectors (sign/phase independent): A V = V diag(w) and V^H V = I
+  auto AV = transform_alloc(A, V);
+  auto Vw = make_matrix<TypeParam>(n, n);
+  scale(Vw, V, w, 1.0, 0.0);
+  auto AV_host = to_host(AV);
+  auto Vw_host = to_host(Vw);
+  double res = 0;
+  for (int i = 0; i < n; ++i)
+    for (int j = 0; j < n; ++j) res = std::max(res, Kokkos::abs(AV_host(i, j) - Vw_host(i, j)));
+  EXPECT_LT(res, 1e-12) << "residual |A V - V diag(w)|";
 
-  // copy eigenvalues to host
-  auto wh = Kokkos::create_mirror(w);
-  Kokkos::deep_copy(wh, w);
+  auto VhV = inner_()(V, V);
+  EXPECT_LT(max_dev_from_identity(to_host(VhV)), 1e-12) << "V^H V != I";
+}
 
-  std::cout << "eigenvalues"
-            << "\n";
-  for (size_t i = 0; i < wh.extent(0); ++i) {
-    // double err = eigs[i] - wh(i);
-    EXPECT_NEAR(wh(i), eigs[i], 1e-8);
+/// diag(make_diag(x)) == x, off-diagonal entries are zero
+TYPED_TEST(LinAlg, DiagRoundtrip)
+{
+  const int n = 7;
+  Kokkos::View<complex_double *, TypeParam> x("x", n);
+  auto x_host = Kokkos::create_mirror(x);
+  for (int i = 0; i < n; ++i) x_host(i) = complex_double(i + 1, -0.5 * i);
+  Kokkos::deep_copy(x, x_host);
+
+  auto D = make_diag()(x);
+  auto D_host = to_host(D);
+  auto d_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), diag(D));
+  ASSERT_EQ(d_host.extent(0), size_t(n));
+  for (int i = 0; i < n; ++i) {
+    EXPECT_EQ(d_host(i), x_host(i));
+    for (int j = 0; j < n; ++j)
+      if (i != j) EXPECT_EQ(D_host(i, j), complex_double(0));
   }
 }
-#endif
+
+/// dst <- beta * dst + alpha * src * diag(x)
+TYPED_TEST(LinAlg, ScaleColumns)
+{
+  const int m = 30, n = 5;
+  auto src = make_matrix<TypeParam>(m, n);
+  fill_random(src, 1);
+  Kokkos::View<double *, TypeParam> x("x", n);
+  auto x_host = Kokkos::create_mirror(x);
+  for (int j = 0; j < n; ++j) x_host(j) = j + 1;
+  Kokkos::deep_copy(x, x_host);
+
+  auto dst = make_matrix<TypeParam>(m, n);
+  scale(dst, src, x, 2.0);  // beta = 0 branch
+  auto src_host = to_host(src);
+  auto dst0_host = to_host(dst);
+  for (int i = 0; i < m; ++i)
+    for (int j = 0; j < n; ++j)
+      EXPECT_NEAR(Kokkos::abs(dst0_host(i, j) - 2.0 * x_host(j) * src_host(i, j)), 0, 1e-14);
+
+  scale(dst, src, x, 1.5, 0.5);  // beta != 0 branch
+  auto dst1_host = to_host(dst);
+  for (int i = 0; i < m; ++i)
+    for (int j = 0; j < n; ++j)
+      EXPECT_NEAR(
+          Kokkos::abs(dst1_host(i, j) - (0.5 * dst0_host(i, j) + 1.5 * x_host(j) * src_host(i, j))),
+          0,
+          1e-14);
+}
+
+/// C = A B^H for non-square A, B
+TYPED_TEST(LinAlg, OuterProduct)
+{
+  const int m = 7, n = 5, k = 3;
+  auto A = make_matrix<TypeParam>(m, k);
+  auto B = make_matrix<TypeParam>(n, k);
+  fill_random(A, 2);
+  fill_random(B, 3);
+  auto C = make_matrix<TypeParam>(m, n);
+  outer(C, A, B);
+
+  auto A_host = to_host(A);
+  auto B_host = to_host(B);
+  auto C_host = to_host(C);
+  for (int i = 0; i < m; ++i) {
+    for (int j = 0; j < n; ++j) {
+      complex_double ref = 0;
+      for (int l = 0; l < k; ++l) ref += A_host(i, l) * Kokkos::conj(B_host(j, l));
+      EXPECT_NEAR(Kokkos::abs(C_host(i, j) - ref), 0, 1e-13) << "i = " << i << ", j = " << j;
+    }
+  }
+}
+
+/// C <- beta * C + alpha * A
+TYPED_TEST(LinAlg, Add)
+{
+  const int m = 11, n = 4;
+  auto A = make_matrix<TypeParam>(m, n);
+  auto C = make_matrix<TypeParam>(m, n);
+  fill_random(A, 4);
+  fill_random(C, 5);
+  auto C0_host = to_host(C);
+  auto A_host = to_host(A);
+
+  complex_double alpha(2.0, 1.0), beta(0.5, 0);
+  add(C, A, alpha, beta);
+  auto C_host = to_host(C);
+  for (int i = 0; i < m; ++i)
+    for (int j = 0; j < n; ++j)
+      EXPECT_NEAR(
+          Kokkos::abs(C_host(i, j) - (beta * C0_host(i, j) + alpha * A_host(i, j))), 0, 1e-14);
+}
 
 int
 main(int argc, char *argv[])

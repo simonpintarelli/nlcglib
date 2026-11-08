@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 #include "la/dvector.hpp"
 #include "la/lapack.hpp"
+#include "test_common.hpp"
 
 using namespace nlcglib;
 
@@ -52,20 +53,11 @@ TestSymSolve<T>::SetUp()
   matrix_t H(Map<>(Communicator(), SlabLayoutV({{0, 0, ncols, ncols}})));
 }
 
-#if (!__NLCGLIB__CUDA) && (!__NLCGLIB__ROCM)
-// pass
-#else
-// https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#typed-tests
-#ifdef __NLCGLIB__CUDA
-using KokkosMemTypes = ::testing::Types<Kokkos::CudaSpace, Kokkos::HostSpace>;
-#endif
+// host, and device if enabled
+using nlcglib::test::KokkosMemTypes;
+using nlcglib::test::MemSpaceNames;
 
-#ifdef __NLCGLIB__ROCM
-using KokkosMemTypes = ::testing::Types<Kokkos::HIPSpace, Kokkos::HostSpace>;
-#endif
-
-TYPED_TEST_SUITE_P(TestSymSolve);
-TYPED_TEST_SUITE(TestSymSolve, KokkosMemTypes);
+TYPED_TEST_SUITE(TestSymSolve, KokkosMemTypes, MemSpaceNames);
 
 TYPED_TEST(TestSymSolve, PotrfPotrs)
 {
@@ -94,4 +86,31 @@ TYPED_TEST(TestSymSolve, PotrfPotrs)
   }
 }
 
-#endif
+/// Loewdin orthogonalization: Y = X (X^H X)^{-1/2} has orthonormal columns
+template <class memspace>
+class Loewdin : public ::testing::Test
+{
+};
+
+TYPED_TEST_SUITE(Loewdin, KokkosMemTypes, MemSpaceNames);
+
+TYPED_TEST(Loewdin, Orthonormal)
+{
+  using namespace nlcglib::test;
+  auto X = make_matrix<TypeParam>(nrows, ncols);
+  fill_random(X, 7);
+
+  auto Y = loewdin(X);
+  auto YhY = inner_()(Y, Y);
+  EXPECT_LT(max_dev_from_identity(to_host(YhY)), 1e-10) << "Y^H Y != I";
+
+  // overlap variant with S = identity must agree
+  auto Y2 = loewdin(X, X);
+  auto Y_host = to_host(Y);
+  auto Y2_host = to_host(Y2);
+  double err = 0;
+  for (size_t i = 0; i < Y_host.extent(0); ++i)
+    for (size_t j = 0; j < Y_host.extent(1); ++j)
+      err = std::max(err, Kokkos::abs(Y_host(i, j) - Y2_host(i, j)));
+  EXPECT_LT(err, 1e-12) << "loewdin(X, X) != loewdin(X)";
+}
