@@ -4,6 +4,7 @@ include:
 stages:
   - baseimage
   - build
+  - test
 
 build base uenv gh200:
   extends: .uenv-builder-daint-gh200
@@ -33,4 +34,37 @@ build nlcglib cuda:
       git -C /dev/shm/spack-clone checkout $(jq -r .spack.commit /user-environment/meta/configure.json)
       source /dev/shm/spack-clone/share/spack/setup-env.sh
       bwrap --dev-bind / / --tmpfs ~ -- ./ci/build-cuda.sh
-      bwrap --dev-bind / / --tmpfs ~ -- ./ci/run-unit-tests.sh
+
+.run_tests:
+  script:
+    - |
+      if [ $SLURM_LOCALID -eq 0 ]; then
+        tar xf ./builddir.tar -C /
+        touch /dev/shm/unpack_done_$CI_JOB_ID
+      fi
+    - |
+      # wait for tar unpack
+      while [ ! -f /dev/shm/unpack_done_$CI_JOB_ID ]; do
+        sleep 0.2
+      done
+
+      stagedir=$(find /dev/shm/spack-stage -type d -name "spack-stage-nlcglib-*")
+      echo "stagedir: $stagedir"
+      cd $stagedir
+      builddir=$(find ./ -type d -name "spack-build-*")
+      cd $builddir
+      $TEST_COMMAND
+
+daint test unit tests:
+  extends: [.uenv-runner-daint-gh200, .run_tests]
+  image: nlcglib-gh200/v1:$CI_PIPELINE_ID
+  stage: test
+  needs: ["build nlcglib cuda"]
+  variables:
+    OMP_NUM_THREADS: 16
+    SLURM_TIMELIMIT: '30:00'
+    SLURM_NTASKS: 1
+    SLURM_GPUS: 1
+    SLURM_GPUS_PER_TASK: 1
+    SLURM_CPU_BIND: 'socket'
+    TEST_COMMAND: ./unit_tests/nlcglib_unit_tests
