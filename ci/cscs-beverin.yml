@@ -66,9 +66,11 @@ beverin test unit tests:
   stage: test
   needs: ["build nlcglib mi300"]
   variables:
-    OMP_NUM_THREADS: 16
+    OMP_NUM_THREADS: 8
     SLURM_TIMELIMIT: '30:00'
     SLURM_NTASKS: 1
+    SRUN_CPUS_PER_TASK: 8
+    SLURM_CPUS_PER_TASK: 8
     SLURM_GPUS: 1
     SLURM_GPUS_PER_TASK: 1
     TEST_COMMAND: ./unit_tests/nlcglib_unit_tests
