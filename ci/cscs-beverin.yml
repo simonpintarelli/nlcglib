@@ -38,3 +38,4 @@ build nlcglib mi300:
       git -C /dev/shm/spack-clone checkout $(jq -r .spack.commit /user-environment/meta/configure.json)
       source /dev/shm/spack-clone/share/spack/setup-env.sh
       bwrap --dev-bind / / --tmpfs ~ -- ./ci/build-rocm.sh
+      bwrap --dev-bind / / --tmpfs ~ -- ./ci/run-unit-tests.sh
