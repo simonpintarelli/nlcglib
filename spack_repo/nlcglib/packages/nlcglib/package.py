@@ -31,6 +31,9 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("openmp", default=True, description="Use OpenMP")
     variant("tests", default=False, description="Build tests")
+    variant("shared", default=True, description="Build shared library")
+    # releases up to 1.4.3 always build a shared library
+    conflicts("~shared", when="@:1.4.3")
     variant(
         "build_type",
         default="Release",
@@ -95,6 +98,7 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         options = [
             self.define_from_variant("USE_OPENMP", "openmp"),
             self.define_from_variant("BUILD_TESTS", "tests"),
+            self.define_from_variant("BUILD_SHARED_LIBS", "shared"),
             self.define_from_variant("USE_ROCM", "rocm"),
             self.define_from_variant("USE_GPU_DIRECT", "gpu_direct"),
             self.define_from_variant("USE_MAGMA", "magma"),
