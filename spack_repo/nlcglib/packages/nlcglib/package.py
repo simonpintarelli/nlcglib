@@ -31,9 +31,9 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
 
     variant("openmp", default=True, description="Use OpenMP")
     variant("tests", default=False, description="Build tests")
-    variant("shared", default=True, description="Build shared library")
+    with when("@1.4.4:"):
+        variant("shared", default=True, description="Build shared library")
     # releases up to 1.4.3 always build a shared library
-    conflicts("~shared", when="@:1.4.3")
     variant(
         "build_type",
         default="Release",
@@ -94,17 +94,28 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         for arch in CudaPackage.cuda_arch_values:
             depends_on(f"kokkos cuda_arch={arch}", when=f"cuda_arch={arch}")
 
+    def flag_handler(self, name, flags):
+        # With +cuda the C++ compiler is nvcc_wrapper, which spack's compiler wrapper does not
+        # see, so injected cxxflags would be dropped. Pass them via CMAKE_CXX_FLAGS instead;
+        # nvcc_wrapper then routes nvcc-specific ones (e.g. -Werror=all-warnings) to nvcc.
+        if name == "cxxflags" and self.spec.satisfies("+cuda"):
+            return (None, None, flags)
+        return (flags, None, None)
+
     def cmake_args(self):
         options = [
             self.define_from_variant("USE_OPENMP", "openmp"),
             self.define_from_variant("BUILD_TESTS", "tests"),
-            self.define_from_variant("BUILD_SHARED_LIBS", "shared"),
             self.define_from_variant("USE_ROCM", "rocm"),
             self.define_from_variant("USE_GPU_DIRECT", "gpu_direct"),
             self.define_from_variant("USE_MAGMA", "magma"),
             self.define_from_variant("USE_CUDA", "cuda"),
             self.define_from_variant("USE_TX", "tx"),
         ]
+
+        if self.spec.satisfies("@1.4.4:"):
+            self.define_from_variant("BUILD_SHARED_LIBS", "shared"),
+
 
         if self.spec.satisfies("^[virtuals=lapack] intel-oneapi-mkl"):
             mkl_mapper = {

@@ -7,7 +7,7 @@
 namespace nlcglib {
 namespace env {
 /// Check if environment variable NLCG_DISABLE_NEWTON_EFERMI is set (using a singleton).
-bool
+inline bool
 get_skip_newton_efermi()
 {
   static std::atomic<int> skip_newton{-1};

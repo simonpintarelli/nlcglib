@@ -187,9 +187,9 @@ outer(KokkosDVector<T0**, LAYOUT0, KOKKOS0...>& C,
 
   // single rank
   if (A.map().is_local() && B.map().is_local() && C.map().is_local()) {
-    int m = A.map().ncols();
-    int k = A.map().nrows();
-    int n = B.map().ncols();
+    int m = A.map().nrows();
+    int k = A.map().ncols();
+    int n = B.map().nrows();
     numeric_t* A_ptr = A.array().data();
     numeric_t* B_ptr = B.array().data();
     numeric_t* C_ptr = C.array().data();

@@ -154,9 +154,9 @@ outer(M0& c,
       throw std::runtime_error("expecting column major layout");
     }
 
-    int m = a.map().ncols();
-    int k = a.map().nrows();
-    int n = b.map().ncols();
+    int m = a.map().nrows();
+    int k = a.map().ncols();
+    int n = b.map().nrows();
     numeric_t* A_ptr = a.array().data();
     numeric_t* B_ptr = b.array().data();
     numeric_t* C_ptr = c.array().data();

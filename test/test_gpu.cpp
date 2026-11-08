@@ -21,12 +21,6 @@ std::uniform_real_distribution<double> unif01(0, 1);
 std::mt19937 gen(0);
 
 
-// template<class T>
-// class X
-// {
-// };
-
-
 typedef Kokkos::complex<double> complex_double;
 
 void
