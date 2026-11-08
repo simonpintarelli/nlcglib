@@ -1,5 +1,5 @@
 name: nlcglib-uenv-base
-version: 2
+version: 3
 spack:
   commit: releases/v1.2
   repo: https://github.com/spack/spack.git
