@@ -152,12 +152,15 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
       - name: Install and build a consumer after relocation
+        # CUDA: the container has no driver, only the libcuda.so stub, so the
+        # libcuda.so.1 needed by libnlcglib.so can't be resolved at link time.
         run: |
           cmake --install build
           mv install relocated-install
           cmake -S ci/cmake-consumer -B consumer-build -G Ninja \
             -DCMAKE_CXX_COMPILER="${{ steps.kokkos-compiler.outputs.cxx }}" \
             -DCMAKE_CXX_FLAGS="${{ steps.kokkos-compiler.outputs.extra_cxx_flags }}" \
+            -DCMAKE_EXE_LINKER_FLAGS="${{ matrix.use_cuda == 'ON' && '-Wl,--unresolved-symbols=ignore-in-shared-libs' || '' }}" \
             -DCMAKE_PREFIX_PATH="${PWD}/relocated-install;${HOME}/kokkos-install;${HOME}/openblas-install"
           cmake --build consumer-build -j"$(nproc)"
 

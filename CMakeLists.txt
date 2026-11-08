@@ -114,6 +114,13 @@ if(USE_MAGMA)
   find_package(MAGMA REQUIRED MODULE)
 endif()
 
+# Record non-system dependency dirs in the installed RPATH so consumers and the
+# runtime loader can find them. Callers can override it, e.g. spack sets this
+# itself.
+if(NOT DEFINED CMAKE_INSTALL_RPATH_USE_LINK_PATH)
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
+endif()
+
 add_subdirectory(src)
 
 if(BUILD_TESTS)
