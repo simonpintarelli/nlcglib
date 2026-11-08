@@ -4,7 +4,7 @@ set(nlcglib_private_definitions)
 
 if(_lapack_vendor STREQUAL "OpenBLAS")
   list(APPEND nlcglib_private_libraries OpenBLAS::LAPACKE)
-elseif(_lapack_vendor STREQUAL "MKL")
+elseif(_lapack_vendor STREQUAL "MKLONEAPI")
   list(APPEND nlcglib_private_libraries MKL::MKL)
   list(APPEND nlcglib_private_definitions __USE_MKL)
 else()

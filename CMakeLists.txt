@@ -17,7 +17,8 @@ option(USE_TX "Enable vendor profiling markers (NVTX for CUDA, roctx for ROCm)"
 set(LAPACK_VENDOR
     "AUTO"
     CACHE STRING "LAPACK provider")
-set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS AUTO OpenBLAS MKL CRAY_LIBSCI)
+set_property(CACHE LAPACK_VENDOR PROPERTY STRINGS AUTO OpenBLAS MKLONEAPI MKL
+                                          CRAY_LIBSCI)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE
@@ -55,17 +56,20 @@ endif()
 
 if(LAPACK_VENDOR STREQUAL "AUTO")
   if(DEFINED MKLROOT OR DEFINED ENV{MKLROOT})
-    set(_lapack_vendor "MKL")
+    set(_lapack_vendor "MKLONEAPI")
   else()
     set(_lapack_vendor "OpenBLAS")
   endif()
+elseif(LAPACK_VENDOR STREQUAL "MKL")
+  # Alias: both spellings select oneAPI MKL via MKLConfig.cmake.
+  set(_lapack_vendor "MKLONEAPI")
 else()
   set(_lapack_vendor "${LAPACK_VENDOR}")
 endif()
 
 if(_lapack_vendor STREQUAL "OpenBLAS")
   find_package(OpenBLAS REQUIRED MODULE)
-elseif(_lapack_vendor STREQUAL "MKL")
+elseif(_lapack_vendor STREQUAL "MKLONEAPI")
   set(MKL_INTERFACE
       "lp64"
       CACHE STRING "MKL integer interface")
