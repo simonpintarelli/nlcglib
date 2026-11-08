@@ -41,8 +41,8 @@ protected:
   static constexpr bool monotonous = !std::is_base_of<non_monotonous, S>::value;
 };
 
-using kernel_types = ::testing::
-    Types<fermi_dirac, gauss_smearing, cold_smearing, methfessel_paxton_smearing>;
+using kernel_types =
+    ::testing::Types<fermi_dirac, gauss_smearing, cold_smearing, methfessel_paxton_smearing>;
 
 class KernelNames
 {
@@ -204,8 +204,8 @@ TEST_P(SmearingClass, ElectronCount)
     }
     EXPECT_NEAR(ne, num_electrons, 1e-8) << "mo = " << mo << ", mu = " << mu;
 
-    bool monotonous = GetParam() == smearing_type::FERMI_DIRAC ||
-                      GetParam() == smearing_type::GAUSS;
+    bool monotonous =
+        GetParam() == smearing_type::FERMI_DIRAC || GetParam() == smearing_type::GAUSS;
     if (monotonous) {
       for (auto& [key, fnk] : fn) {
         for (size_t ib = 0; ib < fnk.extent(0); ++ib) {
