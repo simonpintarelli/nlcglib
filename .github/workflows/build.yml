@@ -126,8 +126,8 @@ jobs:
         # runtime instead; TARGET sets the baseline for the common code.
         if: steps.cache-openblas.outputs.cache-hit != 'true'
         run: |
-          curl -fsSL -o /tmp/openblas.tar.gz \
-            https://github.com/OpenMathLib/OpenBLAS/releases/download/v${OPENBLAS_VERSION}/OpenBLAS-${OPENBLAS_VERSION}.tar.gz
+          curl -fsSL --retry 5 --retry-all-errors -o /tmp/openblas.tar.gz \
+            https://github.com/OpenMathLib/OpenBLAS/archive/refs/tags/v${OPENBLAS_VERSION}.tar.gz
           tar xzf /tmp/openblas.tar.gz -C /tmp
           openblas_flags="DYNAMIC_ARCH=1 TARGET=HASWELL"
           make -C /tmp/OpenBLAS-${OPENBLAS_VERSION} -j"$(nproc)" ${openblas_flags}
