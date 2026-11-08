@@ -140,10 +140,10 @@ install(FILES "${PROJECT_BINARY_DIR}/nlcglib-config.cmake"
               "${PROJECT_BINARY_DIR}/nlcglib-config-version.cmake"
         DESTINATION "${nlcglib_cmake_dir}")
 if(NOT BUILD_SHARED_LIBS)
-  if(LAPACK_VENDOR STREQUAL "OpenBLAS")
+  if(_lapack_vendor STREQUAL "OpenBLAS")
     install(FILES cmake/modules/FindOpenBLAS.cmake
             DESTINATION "${nlcglib_cmake_dir}/modules")
-  elseif(LAPACK_VENDOR STREQUAL "CRAY_LIBSCI")
+  elseif(_lapack_vendor STREQUAL "CRAY_LIBSCI")
     install(FILES cmake/modules/FindSCI.cmake
             DESTINATION "${nlcglib_cmake_dir}/modules")
   endif()
