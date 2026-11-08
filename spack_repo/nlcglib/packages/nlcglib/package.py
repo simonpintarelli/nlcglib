@@ -94,6 +94,14 @@ class Nlcglib(CMakePackage, CudaPackage, ROCmPackage):
         for arch in CudaPackage.cuda_arch_values:
             depends_on(f"kokkos cuda_arch={arch}", when=f"cuda_arch={arch}")
 
+    def flag_handler(self, name, flags):
+        # With +cuda the C++ compiler is nvcc_wrapper, which spack's compiler wrapper does not
+        # see, so injected cxxflags would be dropped. Pass them via CMAKE_CXX_FLAGS instead;
+        # nvcc_wrapper then routes nvcc-specific ones (e.g. -Werror=all-warnings) to nvcc.
+        if name == "cxxflags" and self.spec.satisfies("+cuda"):
+            return (None, None, flags)
+        return (flags, None, None)
+
     def cmake_args(self):
         options = [
             self.define_from_variant("USE_OPENMP", "openmp"),

@@ -25,7 +25,7 @@ build nlcglib cuda:
     paths:
       - builddir.tar
   variables:
-    SPEC: nlcglib@=develop +cuda +openmp +tests
+    SPEC: nlcglib@=develop +cuda +openmp +tests cxxflags="-Werror -Werror=all-warnings"
     CUDA_ARCH: 90
   script:
     - |
