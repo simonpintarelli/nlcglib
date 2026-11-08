@@ -16,7 +16,7 @@ spack -e ./spack-env config add "packages:all:variants:[amdgpu_target=${ROCM_ARC
 # TODO: update once this is has changed upstream
 # spack -e ./spack-env config add "packages:all:providers:mpi:[cray-mpich@9.1.0+rocm]"
 
-# keep -Werror instead of spack stripping it, needed since nlcglib builds with -Werror
+# keep -Werror instead of spack stripping it (SPEC sets cxxflags=-Werror for nlcglib)
 spack -e ./spack-env config add "config:flags:keep_werror:all"
 
 spack -e ./spack-env add $SPEC

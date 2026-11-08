@@ -7,9 +7,9 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    container: zhongruoyu/llvm-ports:19-slim-focal
     steps:
-      - uses: actions/checkout@v4
-      - name: Check .cpp and .hpp files
-        run: |
-          ./check_format.sh
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - uses: pre-commit/action@v3.0.1

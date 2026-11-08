@@ -1,7 +1,60 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
+find_dependency(MPI COMPONENTS CXX)
+
+# Shared libraries expose only MPI through the public headers. Static libraries
+# also need all implementation libraries when the final executable is linked.
+if(NOT @BUILD_SHARED_LIBS@)
+  function(_nlcglib_find_static_dependencies)
+    list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/modules")
+    find_dependency(Kokkos CONFIG)
+    find_dependency(fmt CONFIG)
+    if(@USE_OPENMP@)
+      find_dependency(OpenMP COMPONENTS CXX)
+    endif()
+
+    if("@_lapack_vendor@" STREQUAL "OpenBLAS")
+      find_dependency(OpenBLAS MODULE)
+    elseif("@_lapack_vendor@" STREQUAL "CRAY_LIBSCI")
+      set(SCI_USE_OPENMP @USE_OPENMP@)
+      find_dependency(SCI MODULE)
+    else()
+      set(MKL_INTERFACE "@MKL_INTERFACE@")
+      set(MKL_THREADING "@MKL_THREADING@")
+      set(MKL_LINK "@MKL_LINK@")
+      find_dependency(MKL CONFIG)
+    endif()
+    if(@USE_CUDA@)
+      find_dependency(CUDAToolkit)
+    elseif(@USE_ROCM@)
+      find_dependency(hip CONFIG)
+      find_dependency(rocblas CONFIG)
+      find_dependency(rocsolver CONFIG)
+      if(@USE_TX@)
+        find_dependency(rocprofiler-sdk-roctx CONFIG)
+      endif()
+    endif()
+    if(@USE_MAGMA@)
+      find_dependency(hipblas CONFIG)
+      find_dependency(hipsparse CONFIG)
+      find_dependency(MAGMA MODULE)
+    endif()
+    set(_nlcglib_dependencies_found
+        TRUE
+        PARENT_SCOPE)
+  endfunction()
+  set(_nlcglib_dependencies_found FALSE)
+  _nlcglib_find_static_dependencies()
+  if(NOT _nlcglib_dependencies_found)
+    set(nlcglib_FOUND FALSE)
+    set(nlcglib_NOT_FOUND_MESSAGE
+        "Could not find the dependencies required to link static nlcglib")
+    unset(_nlcglib_dependencies_found)
+    return()
+  endif()
+  unset(_nlcglib_dependencies_found)
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/nlcglib-targets.cmake")
-
 check_required_components(nlcglib)
