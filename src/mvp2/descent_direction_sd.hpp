@@ -3,13 +3,13 @@
 #include "descent_direction_impl.hpp"
 #include "la/dvector.hpp"
 #include "mvp2.hpp"
-#include "pseudo_hamiltonian/grad_eta.hpp"
+#include "pseudo_hamiltonian/grad_eta.h"
 #include "utils/profile.hpp"
 
 // (unpreconditoned) steepest descent
 namespace nlcglib {
-template <class memspace_t, enum smearing_type smearing_t>
-class descent_direction_sd : public descent_direction_base<memspace_t, smearing_t>
+template <class memspace_t>
+class descent_direction_sd : public descent_direction_base<memspace_t>
 {
 public:
   descent_direction_sd(const memspace_t& memspc,
@@ -18,9 +18,10 @@ public:
                        double sumfn,
                        double T,
                        double kappa,
-                       double mo)
-      : descent_direction_base<memspace_t, smearing_t>::descent_direction_base(
-            memspc, mu, dFdmu, sumfn, T, kappa, mo)
+                       double mo,
+                       smearing_type smear)
+      : descent_direction_base<memspace_t>::descent_direction_base(
+            memspc, mu, dFdmu, sumfn, T, kappa, mo, smear)
   {
   }
 
@@ -35,19 +36,19 @@ private:
       x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op1_t&& s, op2_t&& sinv, double wk);
 
 private:
-  using descent_direction_base<memspace_t, smearing_t>::memspc;
-  using descent_direction_base<memspace_t, smearing_t>::mu;
-  using descent_direction_base<memspace_t, smearing_t>::dFdmu;
-  using descent_direction_base<memspace_t, smearing_t>::sumfn;
-  using descent_direction_base<memspace_t, smearing_t>::T;
-  using descent_direction_base<memspace_t, smearing_t>::kappa;
-  using descent_direction_base<memspace_t, smearing_t>::mo;
+  using descent_direction_base<memspace_t>::memspc;
+  using descent_direction_base<memspace_t>::mu;
+  using descent_direction_base<memspace_t>::dFdmu;
+  using descent_direction_base<memspace_t>::sumfn;
+  using descent_direction_base<memspace_t>::T;
+  using descent_direction_base<memspace_t>::kappa;
+  using descent_direction_base<memspace_t>::mo;
 };
 
-template <class memspc_t, enum smearing_type smearing_t>
+template <class memspc_t>
 template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t>
 std::tuple<slope_t, to_layout_left_t<x_t>, to_layout_left_t<x_t>>
-descent_direction_sd<memspc_t, smearing_t>::exec_spc(
+descent_direction_sd<memspc_t>::exec_spc(
     x_t&& x, e_t&& e, f_t&& f, hx_t&& hx, op1_t&& s, op2_t&& sinv, double wk)
 {
   PROFILE("exec");
@@ -62,7 +63,7 @@ descent_direction_sd<memspc_t, smearing_t>::exec_spc(
   // covariant gradient
   auto gx = local::gradx()(sx, hx, f, sxhij, wk);
 
-  GradEta<smearing_t> grad_eta(this->T, this->kappa);
+  GradEta<memspc_t> grad_eta(this->T, this->smear);
   auto g_eta = grad_eta.g_eta(hij, mu, wk, e, f, this->sumfn, this->dFdmu, this->mo);
 
   double fr_x = -2.0 * innerh_tr()(gx, cgx).real();
@@ -76,10 +77,10 @@ descent_direction_sd<memspc_t, smearing_t>::exec_spc(
 }
 
 
-template <class memspc_t, enum smearing_type smearing_t>
+template <class memspc_t>
 template <class x_t, class e_t, class f_t, class hx_t, class op1_t, class op2_t>
 auto
-descent_direction_sd<memspc_t, smearing_t>::operator()(
+descent_direction_sd<memspc_t>::operator()(
     x_t&& X_h, e_t&& en_h, f_t&& fn_h, hx_t&& hx_h, op1_t&& S, op2_t&& Sinv, double wk)
 {
   PROFILE("nlcglib::cg::steepest_descent");

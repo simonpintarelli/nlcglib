@@ -3,17 +3,16 @@
 #include "descent_direction_impl.hpp"
 #include "la/dvector.hpp"
 #include "mvp2/mvp2.hpp"
-#include "pseudo_hamiltonian/grad_eta.hpp"
+#include "pseudo_hamiltonian/grad_eta.h"
 #include "utils/profile.hpp"
 
 namespace nlcglib {
 
 /** Helper class for CG algorithm.
     @param memspace_t     execution memory space
-    @param smearing_type  Smearing type
  */
-template <class memspace_t, enum smearing_type smearing_t>
-class descent_direction_conjugate : public descent_direction_base<memspace_t, smearing_t>
+template <class memspace_t>
+class descent_direction_conjugate : public descent_direction_base<memspace_t>
 {
 public:
   descent_direction_conjugate(const memspace_t& memspc,
@@ -22,9 +21,10 @@ public:
                               double sumfn,
                               double T,
                               double kappa,
-                              double mo)
-      : descent_direction_base<memspace_t, smearing_t>::descent_direction_base(
-            memspc, mu, dFdmu, sumfn, T, kappa, mo)
+                              double mo,
+                              smearing_type smear)
+      : descent_direction_base<memspace_t>::descent_direction_base(
+            memspc, mu, dFdmu, sumfn, T, kappa, mo, smear)
   {
   }
 
@@ -83,17 +83,17 @@ private:
       x_t&& x, sx_t&& sx, zxp_t&& zxp, zetap_t&& zetap, ul_t&& ul, gx_t&& gx, geta_t&& geta);
 
 private:
-  using descent_direction_base<memspace_t, smearing_t>::memspc;
-  using descent_direction_base<memspace_t, smearing_t>::mu;
-  using descent_direction_base<memspace_t, smearing_t>::dFdmu;
-  using descent_direction_base<memspace_t, smearing_t>::sumfn;
-  using descent_direction_base<memspace_t, smearing_t>::T;
-  using descent_direction_base<memspace_t, smearing_t>::kappa;
-  using descent_direction_base<memspace_t, smearing_t>::mo;
+  using descent_direction_base<memspace_t>::memspc;
+  using descent_direction_base<memspace_t>::mu;
+  using descent_direction_base<memspace_t>::dFdmu;
+  using descent_direction_base<memspace_t>::sumfn;
+  using descent_direction_base<memspace_t>::T;
+  using descent_direction_base<memspace_t>::kappa;
+  using descent_direction_base<memspace_t>::mo;
 };
 
 /// conjugated
-template <class memspc_t, enum smearing_type smearing_t>
+template <class memspc_t>
 template <class x_t,
           class e_t,
           class f_t,
@@ -109,16 +109,16 @@ std::tuple<slope_t,
            to_layout_left_t<x_t>,
            to_layout_left_t<zetap_t>,
            slope_t>
-descent_direction_conjugate<memspc_t, smearing_t>::exec_spc(x_t&& x,
-                                                            e_t&& e,
-                                                            f_t&& f,
-                                                            hx_t&& hx,
-                                                            op_t&& s,
-                                                            prec_t&& p,
-                                                            zxp_t&& zxp,
-                                                            zetap_t&& zetap,
-                                                            ul_t&& ul,
-                                                            double wk)
+descent_direction_conjugate<memspc_t>::exec_spc(x_t&& x,
+                                                e_t&& e,
+                                                f_t&& f,
+                                                hx_t&& hx,
+                                                op_t&& s,
+                                                prec_t&& p,
+                                                zxp_t&& zxp,
+                                                zetap_t&& zetap,
+                                                ul_t&& ul,
+                                                double wk)
 {
   PROFILE("nlcglib::cg_conjugate::exec");
   auto sx = s(x);
@@ -128,7 +128,7 @@ descent_direction_conjugate<memspc_t, smearing_t>::exec_spc(x_t&& x,
   auto hij = inner_()(x, hx, wk);
   // // std::cout << dFdmu << ", " << sumfn << "\n";
 
-  GradEta<smearing_t> grad_eta(this->T, this->kappa);
+  GradEta<memspc_t> grad_eta(this->T, this->smear);
   auto g_eta = grad_eta.g_eta(hij, mu, wk, e, f, this->sumfn, this->dFdmu, this->mo);
   auto delta_eta = _delta_eta(this->kappa)(hij, e, wk);
 
@@ -142,10 +142,10 @@ descent_direction_conjugate<memspc_t, smearing_t>::exec_spc(x_t&& x,
   return std::make_tuple(fr, delta_x, delta_eta, z_x, z_eta, slope_zp);
 }
 
-template <class memspc_t, enum smearing_type smearing_t>
+template <class memspc_t>
 template <class x_t, class sx_t, class zxp_t, class zetap_t, class ul_t, class gx_t, class geta_t>
 std::tuple<slope_t, to_layout_left_t<zxp_t>, to_layout_left_t<zetap_t>>
-descent_direction_conjugate<memspc_t, smearing_t>::exec(
+descent_direction_conjugate<memspc_t>::exec(
     x_t&& x, sx_t&& sx, zxp_t&& zxp, zetap_t&& zetap, ul_t&& ul, gx_t&& gx, geta_t&& geta)
 {
   auto zx_tmp = local::rotatex()(zxp, ul);
@@ -162,7 +162,7 @@ descent_direction_conjugate<memspc_t, smearing_t>::exec(
 }
 
 
-template <class memspc_t, enum smearing_type smearing_t>
+template <class memspc_t>
 template <class x_t,
           class e_t,
           class f_t,
@@ -173,16 +173,16 @@ template <class x_t,
           class op_t,
           class prec_t>
 auto
-descent_direction_conjugate<memspc_t, smearing_t>::operator()(x_t&& X_h,
-                                                              e_t&& en_h,
-                                                              f_t&& fn_h,
-                                                              hx_t&& hx_h,
-                                                              zxp_t&& zxp_h,
-                                                              zetap_t&& zetap_h,
-                                                              ul_t&& ul_h,
-                                                              op_t&& S,
-                                                              prec_t&& P,
-                                                              double wk)
+descent_direction_conjugate<memspc_t>::operator()(x_t&& X_h,
+                                                  e_t&& en_h,
+                                                  f_t&& fn_h,
+                                                  hx_t&& hx_h,
+                                                  zxp_t&& zxp_h,
+                                                  zetap_t&& zetap_h,
+                                                  ul_t&& ul_h,
+                                                  op_t&& S,
+                                                  prec_t&& P,
+                                                  double wk)
 {
   PROFILE("nlcglib::cg_conjugate");
   // namespace of input an result

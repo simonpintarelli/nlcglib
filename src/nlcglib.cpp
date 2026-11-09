@@ -4,7 +4,7 @@
 #include <ios>
 #include <iostream>
 #include <nlcglib.hpp>
-#include "free_energy.hpp"
+#include "free_energy.h"
 #include "geodesic.hpp"
 #include "interface.hpp"
 #include "la/lapack.hpp"
@@ -12,9 +12,8 @@
 #include "la/utils.hpp"
 #include "linesearch/linesearch.hpp"
 #include "mpi/communicator.hpp"
-#include "mvp2/descent_direction.hpp"
+#include "mvp2/descent_direction.h"
 #include "overlap.hpp"
-#include "smearing.hpp"
 #include "ultrasoft_precond.hpp"
 #include "utils/logger.hpp"
 #include "utils/step_logger.hpp"
@@ -200,12 +199,13 @@ nlcheck_overlap(EnergyBase& e, OverlapBase& s, OverlapBase& si)
 
 
 /// xspace -> memory space where nlcg is executed
-template <class xspace, enum smearing_type smearing_t>
+template <class xspace>
 nlcg_info
 nlcg_us(EnergyBase& energy_base,
         UltrasoftPrecondBase& us_precond_base,
         OverlapBase& overlap_base,
         InverseOverlapBase& inverse_overlap_base,
+        smearing_type smearing_t,
         double T,
         int maxiter,
         double tol,
@@ -213,6 +213,16 @@ nlcg_us(EnergyBase& energy_base,
         double tau,
         int restart)
 {
+  switch (smearing_t) {
+    case smearing_type::FERMI_DIRAC:
+    case smearing_type::GAUSSIAN_SPLINE:
+    case smearing_type::GAUSS:
+    case smearing_type::METHFESSEL_PAXTON:
+    case smearing_type::COLD:
+      break;
+    default:
+      throw std::runtime_error("invalid smearing type given");
+  }
   PROFILE("nlcglib");
   nlcg_info info;
 
@@ -262,9 +272,8 @@ nlcg_us(EnergyBase& energy_base,
   auto ek = free_energy.get_ek();
   auto wk = free_energy.get_wk();
   auto commk = wk.commk();
-  Smearing smearing = free_energy.get_smearing();
 
-  auto mu_fn = smearing.fn(ek);
+  auto mu_fn = free_energy.occupations(ek);
   double mu = std::get<0>(mu_fn);
   auto fn = std::get<1>(mu_fn);
   auto X0 = free_energy.get_X();
@@ -282,10 +291,10 @@ nlcg_us(EnergyBase& energy_base,
          << "\n";
 
   // auto HX_c = copy(Hx);
-  descent_direction<smearing_t> dd(T, kappa);
+  descent_direction<xspace> dd(T, kappa, smearing_t);
 
   auto eta = eval_threaded(tapply(make_diag(), ek));
-  auto [slope, z_x, z_eta] = dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
+  auto [slope, z_x, z_eta] = dd.restarted(X, ek, fn, Hx, wk, mu, S, P, free_energy);
 
   // allocate rotation matrices
   auto ul = eval_threaded(tapply([](auto&& z) { return empty_like()(z); }, z_eta));
@@ -337,7 +346,7 @@ nlcg_us(EnergyBase& energy_base,
       auto ek_ul_xnext = geodesic(xspace(), X, eta, z_x, z_eta, S, t);
       auto ek = std::get<0>(ek_ul_xnext);
       auto Xn = std::get<2>(ek_ul_xnext);
-      auto mu_fn = smearing.fn(ek);
+      auto mu_fn = free_energy.occupations(ek);
       double mu = std::get<0>(mu_fn);
 
       free_energy.compute(Xn, std::get<1>(mu_fn), ek, mu);
@@ -372,8 +381,7 @@ nlcg_us(EnergyBase& energy_base,
           slope.x + slope.eta,
           slope.x,
           slope.eta);
-      std::tie(slope, z_x, z_eta) =
-          dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
+      std::tie(slope, z_x, z_eta) = dd.restarted(X, ek, fn, Hx, wk, mu, S, P, free_energy);
       fr = slope;
       state = cg_state::pSD;
       continue;
@@ -387,8 +395,7 @@ nlcg_us(EnergyBase& energy_base,
           slope.x + slope.eta,
           slope.x,
           slope.eta);
-      std::tie(slope, z_x, z_eta) =
-          dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, S, Sinv, P, free_energy);
+      std::tie(slope, z_x, z_eta) = dd.restarted_sd(X, ek, fn, Hx, wk, mu, S, Sinv, P, free_energy);
       fr = slope;
       state = cg_state::SD;
       continue;
@@ -411,8 +418,7 @@ nlcg_us(EnergyBase& energy_base,
         state == cg_state::pSD) {
       // continue with unpreconditioned SD step
       logger << "i=" << cg_iter << ": backtracking failed -> steepest descent\n";
-      std::tie(slope, z_x, z_eta) =
-          dd.restarted_sd(xspace(), X, ek, fn, Hx, wk, mu, S, Sinv, P, free_energy);
+      std::tie(slope, z_x, z_eta) = dd.restarted_sd(X, ek, fn, Hx, wk, mu, S, Sinv, P, free_energy);
       fr = slope;
       state = cg_state::SD;
       continue;
@@ -422,8 +428,7 @@ nlcg_us(EnergyBase& energy_base,
         state == cg_state::CG) {
       // continue with preconditioned SD step
       logger << "i=" << cg_iter << ": backtracking failed -> restart\n";
-      std::tie(slope, z_x, z_eta) =
-          dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
+      std::tie(slope, z_x, z_eta) = dd.restarted(X, ek, fn, Hx, wk, mu, S, P, free_energy);
       fr = slope;
       state = cg_state::pSD;
       continue;
@@ -431,8 +436,7 @@ nlcg_us(EnergyBase& energy_base,
 
     if (cg_iter % restart == 0) {
       logger << fmt::format(fmt::runtime("i={:d} cg_restart({:d})\n"), cg_iter, restart);
-      std::tie(slope, z_x, z_eta) =
-          dd.restarted(xspace(), X, ek, fn, Hx, wk, mu, S, P, free_energy);
+      std::tie(slope, z_x, z_eta) = dd.restarted(X, ek, fn, Hx, wk, mu, S, P, free_energy);
       fr = slope;
       state = cg_state::pSD;
     }
@@ -448,7 +452,7 @@ nlcg_us(EnergyBase& energy_base,
       Hx = copy(free_energy.get_HX());
 
       std::tie(fr, slope, z_x, z_eta) =
-          dd.conjugated(xspace(), fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
+          dd.conjugated(fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
       state = cg_state::CG;
     } else {
       throw std::runtime_error(fmt::format(fmt::runtime("Unhandled line-search error occured.")));
@@ -471,75 +475,17 @@ nlcg_us_cpu(EnergyBase& energy_base,
             int maxiter,
             int restart)
 {
-  switch (smearing) {
-    case smearing_type::FERMI_DIRAC: {
-      auto info = nlcg_us<Kokkos::HostSpace, smearing_type::FERMI_DIRAC>(energy_base,
-                                                                         us_precond_base,
-                                                                         overlap_base,
-                                                                         inverse_overlap_base,
-                                                                         temp,
-                                                                         maxiter,
-                                                                         tol,
-                                                                         kappa,
-                                                                         tau,
-                                                                         restart);
-      return info;
-    }
-    case smearing_type::GAUSSIAN_SPLINE: {
-      auto info = nlcg_us<Kokkos::HostSpace, smearing_type::GAUSSIAN_SPLINE>(energy_base,
-                                                                             us_precond_base,
-                                                                             overlap_base,
-                                                                             inverse_overlap_base,
-                                                                             temp,
-                                                                             maxiter,
-                                                                             tol,
-                                                                             kappa,
-                                                                             tau,
-                                                                             restart);
-      return info;
-    }
-    case smearing_type::GAUSS: {
-      auto info = nlcg_us<Kokkos::HostSpace, smearing_type::GAUSS>(energy_base,
-                                                                   us_precond_base,
-                                                                   overlap_base,
-                                                                   inverse_overlap_base,
-                                                                   temp,
-                                                                   maxiter,
-                                                                   tol,
-                                                                   kappa,
-                                                                   tau,
-                                                                   restart);
-      return info;
-    }
-    case smearing_type::METHFESSEL_PAXTON: {
-      auto info = nlcg_us<Kokkos::HostSpace, smearing_type::METHFESSEL_PAXTON>(energy_base,
-                                                                               us_precond_base,
-                                                                               overlap_base,
-                                                                               inverse_overlap_base,
-                                                                               temp,
-                                                                               maxiter,
-                                                                               tol,
-                                                                               kappa,
-                                                                               tau,
-                                                                               restart);
-      return info;
-    }
-    case smearing_type::COLD: {
-      auto info = nlcg_us<Kokkos::HostSpace, smearing_type::COLD>(energy_base,
-                                                                  us_precond_base,
-                                                                  overlap_base,
-                                                                  inverse_overlap_base,
-                                                                  temp,
-                                                                  maxiter,
-                                                                  tol,
-                                                                  kappa,
-                                                                  tau,
-                                                                  restart);
-      return info;
-    }
-    default:
-      throw std::runtime_error("invalid smearing type given");
-  }
+  return nlcg_us<Kokkos::HostSpace>(energy_base,
+                                    us_precond_base,
+                                    overlap_base,
+                                    inverse_overlap_base,
+                                    smearing,
+                                    temp,
+                                    maxiter,
+                                    tol,
+                                    kappa,
+                                    tau,
+                                    restart);
 }
 
 nlcg_info
@@ -556,148 +502,29 @@ nlcg_us_device([[maybe_unused]] EnergyBase& energy_base,
                [[maybe_unused]] int restart)
 {
 #ifdef __NLCGLIB__CUDA
-  switch (smearing) {
-    case smearing_type::FERMI_DIRAC: {
-      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::FERMI_DIRAC>(energy_base,
-                                                                         us_precond_base,
-                                                                         overlap_base,
-                                                                         inverse_overlap_base,
-                                                                         temp,
-                                                                         maxiter,
-                                                                         tol,
-                                                                         kappa,
-                                                                         tau,
-                                                                         restart);
-      return info;
-    }
-    case smearing_type::GAUSSIAN_SPLINE: {
-      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::GAUSSIAN_SPLINE>(energy_base,
-                                                                             us_precond_base,
-                                                                             overlap_base,
-                                                                             inverse_overlap_base,
-                                                                             temp,
-                                                                             maxiter,
-                                                                             tol,
-                                                                             kappa,
-                                                                             tau,
-                                                                             restart);
-      return info;
-    }
-    case smearing_type::GAUSS: {
-      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::GAUSS>(energy_base,
-                                                                   us_precond_base,
-                                                                   overlap_base,
-                                                                   inverse_overlap_base,
-                                                                   temp,
-                                                                   maxiter,
-                                                                   tol,
-                                                                   kappa,
-                                                                   tau,
-                                                                   restart);
-      return info;
-    }
-    case smearing_type::METHFESSEL_PAXTON: {
-      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::METHFESSEL_PAXTON>(energy_base,
-                                                                               us_precond_base,
-                                                                               overlap_base,
-                                                                               inverse_overlap_base,
-                                                                               temp,
-                                                                               maxiter,
-                                                                               tol,
-                                                                               kappa,
-                                                                               tau,
-                                                                               restart);
-      return info;
-    }
-    case smearing_type::COLD: {
-      auto info = nlcg_us<Kokkos::CudaSpace, smearing_type::COLD>(energy_base,
-                                                                  us_precond_base,
-                                                                  overlap_base,
-                                                                  inverse_overlap_base,
-                                                                  temp,
-                                                                  maxiter,
-                                                                  tol,
-                                                                  kappa,
-                                                                  tau,
-                                                                  restart);
-      return info;
-    }
-
-    default:
-      throw std::runtime_error("invalid smearing type given");
-  }
-#elif defined __NLCGLIB__ROCM
-  switch (smearing) {
-    case smearing_type::FERMI_DIRAC: {
-      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::FERMI_DIRAC>(energy_base,
-                                                                        us_precond_base,
-                                                                        overlap_base,
-                                                                        inverse_overlap_base,
-                                                                        temp,
-                                                                        maxiter,
-                                                                        tol,
-                                                                        kappa,
-                                                                        tau,
-                                                                        restart);
-      return info;
-    }
-    case smearing_type::GAUSSIAN_SPLINE: {
-      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::GAUSSIAN_SPLINE>(energy_base,
-                                                                            us_precond_base,
-                                                                            overlap_base,
-                                                                            inverse_overlap_base,
-                                                                            temp,
-                                                                            maxiter,
-                                                                            tol,
-                                                                            kappa,
-                                                                            tau,
-                                                                            restart);
-      return info;
-    }
-    case smearing_type::GAUSS: {
-      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::GAUSS>(energy_base,
-                                                                  us_precond_base,
-                                                                  overlap_base,
-                                                                  inverse_overlap_base,
-                                                                  temp,
-                                                                  maxiter,
-                                                                  tol,
-                                                                  kappa,
-                                                                  tau,
-                                                                  restart);
-      return info;
-    }
-    case smearing_type::METHFESSEL_PAXTON: {
-      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::METHFESSEL_PAXTON>(energy_base,
-                                                                              us_precond_base,
-                                                                              overlap_base,
-                                                                              inverse_overlap_base,
-                                                                              temp,
-                                                                              maxiter,
-                                                                              tol,
-                                                                              kappa,
-                                                                              tau,
-                                                                              restart);
-      return info;
-    }
-    case smearing_type::COLD: {
-      auto info = nlcg_us<Kokkos::HIPSpace, smearing_type::COLD>(energy_base,
-                                                                 us_precond_base,
-                                                                 overlap_base,
-                                                                 inverse_overlap_base,
-                                                                 temp,
-                                                                 maxiter,
-                                                                 tol,
-                                                                 kappa,
-                                                                 tau,
-                                                                 restart);
-      return info;
-    }
-
-    default:
-      throw std::runtime_error("invalid smearing type given");
-  }
-
+  return nlcg_us<Kokkos::CudaSpace>(energy_base,
+                                    us_precond_base,
+                                    overlap_base,
+                                    inverse_overlap_base,
+                                    smearing,
+                                    temp,
+                                    maxiter,
+                                    tol,
+                                    kappa,
+                                    tau,
+                                    restart);
+#elif defined(__NLCGLIB__ROCM)
+  return nlcg_us<Kokkos::HIPSpace>(energy_base,
+                                   us_precond_base,
+                                   overlap_base,
+                                   inverse_overlap_base,
+                                   smearing,
+                                   temp,
+                                   maxiter,
+                                   tol,
+                                   kappa,
+                                   tau,
+                                   restart);
 #else
   throw std::runtime_error("recompile nlcglib with CUDA or ROCM.");
 #endif

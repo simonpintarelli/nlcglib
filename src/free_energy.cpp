@@ -1,67 +1,28 @@
-#pragma once
-
-#include <Kokkos_Core.hpp>
+#include "free_energy.h"
 #include "constants.hpp"
-#include "interface.hpp"
 #include "smearing.hpp"
 #include "utils/profile.hpp"
 
 namespace nlcglib {
 
-class FreeEnergy
-{
-public:
-  FreeEnergy(double T, EnergyBase& energy, smearing_type smear);
-  virtual ~FreeEnergy() {}
-
-  template <class tF, class tX, class tE>
-  void compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<tE>& en, double mu);
-
-  void compute();
-
-  auto get_X();
-  auto get_HX();
-  // auto get_SX();
-  auto get_fn();
-  auto get_ek();
-  auto get_wk();
-  auto get_gkvec_ekin();
-  double occupancy();
-  double ks_energy();
-
-  std::map<std::string, double> ks_energy_components();
-
-  double get_F() const { return free_energy; }
-  double get_entropy() const { return entropy; }
-  const auto& ehandle() const { return energy; }
-
-  Smearing& get_smearing() { return smearing; }
-  double get_chemical_potential() const { return energy.get_chemical_potential(); }
-
-private:
-  double T;
-  double free_energy;
-  double entropy;
-  EnergyBase& energy;
-  Smearing smearing;
-};
-
-
 FreeEnergy::FreeEnergy(double T, EnergyBase& energy, smearing_type smear)
     : T(T)
     , energy(energy)
-    , smearing(T,
-               energy.nelectrons(),
-               energy.occupancy(),
-               make_mmscalar(energy.get_kpoint_weights()),
-               smear)
+    , smearing(std::make_unique<Smearing>(T,
+                                          energy.nelectrons(),
+                                          energy.occupancy(),
+                                          make_mmscalar(energy.get_kpoint_weights()),
+                                          smear))
 {
   /* empty */
 }
 
-template <class tF, class tX, class tE>
+template <class Matrix>
 void
-FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<tE>& en, double mu)
+FreeEnergy::compute_impl(const mvector<Matrix>& X,
+                         const mvector<host_vector_t>& fn,
+                         const mvector<host_vector_t>& en,
+                         double mu)
 {
   PROFILE("nlcglib::FreeEnergy::compute");
   // convert fn to std::vector
@@ -100,51 +61,45 @@ FreeEnergy::compute(const mvector<tX>& X, const mvector<tF>& fn, const mvector<t
   energy.set_chemical_potential(mu);
 
   double etot = energy.get_total_energy();
-  double S = smearing.entropy(en, mu);
+  double S = smearing->entropy(en, mu);
 
   entropy = physical_constants::kb * T * S;
   free_energy = etot + entropy;
 }
 
-auto
+mvector<host_vector_t>
 FreeEnergy::get_fn()
 {
   return make_mmvector<Kokkos::HostSpace>(this->energy.get_fn());
 }
 
-auto
+mvector<host_matrix_view_t>
 FreeEnergy::get_X()
 {
   return make_mmatrix<Kokkos::HostSpace>(this->energy.get_C(memory_type::host));
 }
 
 
-auto
+mvector<host_matrix_view_t>
 FreeEnergy::get_HX()
 {
   return make_mmatrix<Kokkos::HostSpace>(this->energy.get_hphi(memory_type::host));
 }
 
 
-// auto
-// FreeEnergy::get_SX()
-// {
-//   return make_mmatrix<Kokkos::HostSpace>(this->energy.get_sphi(memory_type::host));
-// }
-
-auto
+mvector<host_vector_t>
 FreeEnergy::get_ek()
 {
   return make_mmvector<Kokkos::HostSpace>(this->energy.get_ek());
 }
 
-auto
+mvector<double>
 FreeEnergy::get_wk()
 {
   return make_mmscalar(this->energy.get_kpoint_weights());
 }
 
-auto
+std::shared_ptr<VectorBaseZ>
 FreeEnergy::get_gkvec_ekin()
 {
   return this->energy.get_gkvec_ekin();
@@ -174,5 +129,31 @@ FreeEnergy::compute()
   energy.compute();
 }
 
+
+FreeEnergy::~FreeEnergy() = default;
+
+void
+FreeEnergy::compute(const mvector<host_matrix_t>& X,
+                    const mvector<host_vector_t>& fn,
+                    const mvector<host_vector_t>& en,
+                    double mu)
+{
+  compute_impl(X, fn, en, mu);
+}
+
+void
+FreeEnergy::compute(const mvector<host_matrix_view_t>& X,
+                    const mvector<host_vector_t>& fn,
+                    const mvector<host_vector_t>& en,
+                    double mu)
+{
+  compute_impl(X, fn, en, mu);
+}
+
+std::tuple<double, mvector<host_vector_t>>
+FreeEnergy::occupations(const mvector<host_vector_t>& en)
+{
+  return smearing->fn(en);
+}
 
 }  // namespace nlcglib
