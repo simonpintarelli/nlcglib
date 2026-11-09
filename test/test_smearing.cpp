@@ -1,7 +1,8 @@
 #include <Kokkos_Core.hpp>
 
 
-#include "smearing.hpp"
+#include "la/mvector.hpp"
+#include "smearing.h"
 
 using namespace nlcglib;
 

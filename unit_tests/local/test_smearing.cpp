@@ -5,7 +5,10 @@
 #include <type_traits>
 #include <vector>
 #include "constants.hpp"
-#include "smearing.hpp"
+#include "dft/chemical_potential.h"
+#include "la/mvector.hpp"
+#include "smearing.h"
+#include "smearing/kernels.h"
 
 using namespace nlcglib;
 
@@ -38,11 +41,15 @@ template <class S>
 class SmearingKernel : public ::testing::Test
 {
 protected:
-  static constexpr bool monotonous = !std::is_base_of<non_monotonous, S>::value;
+  static constexpr bool monotonous = !std::is_same<S, cold_smearing_kernel>::value &&
+                                     !std::is_same<S, methfessel_paxton_smearing_kernel>::value;
 };
 
-using kernel_types = ::testing::
-    Types<fermi_dirac, gauss_smearing, gaussian_spline, cold_smearing, methfessel_paxton_smearing>;
+using kernel_types = ::testing::Types<fermi_dirac_kernel,
+                                      gauss_smearing_kernel,
+                                      gaussian_spline_kernel,
+                                      cold_smearing_kernel,
+                                      methfessel_paxton_smearing_kernel>;
 
 class KernelNames
 {
@@ -50,11 +57,11 @@ public:
   template <class T>
   static std::string GetName(int)
   {
-    if (std::is_same<T, fermi_dirac>::value) return "FermiDirac";
-    if (std::is_same<T, gauss_smearing>::value) return "Gauss";
-    if (std::is_same<T, gaussian_spline>::value) return "GaussianSpline";
-    if (std::is_same<T, cold_smearing>::value) return "Cold";
-    if (std::is_same<T, methfessel_paxton_smearing>::value) return "MethfesselPaxton";
+    if (std::is_same<T, fermi_dirac_kernel>::value) return "FermiDirac";
+    if (std::is_same<T, gauss_smearing_kernel>::value) return "Gauss";
+    if (std::is_same<T, gaussian_spline_kernel>::value) return "GaussianSpline";
+    if (std::is_same<T, cold_smearing_kernel>::value) return "Cold";
+    if (std::is_same<T, methfessel_paxton_smearing_kernel>::value) return "MethfesselPaxton";
     return "unknown";
   }
 };
@@ -150,10 +157,10 @@ TEST(FermiDirac, ClosedForm)
   for (double mo : {1.0, 2.0}) {
     for (double x : sample_points()) {
       double f = 1.0 / (1.0 + std::exp(-x));
-      EXPECT_NEAR(fermi_dirac::fn(x, mo), mo * f, 1e-14);
-      EXPECT_NEAR(fermi_dirac::delta(x, mo), mo * f * (1 - f), 1e-14);
+      EXPECT_NEAR(fermi_dirac_kernel::fn(x, mo), mo * f, 1e-14);
+      EXPECT_NEAR(fermi_dirac_kernel::delta(x, mo), mo * f * (1 - f), 1e-14);
       double s = -(f * std::log(f) + (1 - f) * std::log(1 - f));
-      EXPECT_NEAR(fermi_dirac::entropy(x, mo), mo * s, 1e-12);
+      EXPECT_NEAR(fermi_dirac_kernel::entropy(x, mo), mo * s, 1e-12);
     }
   }
 }

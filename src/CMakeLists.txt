@@ -42,8 +42,10 @@ if(USE_MAGMA)
   list(APPEND nlcglib_private_definitions __NLCGLIB__MAGMA)
 endif()
 
-add_library(nlcglib nlcglib.cpp free_energy.cpp mvp2/descent_direction.cpp
-                    pseudo_hamiltonian/grad_eta.cpp utils/step_logger.cpp)
+# Make the larger solver and logger units available early in a parallel build.
+add_library(
+  nlcglib nlcglib.cpp mvp2/descent_direction.cpp utils/step_logger.cpp
+          free_energy.cpp pseudo_hamiltonian/grad_eta.cpp smearing.cpp)
 add_library(nlcglib::nlcglib ALIAS nlcglib)
 if(USE_CUDA)
   target_sources(nlcglib PRIVATE la/cusolver.cpp)
