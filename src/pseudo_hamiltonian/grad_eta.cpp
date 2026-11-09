@@ -1,8 +1,9 @@
 #include "grad_eta.h"
 #include "constants.hpp"
 #include "exec_space.hpp"
-#include "la/lapack.hpp"
-#include "smearing.hpp"
+#include "la/mvector.hpp"
+#include "la/utils.hpp"
+#include "smearing/kernels.h"
 #include "utils/profile.hpp"
 
 namespace nlcglib {
@@ -15,21 +16,21 @@ dispatch_smearing(smearing_type smear, Function&& function)
 {
   switch (smear) {
     case smearing_type::FERMI_DIRAC:
-      return function.template operator()<smearing_type::FERMI_DIRAC>();
+      return function.template operator()<fermi_dirac_kernel>();
     case smearing_type::GAUSSIAN_SPLINE:
-      return function.template operator()<smearing_type::GAUSSIAN_SPLINE>();
+      return function.template operator()<gaussian_spline_kernel>();
     case smearing_type::GAUSS:
-      return function.template operator()<smearing_type::GAUSS>();
+      return function.template operator()<gauss_smearing_kernel>();
     case smearing_type::METHFESSEL_PAXTON:
-      return function.template operator()<smearing_type::METHFESSEL_PAXTON>();
+      return function.template operator()<methfessel_paxton_smearing_kernel>();
     case smearing_type::COLD:
-      return function.template operator()<smearing_type::COLD>();
+      return function.template operator()<cold_smearing_kernel>();
     default:
       throw std::runtime_error("invalid smearing type given");
   }
 }
 
-template <enum smearing_type smearing_t>
+template <class Kernel>
 struct GradEtaHelperImpl
 {
   /// NOTE: the factor 1/ kT isn't included.
@@ -60,7 +61,7 @@ struct GradEtaHelperImpl
           "dFdmu",
           Kokkos::RangePolicy<Kokkos::Serial>(0, nbands),
           KOKKOS_LAMBDA(int i, Kokkos::complex<double>& result) {
-            double delta = smearing<smearing_t>::delta((mu - en_loc(i)) / kT, mo);
+            double delta = Kernel::delta((mu - en_loc(i)) / kT, mo);
             result += (hii(i) - en_loc(i)) * (delta);
           },
           v);
@@ -93,7 +94,7 @@ struct GradEtaHelperImpl
       int nbands = en[key].size();
       auto en_loc = en[key];
       for (int i = 0; i < nbands; ++i) {
-        double delta = smearing<smearing_t>::delta((mu - en_loc(i)) / kT, mo);
+        double delta = Kernel::delta((mu - en_loc(i)) / kT, mo);
         v += delta * w_k;
       }
     }
@@ -102,7 +103,7 @@ struct GradEtaHelperImpl
   }
 };
 
-template <enum smearing_type smearing_t>
+template <class Kernel>
 class GradEtaKernel
 {
 public:
@@ -137,7 +138,7 @@ public:
     double kT_loc = kT;
     Kokkos::parallel_for(
         "gEta (1)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
-          double delta = smearing<smearing_t>::delta((mu - ek(i)) / kT_loc, mo);
+          double delta = Kernel::delta((mu - ek(i)) / kT_loc, mo);
           mgETA(i, i) = -1 / kT_loc * (mHij(i, i) - wk * ek(i)) * (delta);
         });
 
@@ -147,7 +148,7 @@ public:
       Kokkos::parallel_for(
           "gEta (2)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
             // sumfn dmuFn
-            double delta = smearing<smearing_t>::delta((mu - ek(i)) / kT_loc, mo);
+            double delta = Kernel::delta((mu - ek(i)) / kT_loc, mo);
             mgETA(i, i) += wk * (delta) / dmu_deta * (dFdmu / kT_loc);
           });
     }
@@ -189,8 +190,8 @@ GradEtaHelper::dFdmu(smearing_type smear,
                      double T,
                      double mo)
 {
-  return dispatch_smearing(smear, [&]<smearing_type Kind>() {
-    return GradEtaHelperImpl<Kind>::dFdmu(Hii, en, fn, wk, mu, T, mo);
+  return dispatch_smearing(smear, [&]<class Kernel>() {
+    return GradEtaHelperImpl<Kernel>::dFdmu(Hii, en, fn, wk, mu, T, mo);
   });
 }
 
@@ -202,8 +203,8 @@ GradEtaHelper::dmu_deta(smearing_type smear,
                         double T,
                         double mo)
 {
-  return dispatch_smearing(smear, [&]<smearing_type Kind>() {
-    return GradEtaHelperImpl<Kind>::dmu_deta(en, wk, mu, T, mo);
+  return dispatch_smearing(smear, [&]<class Kernel>() {
+    return GradEtaHelperImpl<Kernel>::dmu_deta(en, wk, mu, T, mo);
   });
 }
 
@@ -225,8 +226,8 @@ GradEta<MemorySpace>::g_eta(const dense_matrix_t<MemorySpace>& Hij,
                             double dFdmu,
                             double mo)
 {
-  return dispatch_smearing(smear, [&]<smearing_type Kind>() {
-    return GradEtaKernel<Kind>(kT).g_eta(Hij, mu, wk, ek, fn, dmu_deta, dFdmu, mo);
+  return dispatch_smearing(smear, [&]<class Kernel>() {
+    return GradEtaKernel<Kernel>(kT).g_eta(Hij, mu, wk, ek, fn, dmu_deta, dFdmu, mo);
   });
 }
 

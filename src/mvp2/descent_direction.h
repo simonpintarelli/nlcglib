@@ -2,7 +2,6 @@
 
 #include <tuple>
 #include "interface.hpp"
-#include "la/mvector.hpp"
 #include "la/types.h"
 
 namespace nlcglib {

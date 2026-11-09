@@ -16,7 +16,7 @@
 #include "overlap.hpp"
 #include "ultrasoft_precond.hpp"
 #include "utils/logger.hpp"
-#include "utils/step_logger.hpp"
+#include "utils/step_logger.h"
 #include "utils/timer.hpp"
 
 typedef std::complex<double> complex_double;
@@ -89,56 +89,6 @@ print_info(
 
   return info;
 }
-
-template <class T1, class T2, class T3>
-void
-cg_write_step_json(double free_energy,
-                   double ks_energy,
-                   double entropy,
-                   slope_t slope,
-                   double efermi,
-                   T1&& ek,
-                   T2&& fn,
-                   T3&& wk,
-                   std::map<std::string, double> energy_components,
-                   Communicator& commk,
-                   int step,
-                   int freq)
-{
-  StepLogger logger(step, "nlcg.json", commk.rank() == 0);
-  logger.log("F", free_energy);
-  logger.log("EKS", ks_energy);
-  logger.log("entropy", entropy);
-  logger.log("slope_x", slope.x);
-  logger.log("slope_eta", slope.eta);
-  logger.log("fermi_energy", efermi);
-  logger.log("ks_energy_comps", energy_components);
-  if (step == 0) {
-    logger.log("wk", wk);
-  }
-
-  if (step % freq == 0) {
-    auto ek_host =
-        eval_threaded(tapply(
-                          [](auto&& x) {
-                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
-                          },
-                          ek))
-            .allgather(commk);
-
-    auto fn_host =
-        eval_threaded(tapply(
-                          [](auto&& x) {
-                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
-                          },
-                          fn))
-            .allgather(commk);
-
-    logger.log("eta", ek_host);
-    logger.log("fn", fn_host);
-  }
-}
-
 
 template <class memspace>
 void
@@ -307,7 +257,8 @@ nlcg_us(EnergyBase& energy_base,
     cg_write_step_json(free_energy.get_F(),
                        free_energy.ks_energy(),
                        free_energy.get_entropy(),
-                       slope,
+                       slope.x,
+                       slope.eta,
                        free_energy.get_chemical_potential(),
                        ek,
                        fn,
