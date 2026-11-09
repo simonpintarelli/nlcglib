@@ -353,18 +353,18 @@ struct geam<Kokkos::complex<double>> : blas_base
       assert(false);
     }
 
-    std::complex<double> c_alpha(alpha.real(), alpha.imag());
-    std::complex<double> c_beta(beta.real(), beta.imag());
+    const MKL_Complex16 c_alpha{alpha.real(), alpha.imag()};
+    const MKL_Complex16 c_beta{beta.real(), beta.imag()};
 
     mkl_zomatadd(c_ordering,
                  transa,
                  transb,
                  M,
                  N,
-                 reinterpret_cast<CPX &>(c_alpha),
+                 c_alpha,
                  reinterpret_cast<const CPX *>(A),
                  lda,
-                 reinterpret_cast<CPX &>(c_beta),
+                 c_beta,
                  reinterpret_cast<const CPX *>(B),
                  ldb,
                  reinterpret_cast<CPX *>(C),
