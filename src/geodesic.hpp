@@ -2,6 +2,7 @@
 
 #include <Kokkos_Core.hpp>
 #include "la/lapack.hpp"
+#include "la/types.h"
 #include "la/utils.hpp"
 #include "utils/profile.hpp"
 
@@ -178,7 +179,8 @@ struct geodesic_us_functor
     auto result = eval(impl::geodesic_us(X, eta, z_x, z_eta, S, t));
 
     // copy results to host
-    auto ek = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), std::get<0>(result));
+    host_vector_t ek =
+        Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), std::get<0>(result));
     auto Ul = create_mirror_view_and_copy(Kokkos::HostSpace(), std::get<1>(result));
     auto x_next_h = create_mirror_view_and_copy(Kokkos::HostSpace(), std::get<2>(result));
     return std::make_tuple(ek, Ul, x_next_h);

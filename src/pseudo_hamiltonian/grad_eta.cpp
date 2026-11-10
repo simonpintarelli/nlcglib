@@ -1,16 +1,37 @@
-#pragma once
-
-#include <Kokkos_Core.hpp>
+#include "grad_eta.h"
 #include "constants.hpp"
 #include "exec_space.hpp"
 #include "la/mvector.hpp"
-#include "smearing.hpp"
+#include "la/utils.hpp"
+#include "smearing/kernels.h"
 #include "utils/profile.hpp"
 
 namespace nlcglib {
+namespace {
 
-template <enum smearing_type smearing_t>
-struct GradEtaHelper
+// Dispatch once on the host, before launching a statically specialized kernel.
+template <class Function>
+decltype(auto)
+dispatch_smearing(smearing_type smear, Function&& function)
+{
+  switch (smear) {
+    case smearing_type::FERMI_DIRAC:
+      return function.template operator()<fermi_dirac_kernel>();
+    case smearing_type::GAUSSIAN_SPLINE:
+      return function.template operator()<gaussian_spline_kernel>();
+    case smearing_type::GAUSS:
+      return function.template operator()<gauss_smearing_kernel>();
+    case smearing_type::METHFESSEL_PAXTON:
+      return function.template operator()<methfessel_paxton_smearing_kernel>();
+    case smearing_type::COLD:
+      return function.template operator()<cold_smearing_kernel>();
+    default:
+      throw std::runtime_error("invalid smearing type given");
+  }
+}
+
+template <class Kernel>
+struct GradEtaHelperImpl
 {
   /// NOTE: the factor 1/ kT isn't included.
   template <class array1_t, class array2_t, class array3_t, class array4_t>
@@ -40,7 +61,7 @@ struct GradEtaHelper
           "dFdmu",
           Kokkos::RangePolicy<Kokkos::Serial>(0, nbands),
           KOKKOS_LAMBDA(int i, Kokkos::complex<double>& result) {
-            double delta = smearing<smearing_t>::delta((mu - en_loc(i)) / kT, mo);
+            double delta = Kernel::delta((mu - en_loc(i)) / kT, mo);
             result += (hii(i) - en_loc(i)) * (delta);
           },
           v);
@@ -73,7 +94,7 @@ struct GradEtaHelper
       int nbands = en[key].size();
       auto en_loc = en[key];
       for (int i = 0; i < nbands; ++i) {
-        double delta = smearing<smearing_t>::delta((mu - en_loc(i)) / kT, mo);
+        double delta = Kernel::delta((mu - en_loc(i)) / kT, mo);
         v += delta * w_k;
       }
     }
@@ -82,49 +103,13 @@ struct GradEtaHelper
   }
 };
 
-struct _delta_eta
-{
-  _delta_eta(double kappa)
-      : kappa(kappa)
-  {
-  }
-  template <class hij_t, class ek_t, class wk_t>
-  to_layout_left_t<std::remove_reference_t<hij_t>> operator()(const hij_t& hij,
-                                                              const ek_t& ek,
-                                                              const wk_t& wk) const
-  {
-    using Kokkos::RangePolicy;
-    using Kokkos::Rank;
-
-    auto d_eta = empty_like()(hij);
-    using memspc = typename hij_t::storage_t::memory_space;
-    static_assert(std::is_same<memspc, typename ek_t::memory_space>::value,
-                  "memory spaces must match");
-    scale(d_eta, hij, kappa / wk);
-    int n = ek.extent(0);
-    auto d_eta_array = d_eta.array();
-
-    // CUDA will crash if it tries to access a member variable in a lambda capture ...
-    double local_kappa = kappa;
-    Kokkos::parallel_for(
-        RangePolicy<exec_t<memspc>>(0, n),
-        KOKKOS_LAMBDA(int i) { d_eta_array(i, i) = d_eta_array(i, i) - local_kappa * ek(i); });
-
-    return d_eta;
-  }
-
-  double kappa;
-};
-
-
-template <enum smearing_type smearing_t>
-class GradEta
+template <class Kernel>
+class GradEtaKernel
 {
 public:
-  GradEta(double T, double kappa)
-      : kappa(kappa)
+  explicit GradEtaKernel(double kT)
+      : kT(kT)
   {
-    kT = physical_constants::kb * T;
   }
 
   /**
@@ -153,7 +138,7 @@ public:
     double kT_loc = kT;
     Kokkos::parallel_for(
         "gEta (1)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
-          double delta = smearing<smearing_t>::delta((mu - ek(i)) / kT_loc, mo);
+          double delta = Kernel::delta((mu - ek(i)) / kT_loc, mo);
           mgETA(i, i) = -1 / kT_loc * (mHij(i, i) - wk * ek(i)) * (delta);
         });
 
@@ -163,7 +148,7 @@ public:
       Kokkos::parallel_for(
           "gEta (2)", Kokkos::RangePolicy<exec_space>(0, nbands), KOKKOS_LAMBDA(int i) {
             // sumfn dmuFn
-            double delta = smearing<smearing_t>::delta((mu - ek(i)) / kT_loc, mo);
+            double delta = Kernel::delta((mu - ek(i)) / kT_loc, mo);
             mgETA(i, i) += wk * (delta) / dmu_deta * (dFdmu / kT_loc);
           });
     }
@@ -189,24 +174,68 @@ public:
   }
 
 
-  /**
-   * Preconditioned gradient of η
-   */
-  template <class matrix_t, class vector_t, class vector2_t>
-  // mvector<std::shared_future<to_layout_left_t<matrix_t>>>
-  auto delta_eta(const mvector<matrix_t>& Hij,
-                 const mvector<vector_t>& ek,
-                 const mvector<vector2_t>& wk)
-  {
-    return tapply_async(_delta_eta(kappa), Hij, ek, wk);
-  }
-
-
 private:
-  // temperature (in Kelvin)
-  double kappa;
   double kT;
 };
 
+}  // namespace
+
+double
+GradEtaHelper::dFdmu(smearing_type smear,
+                     const mvector<host_vector_t>& Hii,
+                     const mvector<host_vector_t>& en,
+                     const mvector<host_vector_t>& fn,
+                     const mvector<double>& wk,
+                     double mu,
+                     double T,
+                     double mo)
+{
+  return dispatch_smearing(smear, [&]<class Kernel>() {
+    return GradEtaHelperImpl<Kernel>::dFdmu(Hii, en, fn, wk, mu, T, mo);
+  });
+}
+
+double
+GradEtaHelper::dmu_deta(smearing_type smear,
+                        const mvector<host_vector_t>& en,
+                        const mvector<double>& wk,
+                        double mu,
+                        double T,
+                        double mo)
+{
+  return dispatch_smearing(smear, [&]<class Kernel>() {
+    return GradEtaHelperImpl<Kernel>::dmu_deta(en, wk, mu, T, mo);
+  });
+}
+
+template <class MemorySpace>
+GradEta<MemorySpace>::GradEta(double T, smearing_type smear)
+    : kT(physical_constants::kb * T)
+    , smear(smear)
+{
+}
+
+template <class MemorySpace>
+dense_matrix_t<MemorySpace>
+GradEta<MemorySpace>::g_eta(const dense_matrix_t<MemorySpace>& Hij,
+                            double mu,
+                            double wk,
+                            const real_vector_t<MemorySpace>& ek,
+                            const real_vector_t<MemorySpace>& fn,
+                            double dmu_deta,
+                            double dFdmu,
+                            double mo)
+{
+  return dispatch_smearing(smear, [&]<class Kernel>() {
+    return GradEtaKernel<Kernel>(kT).g_eta(Hij, mu, wk, ek, fn, dmu_deta, dFdmu, mo);
+  });
+}
+
+template class GradEta<Kokkos::HostSpace>;
+#ifdef __NLCGLIB__CUDA
+template class GradEta<Kokkos::CudaSpace>;
+#elif defined(__NLCGLIB__ROCM)
+template class GradEta<Kokkos::HIPSpace>;
+#endif
 
 }  // namespace nlcglib
