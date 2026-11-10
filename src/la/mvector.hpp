@@ -500,7 +500,7 @@ template <class X>
 auto
 copy(const mvector<X>& x)
 {
-  return eval_threaded(tapply(do_copy(), x));
+  return tapply_eager(do_copy(), x);
 }
 
 

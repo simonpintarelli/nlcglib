@@ -145,19 +145,15 @@ cg_write_step_json(double free_energy,
 
   if (step % freq == 0) {
     auto ek_host =
-        eval_threaded(tapply(
-                          [](auto&& x) {
-                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
-                          },
-                          ek))
+        tapply_eager(
+            [](auto&& x) { return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x); },
+            ek)
             .allgather(commk);
 
     auto fn_host =
-        eval_threaded(tapply(
-                          [](auto&& x) {
-                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
-                          },
-                          fn))
+        tapply_eager(
+            [](auto&& x) { return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x); },
+            fn)
             .allgather(commk);
 
     logger.log("eta", ek_host);

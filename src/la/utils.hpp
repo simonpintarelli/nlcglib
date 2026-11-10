@@ -192,7 +192,30 @@ print(const Kokkos::View<T*, ARGS...>& x)
   std::cout << "\n";
 }
 
-/// threaded apply over mvector
+/// Evaluate each local key immediately, without storing deferred callables.
+/// The result has the same local communicator as eval_threaded(tapply(...)).
+/// Void functors execute in key order without constructing a result container.
+template <class FUNCTOR, class ARG, class... ARGS>
+auto
+tapply_eager(FUNCTOR&& fun, const ARG& arg0, const ARGS&... args)
+{
+  auto apply_key = [&](const auto& key) {
+    auto get_key = [&key](const auto& container) { return container.at(key); };
+    // Keep per-key value captures, including stateful callables, without copying containers.
+    auto local_fun = fun;
+    return local_fun(eval(get_key(arg0)), eval(get_key(args))...);
+  };
+  using R = std::decay_t<decltype(apply_key(std::declval<typename ARG::key_t>()))>;
+  if constexpr (std::is_void_v<R>) {
+    for (const auto& elem : arg0) apply_key(elem.first);
+  } else {
+    mvector<R> result;
+    for (const auto& elem : arg0) result[elem.first] = apply_key(elem.first);
+    return result;
+  }
+}
+
+/// Deferred apply over mvector; captures the evaluated arguments by value.
 template <class FUNCTOR, class ARG, class... ARGS>
 auto
 tapply(FUNCTOR&& fun, const ARG& arg0, const ARGS&... args)
@@ -202,7 +225,7 @@ tapply(FUNCTOR&& fun, const ARG& arg0, const ARGS&... args)
   mvector<std::function<R()>> result(arg0.commk());
   for (auto& elem : arg0) {
     auto key = elem.first;
-    auto get_key = [key](auto container) { return container.at(key); };
+    auto get_key = [key](const auto& container) { return container.at(key); };
     result[key] = std::bind(fun, eval(get_key(arg0)), eval(get_key(args))...);
   }
   return result;
@@ -221,14 +244,14 @@ tapply_op(OP&& op, const ARG0& arg0, const ARGS&... args)
   mvector<std::function<R()>> result(arg0.commk());
   for (auto& elem : arg0) {
     auto key = elem.first;
-    auto get_key = [key](auto container) { return container.at(key); };
+    auto get_key = [key](const auto& container) { return container.at(key); };
     auto fun = op.at(key);
     result[key] = [=]() { return fun(eval(get_key(arg0)), eval(get_key(args))...); };
   }
   return result;
 }
 
-/// threaded apply over mvector
+/// Cached deferred apply over mvector; does not launch worker threads.
 template <class FUNCTOR, class ARG, class... ARGS>
 auto
 tapply_async(FUNCTOR&& fun, const ARG& arg0, const ARGS&... args)
@@ -238,7 +261,7 @@ tapply_async(FUNCTOR&& fun, const ARG& arg0, const ARGS&... args)
   mvector<std::shared_future<R>> result(arg0.commk());
   for (auto& elem : arg0) {
     auto key = elem.first;
-    auto get_key = [key](auto container) { return container.at(key); };
+    auto get_key = [key](const auto& container) { return container.at(key); };
     result[key] = std::async(std::launch::deferred,
                              std::bind(fun, eval(get_key(arg0)), eval(get_key(args))...))
                       .share();

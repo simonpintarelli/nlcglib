@@ -207,9 +207,7 @@ geodesic(const mem_space_t& mem_space,
   PROFILE("geodesic");
   impl::geodesic_us_functor<mem_space_t> functor(mem_space, t);
 
-  auto res = tapply_async(functor, X_h, eta_h, z_x_h, z_eta_h, S);
-
-  return unzip(eval_threaded(res));
+  return unzip(tapply_eager(functor, X_h, eta_h, z_x_h, z_eta_h, S));
 }
 
 

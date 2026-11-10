@@ -44,7 +44,7 @@ descent_direction<MemorySpace>::conjugated(slope_t fr_old,
       MemorySpace{}, mu, dFdmu, sumfn, T, kappa, mo, smear);
 
   auto [m_fr, delta_x, delta_eta, z_x, z_eta, m_slope_zp] =
-      unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, zxp, zetap, ul, S, P, wk)));
+      unzip(tapply_eager(functor, X, en, fn, hx, zxp, zetap, ul, S, P, wk));
 
   slope_t fr = sum(m_fr, commk);
   double gamma = (fr.x + fr.eta) / (fr_old.x + fr_old.eta);
@@ -58,19 +58,17 @@ descent_direction<MemorySpace>::conjugated(slope_t fr_old,
    */
   slope_t slope = fr + gamma * slope_zp;
 
-  eval_threaded(
-      // note: this operation is in-place and overwrites z_x, z_eta
-      tapply_async(
-          [gamma](auto delta_x, auto delta_eta, auto z_x, auto z_eta) {
-            // Z <- gamma*Z + delta
-            (void)add(z_x, delta_x, 1.0, gamma);
-            (void)add(z_eta, delta_eta, 1.0, gamma);
-            return "void";
-          },
-          delta_x,
-          delta_eta,
-          z_x,
-          z_eta));
+  // This operation is in-place and overwrites z_x, z_eta.
+  tapply_eager(
+      [gamma](auto delta_x, auto delta_eta, auto z_x, auto z_eta) {
+        // Z <- gamma*Z + delta
+        (void)add(z_x, delta_x, 1.0, gamma);
+        (void)add(z_eta, delta_eta, 1.0, gamma);
+      },
+      delta_x,
+      delta_eta,
+      z_x,
+      z_eta);
 
   return std::make_tuple(fr, slope, z_x, z_eta);
 }
@@ -96,7 +94,7 @@ descent_direction<MemorySpace>::restarted(const mvector<host_matrix_t>& X,
   descent_direction_restart<MemorySpace> functor(
       MemorySpace{}, mu, dFdmu, sumfn, T, kappa, mo, smear);
 
-  auto [m_fr, z_x, z_eta] = unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, S, P, wk)));
+  auto [m_fr, z_x, z_eta] = unzip(tapply_eager(functor, X, en, fn, hx, S, P, wk));
   // auto ures = unzip(res);
 
   slope_t fr = sum(m_fr, commk);
@@ -125,7 +123,7 @@ descent_direction<MemorySpace>::restarted_sd(const mvector<host_matrix_t>& X,
 
   descent_direction_sd<MemorySpace> functor(MemorySpace{}, mu, dFdmu, sumfn, T, kappa, mo, smear);
 
-  auto [m_fr, z_x, z_eta] = unzip(eval_threaded(tapply_async(functor, X, en, fn, hx, S, Sinv, wk)));
+  auto [m_fr, z_x, z_eta] = unzip(tapply_eager(functor, X, en, fn, hx, S, Sinv, wk));
   slope_t fr = sum(m_fr, commk);
 
   return std::make_tuple(slope_t{.x = fr.x, .eta = fr.eta}, z_x, z_eta);

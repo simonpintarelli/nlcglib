@@ -243,11 +243,11 @@ nlcg_us(EnergyBase& energy_base,
   // auto HX_c = copy(Hx);
   descent_direction<xspace> dd(T, kappa, smearing_t);
 
-  auto eta = eval_threaded(tapply(make_diag(), ek));
+  auto eta = tapply_eager(make_diag(), ek);
   auto [slope, z_x, z_eta] = dd.restarted(X, ek, fn, Hx, wk, mu, S, P, free_energy);
 
   // allocate rotation matrices
-  auto ul = eval_threaded(tapply([](auto&& z) { return empty_like()(z); }, z_eta));
+  auto ul = tapply_eager([](auto&& z) { return empty_like()(z); }, z_eta);
 
   // CG related variables
   slope_t fr = slope;  // Fletcher-Reeves numerator
@@ -398,7 +398,7 @@ nlcg_us(EnergyBase& energy_base,
       ul = std::get<1>(ek_ul_x_mu);
       X = std::get<2>(ek_ul_x_mu);
       double mu = std::get<3>(ek_ul_x_mu);
-      eta = eval_threaded(tapply(make_diag(), ek));
+      eta = tapply_eager(make_diag(), ek);
       fn = free_energy.get_fn();
       Hx = copy(free_energy.get_HX());
 
