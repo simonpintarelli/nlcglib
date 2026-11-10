@@ -1,6 +1,7 @@
 set(nlcglib_private_libraries Kokkos::kokkos fmt::fmt
                               $<BUILD_INTERFACE:nlohmann_json::nlohmann_json>)
-set(nlcglib_private_definitions)
+# All MPI calls use the C interface; keep legacy C++ bindings out of internal headers.
+set(nlcglib_private_definitions OMPI_SKIP_MPICXX MPICH_SKIP_MPICXX)
 
 if(_lapack_vendor STREQUAL "OpenBLAS")
   list(APPEND nlcglib_private_libraries OpenBLAS::LAPACKE)
@@ -44,8 +45,14 @@ endif()
 
 # Make the larger solver and logger units available early in a parallel build.
 add_library(
-  nlcglib nlcglib.cpp mvp2/descent_direction.cpp utils/step_logger.cpp
-          free_energy.cpp pseudo_hamiltonian/grad_eta.cpp smearing.cpp)
+  nlcglib
+  solver_backend.cpp
+  mvp2/descent_direction.cpp
+  utils/step_logger.cpp
+  free_energy.cpp
+  pseudo_hamiltonian/grad_eta.cpp
+  smearing.cpp
+  nlcglib.cpp)
 add_library(nlcglib::nlcglib ALIAS nlcglib)
 if(USE_CUDA)
   target_sources(nlcglib PRIVATE la/cusolver.cpp)

@@ -102,7 +102,7 @@ line_search::bt_search(GEODESIC& G, FREE_ENERGY& FE, double F0)
 /**
  * Quadratic line search.
  *
- * Returns tuple (ek, Ul)
+ * Returns the evaluation result at the accepted step.
  */
 template <class GEODESIC, class FREE_ENERGY>
 auto
