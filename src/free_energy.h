@@ -43,11 +43,14 @@ public:
   double get_chemical_potential() const { return energy.get_chemical_potential(); }
 
 private:
+  struct Occupations;
+
   template <class Matrix>
   void compute_impl(const mvector<Matrix>& X,
                     const mvector<host_vector_t>& fn,
                     const mvector<host_vector_t>& en,
                     double mu);
+  void compute_energy(const Occupations& fn, const mvector<host_vector_t>& en, double mu);
 
   double T;
   double free_energy;

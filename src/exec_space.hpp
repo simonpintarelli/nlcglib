@@ -1,8 +1,31 @@
 #pragma once
 
 #include <Kokkos_Core.hpp>
+#include <stdexcept>
+#include "execution_backend.h"
 
 namespace nlcglib {
+
+/// Keep memory-space specialization inside implementation files.
+template <class Function>
+auto
+dispatch_backend(execution_backend backend, Function&& function)
+{
+  switch (backend) {
+    case execution_backend::host:
+      return function.template operator()<Kokkos::HostSpace>();
+    case execution_backend::device:
+#ifdef __NLCGLIB__CUDA
+      return function.template operator()<Kokkos::CudaSpace>();
+#elif defined(__NLCGLIB__ROCM)
+      return function.template operator()<Kokkos::HIPSpace>();
+#else
+      throw std::runtime_error("recompile nlcglib with CUDA or ROCM.");
+#endif
+    default:
+      throw std::runtime_error("invalid execution backend");
+  }
+}
 
 template <class SPACE>
 struct exec

@@ -331,7 +331,7 @@ template <class X, class Y>
 Kokkos::complex<double>
 innerh_reduce(const mvector<X>& x, const mvector<Y>& y)
 {
-  auto tmp = eval_threaded(tapply(innerh_tr(), x, y));
+  auto tmp = tapply_eager(innerh_tr(), x, y);
   auto z = sum(tmp);
   return Kokkos::real(z);
 }
@@ -341,7 +341,7 @@ template <class X>
 double
 l2norm(const mvector<X>& x)
 {
-  auto tmp = eval_threaded(tapply(innerh_tr(), x, x));
+  auto tmp = tapply_eager(innerh_tr(), x, x);
   auto z = sum(tmp);
   // if (std::abs(Kokkos::imag(z)) > 1e-10) {
   //   throw std::runtime_error("invalid value");

@@ -358,6 +358,96 @@ TYPED_TEST(LinAlg, Add)
           Kokkos::abs(C_host(i, j) - (beta * C0_host(i, j) + alpha * A_host(i, j))), 0, 1e-14);
 }
 
+namespace {
+
+// Copying a whole input container to look up one key is never necessary.
+class NoncopyableValues : public mvector<int>
+{
+public:
+  explicit NoncopyableValues(const Communicator &comm)
+      : mvector<int>(comm)
+  {
+  }
+  NoncopyableValues(const NoncopyableValues &) = delete;
+};
+
+}  // namespace
+
+TEST(MVectorApply, DeferredSnapshotAndCaching)
+{
+  const auto key = std::make_pair(1, 0);
+  NoncopyableValues input(Communicator{MPI_COMM_WORLD});
+  input[key] = 3;
+  int cached_calls = 0;
+  auto cached = tapply_async(
+      [&](int value) {
+        ++cached_calls;
+        return 2 * value;
+      },
+      input);
+  EXPECT_EQ(cached_calls, 0);
+  EXPECT_TRUE(cached.commk() == input.commk());
+
+  input[key] = 9;
+  EXPECT_EQ(eval(cached.at(key)), 6);
+  EXPECT_EQ(eval(cached.at(key)), 6);
+  EXPECT_EQ(cached_calls, 1);
+
+  mvector<std::function<int()>> source;
+  source[key] = [counter = 0]() mutable { return ++counter; };
+  auto immediate = tapply_eager([](int value) { return value; }, source);
+  EXPECT_EQ(immediate.at(key), 1);
+  EXPECT_EQ(eval(source.at(key)), 1);
+}
+
+TEST(MVectorApply, EagerValuesAndEmptyInput)
+{
+  const auto first = std::make_pair(1, 0);
+  const auto second = std::make_pair(3, 1);
+  NoncopyableValues input(Communicator{MPI_COMM_WORLD});
+  input[second] = 9;
+  input[first] = 4;
+  mvector<double> weights;
+  weights[first] = 0.5;
+  weights[second] = 0.25;
+  std::vector<int> visited;
+  auto values = tapply_eager(
+      [&](int value, double weight) {
+        visited.push_back(value);
+        return std::make_tuple(value, value * weight);
+      },
+      input,
+      weights);
+  EXPECT_EQ(visited, (std::vector<int>{4, 9}));
+  EXPECT_EQ(values.at(first), std::make_tuple(4, 2.0));
+  EXPECT_EQ(values.at(second), std::make_tuple(9, 2.25));
+  EXPECT_TRUE(values.commk() == Communicator{MPI_COMM_SELF});
+
+  NoncopyableValues empty(Communicator{MPI_COMM_WORLD});
+  auto result = tapply_eager(
+      [](int) -> int { throw std::runtime_error("empty input must not be evaluated"); }, empty);
+  EXPECT_EQ(result.size(), 0);
+  EXPECT_TRUE(result.commk() == Communicator{MPI_COMM_SELF});
+}
+
+TEST(MVectorApply, EagerInPlaceKeepsMatrixStorage)
+{
+  const auto key = std::make_pair(2, 0);
+  auto matrix = nlcglib::test::make_matrix<Kokkos::HostSpace>(2, 2);
+  Kokkos::deep_copy(matrix.array(), nlcglib::test::complex_double{0});
+  mvector<decltype(matrix)> blocks;
+  blocks[key] = matrix;
+  int calls = 0;
+  tapply_eager(
+      [&](auto block) {
+        ++calls;
+        block.array()(0, 1) = nlcglib::test::complex_double{2.0, -3.0};
+      },
+      blocks);
+  EXPECT_EQ(calls, 1);
+  EXPECT_EQ(matrix.array()(0, 1), nlcglib::test::complex_double(2.0, -3.0));
+}
+
 int
 main(int argc, char *argv[])
 {

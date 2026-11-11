@@ -1,9 +1,28 @@
 #include "free_energy.h"
 #include "constants.hpp"
-#include "smearing.hpp"
+#include "la/mvector.hpp"
+#include "smearing.h"
 #include "utils/profile.hpp"
 
 namespace nlcglib {
+
+// Independent of the wavefunction matrix type.
+struct FreeEnergy::Occupations
+{
+  explicit Occupations(const mvector<host_vector_t>& fn)
+  {
+    for (const auto& fi : fn) {
+      const auto& view = fi.second;
+      std::vector<double> value(view.size());
+      std::copy(view.data(), view.data() + view.size(), value.data());
+      values.push_back(std::move(value));
+      keys.push_back(fi.first);
+    }
+  }
+
+  std::vector<std::vector<double>> values;
+  std::vector<std::pair<int, int>> keys;
+};
 
 FreeEnergy::FreeEnergy(double T, EnergyBase& energy, smearing_type smear)
     : T(T)
@@ -25,35 +44,23 @@ FreeEnergy::compute_impl(const mvector<Matrix>& X,
                          double mu)
 {
   PROFILE("nlcglib::FreeEnergy::compute");
-  // convert fn to std::vector
-  auto map_fn = tapply(
-      [](auto fi) {
-        auto fi_host = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), fi);
-        int n = fi_host.size();
-        std::vector<double> vec_fi(n);
-        std::copy(fi_host.data(), fi_host.data() + n, vec_fi.data());
-        return vec_fi;
-      },
-      fn);
-  std::vector<std::vector<double>> vec_fn;
-  std::vector<std::pair<int, int>> key_fn;
-  for (auto& fi : map_fn) vec_fn.push_back(eval(fi.second));
-  for (auto& fi : map_fn) key_fn.push_back(eval(fi.first));
+  const Occupations occupations(fn);
 
   auto Xsirius = make_mmatrix<Kokkos::HostSpace>(this->energy.get_C(memory_type::host));
-  execute(tapply(
-      [](auto x_sirius, auto x) {
-        PROFILE("host unpinned -> pinned");
-        auto xh = Kokkos::create_mirror(x.array());
-        // copy to Kokkos owned host mirror,
-        // since  Kokkos refuses to copy device, managed -> host, unmanaged
-        Kokkos::deep_copy(xh, x.array());
-        Kokkos::deep_copy(x_sirius.array(), xh);
-      },
-      Xsirius,
-      X));
+  for (auto& xi : Xsirius) {
+    PROFILE("host unpinned -> pinned");
+    const auto& x = X.at(xi.first);
+    // Both overloads have host storage, including the provider's unmanaged buffer.
+    Kokkos::deep_copy(xi.second.array(), x.array());
+  }
 
-  energy.set_fn(key_fn, vec_fn);
+  compute_energy(occupations, en, mu);
+}
+
+void
+FreeEnergy::compute_energy(const Occupations& fn, const mvector<host_vector_t>& en, double mu)
+{
+  energy.set_fn(fn.keys, fn.values);
   energy.compute();
 
   // update fermi energy in SIRIUS (no effect here, but make sure to leave SIRIUS in a consistent

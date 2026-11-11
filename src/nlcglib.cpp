@@ -1,25 +1,16 @@
-#include <fmt/format.h>
-#include <Kokkos_Core.hpp>
+#include <cmath>
+#include <cstdio>
 #include <iomanip>
 #include <ios>
-#include <iostream>
+#include <map>
 #include <nlcglib.hpp>
-#include "free_energy.h"
-#include "geodesic.hpp"
+#include <tuple>
 #include "interface.hpp"
-#include "la/lapack.hpp"
-#include "la/mvector.hpp"
-#include "la/utils.hpp"
 #include "linesearch/linesearch.hpp"
-#include "mpi/communicator.hpp"
-#include "mvp2/descent_direction.h"
-#include "overlap.hpp"
-#include "ultrasoft_precond.hpp"
+#include "solver_state.h"
+#include "utils/iteration_logger.h"
 #include "utils/logger.hpp"
-#include "utils/step_logger.h"
 #include "utils/timer.hpp"
-
-typedef std::complex<double> complex_double;
 
 enum class cg_state
 {
@@ -30,128 +21,9 @@ enum class cg_state
 
 namespace nlcglib {
 
-void
-initialize()
-{
-  Kokkos::InitializationSettings args;
-  args.set_disable_warnings(true);
-#ifdef USE_OPENMP
-  args.num_threads = omp_get_max_threads();
-#endif
-
-#ifdef __NLCGLIB__MAGMA
-  nlcg_init_magma();
-#endif
-
-  Kokkos::initialize(args);
-}
-
-void
-finalize()
-{
-  Kokkos::finalize();
-#ifdef __NLCGLIB__MAGMA
-  nlcg_finalize_magma();
-#endif
-}
-
-auto
-print_info(
-    double free_energy, double ks_energy, double entropy, slope_t slope, double efermi, int step)
-{
-  double slope_tot = slope.x + slope.eta;
-  auto& logger = Logger::GetInstance();
-  //                       fmt::arg("slope_tot", slope_tot));
-  logger << TO_STDOUT
-         << fmt::format(fmt::runtime("{iter:<6d}"
-                                     R"(Etot     : {F:20.10f} [Ha]
-      Residual : {slope_tot:>20.5e}
-      kT * S   : {entropy:>20.8f} [Ha]
-      Efermi   : {efermi:>20.8f} [Ha]
-      KS energy: {ks_energy:>20.8f} [Ha]
-      slope x  : {slope_x:>20.5e}
-      slope eta: {slope_eta:>20.5e}
-)"),
-                        fmt::arg("iter", step),
-                        fmt::arg("F", free_energy),
-                        fmt::arg("slope_tot", slope_tot),
-                        fmt::arg("entropy", entropy),
-                        fmt::arg("efermi", efermi),
-                        fmt::arg("ks_energy", ks_energy),
-                        fmt::arg("slope_x", slope.x),
-                        fmt::arg("slope_eta", slope.eta));
-
-  nlcg_info info;
-  info.F = free_energy;
-  info.S = entropy;
-  info.tolerance = slope.x + slope.eta;
-  info.iter = step;
-
-  return info;
-}
-
-template <class memspace>
-void
-check_overlap(EnergyBase& e, OverlapBase& Sb, OverlapBase& Sib)
-{
-  FreeEnergy Energy(100, e, smearing_type::FERMI_DIRAC);
-
-  auto X = copy(Energy.get_X());
-  Overlap S(Sb);
-  Overlap Sinv(Sib);
-
-  std::cout << "l2norm(X) = " << l2norm(X) << "\n";
-
-  auto SX = tapply_op(S, X);
-  auto SinvX = tapply_op(Sinv, X);
-  std::cout << "l2norm(SX): " << l2norm(SX) << "\n";
-  std::cout << "l2norm(SinvX): " << l2norm(SinvX) << "\n";
-
-  auto tr = innerh_reduce(X, SX);
-  std::cout << "tr(XSX): " << tr << "\n";
-  auto Xref = tapply(
-      [](auto x, auto s, auto si) {
-        auto sx = s(x);
-        auto x2 = si(sx);
-        return x2;
-      },
-      X,
-      S,
-      Sinv);
-  auto Xref2 = tapply(
-      [](auto x, auto s, auto si) {
-        auto six = si(x);
-        auto x2 = s(six);
-        return x2;
-      },
-      X,
-      S,
-      Sinv);
-
-  auto error = tapply(
-      [](auto x, auto y) {
-        auto z = copy(x);
-        add(z, y, -1, 1);
-        return z;
-      },
-      X,
-      Xref);
-
-  double diff = l2norm(error);
-  std::cout << "** check: S(S_inv(x)), error: " << diff << "\n";
-}
-
-void
-nlcheck_overlap(EnergyBase& e, OverlapBase& s, OverlapBase& si)
-{
-  check_overlap<Kokkos::HostSpace>(e, s, si);
-}
-
-
-/// xspace -> memory space where nlcg is executed
-template <class xspace>
 nlcg_info
-nlcg_us(EnergyBase& energy_base,
+nlcg_us(execution_backend backend,
+        EnergyBase& energy_base,
         UltrasoftPrecondBase& us_precond_base,
         OverlapBase& overlap_base,
         InverseOverlapBase& inverse_overlap_base,
@@ -176,14 +48,15 @@ nlcg_us(EnergyBase& energy_base,
   PROFILE("nlcglib");
   nlcg_info info;
 
-  Communicator comm_world(energy_base.comm_world());
-
-  auto S = Overlap(overlap_base);
-  auto Sinv = InverseOverlap(inverse_overlap_base);
-  auto P = USPreconditioner(us_precond_base);
-
   Timer timer;
-  FreeEnergy free_energy(T, energy_base, smearing_t);
+  solver_state solver(backend,
+                      energy_base,
+                      us_precond_base,
+                      overlap_base,
+                      inverse_overlap_base,
+                      smearing_t,
+                      T,
+                      kappa);
   std::map<smearing_type, std::string> smear_name{
       {smearing_type::FERMI_DIRAC, "Fermi-Dirac"},
       {smearing_type::COLD, "Cold"},
@@ -197,7 +70,7 @@ nlcg_us(EnergyBase& energy_base,
   logger.attach_file_master("nlcg.out");
   remove("nlcg.json");
 
-  free_energy.compute();
+  solver.compute();
 
   logger << "nlcglib parameters\n"
          << std::setw(10) << "T "
@@ -219,20 +92,8 @@ nlcg_us(EnergyBase& energy_base,
   logger << "num electrons: " << Ne << "\n";
   logger << "tol = " << tol << "\n";
 
-  auto ek = free_energy.get_ek();
-  auto wk = free_energy.get_wk();
-  auto commk = wk.commk();
+  solver.initialize_orbitals();
 
-  auto mu_fn = free_energy.occupations(ek);
-  double mu = std::get<0>(mu_fn);
-  auto fn = std::get<1>(mu_fn);
-  auto X0 = free_energy.get_X();
-  free_energy.compute(X0, fn, ek, mu);
-
-  auto Hx = copy(free_energy.get_HX());
-  auto X = copy(free_energy.get_X());
-
-  // double fr = compute_slope_single(g_X, delta_x, g_eta, delta_eta, commk);
   line_search ls;
   ls.t_trial = 0.2;
   ls.tau = tau;
@@ -240,52 +101,30 @@ nlcg_us(EnergyBase& energy_base,
          << "\t" << std::setw(15) << std::left << "Residual"
          << "\n";
 
-  // auto HX_c = copy(Hx);
-  descent_direction<xspace> dd(T, kappa, smearing_t);
-
-  auto eta = eval_threaded(tapply(make_diag(), ek));
-  auto [slope, z_x, z_eta] = dd.restarted(X, ek, fn, Hx, wk, mu, S, P, free_energy);
-
-  // allocate rotation matrices
-  auto ul = eval_threaded(tapply([](auto&& z) { return empty_like()(z); }, z_eta));
+  auto slope = solver.initial_direction();
 
   // CG related variables
   slope_t fr = slope;  // Fletcher-Reeves numerator
   cg_state state = cg_state::CG;
 
-  auto write_json = [&](int step, int freq = 10) {
-    cg_write_step_json(free_energy.get_F(),
-                       free_energy.ks_energy(),
-                       free_energy.get_entropy(),
-                       slope.x,
-                       slope.eta,
-                       free_energy.get_chemical_potential(),
-                       ek,
-                       fn,
-                       wk,
-                       free_energy.ks_energy_components(),
-                       comm_world,
-                       step,
-                       freq);
-  };
+  auto write_json = [&](int step, int freq = 10) { solver.write_json(slope, step, freq); };
 
   for (int cg_iter = 1; cg_iter < maxiter + 1; ++cg_iter) {
     logger.flush();
     if (std::abs(slope.x + slope.eta) < tol) {
-      info = print_info(free_energy.get_F(),
-                        free_energy.ks_energy(),
-                        free_energy.get_entropy(),
+      info = print_info(solver.get_F(),
+                        solver.ks_energy(),
+                        solver.get_entropy(),
                         slope,
-                        free_energy.get_chemical_potential(),
+                        solver.get_chemical_potential(),
                         cg_iter);
       write_json(cg_iter);
 
-      free_energy.ehandle().print_info();  // print magnetization
-      logger << TO_STDOUT << "kT * S   : " << std::setprecision(13) << free_energy.get_entropy()
+      solver.ehandle().print_info();  // print magnetization
+      logger << TO_STDOUT << "kT * S   : " << std::setprecision(13) << solver.get_entropy() << "\n"
+             << "F        : " << std::setprecision(13) << solver.get_F() << "\n"
+             << "KS-energy: " << std::setprecision(13) << solver.get_F() - solver.get_entropy()
              << "\n"
-             << "F        : " << std::setprecision(13) << free_energy.get_F() << "\n"
-             << "KS-energy: " << std::setprecision(13)
-             << free_energy.get_F() - free_energy.get_entropy() << "\n"
              << "NLCG SUCCESS\n";
       logger.flush();
 
@@ -293,46 +132,33 @@ nlcg_us(EnergyBase& energy_base,
 
       return info;
     }
-    auto g = [&](double t) {
-      auto ek_ul_xnext = geodesic(xspace(), X, eta, z_x, z_eta, S, t);
-      auto ek = std::get<0>(ek_ul_xnext);
-      auto Xn = std::get<2>(ek_ul_xnext);
-      auto mu_fn = free_energy.occupations(ek);
-      double mu = std::get<0>(mu_fn);
-
-      free_energy.compute(Xn, std::get<1>(mu_fn), ek, mu);
-
-      return std::tuple_cat(ek_ul_xnext, std::make_tuple(mu));
-    };
+    auto g = [&](double t) { return solver.evaluate(t); };
 
     write_json(cg_iter);
 
 
-    info = print_info(free_energy.get_F(),
-                      free_energy.ks_energy(),
-                      free_energy.get_entropy(),
+    info = print_info(solver.get_F(),
+                      solver.ks_energy(),
+                      solver.get_entropy(),
                       slope,
-                      free_energy.get_chemical_potential(),
+                      solver.get_chemical_potential(),
                       cg_iter);
-    free_energy.ehandle().print_info();  // print magnetization
+    solver.ehandle().print_info();  // print magnetization
 
     timer.start();
-    auto ls_result = ls(g, free_energy, slope.x + slope.eta);
+    auto ls_result = ls(g, solver, slope.x + slope.eta);
     auto tlap = timer.stop();
     logger << "line search took: " << tlap << " seconds\n";
     logger.flush();
+
+    if (!ls_result) solver.discard_trial();
 
     /* search direction is not a descent direction */
     if ((!ls_result && ls_result.error() == LineSearchErrors::SlopeError &&
          state == cg_state::CG)) {
       // attempt preconditioned SD
-      logger << fmt::format(
-          fmt::runtime("WARNING: iter={:d} slope={:.5e} ({:.5e},{:.5e}) > 0 detected -> restart\n"),
-          cg_iter,
-          slope.x + slope.eta,
-          slope.x,
-          slope.eta);
-      std::tie(slope, z_x, z_eta) = dd.restarted(X, ek, fn, Hx, wk, mu, S, P, free_energy);
+      log_restart_warning(cg_iter, slope);
+      slope = solver.restarted();
       fr = slope;
       state = cg_state::pSD;
       continue;
@@ -340,13 +166,8 @@ nlcg_us(EnergyBase& energy_base,
 
     if (!ls_result && ls_result.error() == LineSearchErrors::SlopeError && state == cg_state::pSD) {
       // attempt steepest descent
-      logger << fmt::format(
-          fmt::runtime("WARNING: iter={:d} slope={:.5e} ({:.5e},{:.5e}) > 0 detected -> restart\n"),
-          cg_iter,
-          slope.x + slope.eta,
-          slope.x,
-          slope.eta);
-      std::tie(slope, z_x, z_eta) = dd.restarted_sd(X, ek, fn, Hx, wk, mu, S, Sinv, P, free_energy);
+      log_restart_warning(cg_iter, slope);
+      slope = solver.restarted_sd();
       fr = slope;
       state = cg_state::SD;
       continue;
@@ -369,7 +190,7 @@ nlcg_us(EnergyBase& energy_base,
         state == cg_state::pSD) {
       // continue with unpreconditioned SD step
       logger << "i=" << cg_iter << ": backtracking failed -> steepest descent\n";
-      std::tie(slope, z_x, z_eta) = dd.restarted_sd(X, ek, fn, Hx, wk, mu, S, Sinv, P, free_energy);
+      slope = solver.restarted_sd();
       fr = slope;
       state = cg_state::SD;
       continue;
@@ -379,34 +200,24 @@ nlcg_us(EnergyBase& energy_base,
         state == cg_state::CG) {
       // continue with preconditioned SD step
       logger << "i=" << cg_iter << ": backtracking failed -> restart\n";
-      std::tie(slope, z_x, z_eta) = dd.restarted(X, ek, fn, Hx, wk, mu, S, P, free_energy);
+      slope = solver.restarted();
       fr = slope;
       state = cg_state::pSD;
       continue;
     }
 
     if (cg_iter % restart == 0) {
-      logger << fmt::format(fmt::runtime("i={:d} cg_restart({:d})\n"), cg_iter, restart);
-      std::tie(slope, z_x, z_eta) = dd.restarted(X, ek, fn, Hx, wk, mu, S, P, free_energy);
+      log_restart(cg_iter, restart);
+      slope = solver.restarted();
       fr = slope;
       state = cg_state::pSD;
     }
 
     if (ls_result) {
-      auto ek_ul_x_mu = ls_result.value();
-      ek = std::get<0>(ek_ul_x_mu);
-      ul = std::get<1>(ek_ul_x_mu);
-      X = std::get<2>(ek_ul_x_mu);
-      double mu = std::get<3>(ek_ul_x_mu);
-      eta = eval_threaded(tapply(make_diag(), ek));
-      fn = free_energy.get_fn();
-      Hx = copy(free_energy.get_HX());
-
-      std::tie(fr, slope, z_x, z_eta) =
-          dd.conjugated(fr, X, ek, fn, Hx, z_x, z_eta, ul, wk, mu, S, P, free_energy);
+      std::tie(fr, slope) = solver.accept(fr);
       state = cg_state::CG;
     } else {
-      throw std::runtime_error(fmt::format(fmt::runtime("Unhandled line-search error occured.")));
+      throw std::runtime_error("Unhandled line-search error occured.");
     }
   }
   return info;
@@ -426,17 +237,18 @@ nlcg_us_cpu(EnergyBase& energy_base,
             int maxiter,
             int restart)
 {
-  return nlcg_us<Kokkos::HostSpace>(energy_base,
-                                    us_precond_base,
-                                    overlap_base,
-                                    inverse_overlap_base,
-                                    smearing,
-                                    temp,
-                                    maxiter,
-                                    tol,
-                                    kappa,
-                                    tau,
-                                    restart);
+  return nlcg_us(execution_backend::host,
+                 energy_base,
+                 us_precond_base,
+                 overlap_base,
+                 inverse_overlap_base,
+                 smearing,
+                 temp,
+                 maxiter,
+                 tol,
+                 kappa,
+                 tau,
+                 restart);
 }
 
 nlcg_info
@@ -452,30 +264,19 @@ nlcg_us_device([[maybe_unused]] EnergyBase& energy_base,
                [[maybe_unused]] int maxiter,
                [[maybe_unused]] int restart)
 {
-#ifdef __NLCGLIB__CUDA
-  return nlcg_us<Kokkos::CudaSpace>(energy_base,
-                                    us_precond_base,
-                                    overlap_base,
-                                    inverse_overlap_base,
-                                    smearing,
-                                    temp,
-                                    maxiter,
-                                    tol,
-                                    kappa,
-                                    tau,
-                                    restart);
-#elif defined(__NLCGLIB__ROCM)
-  return nlcg_us<Kokkos::HIPSpace>(energy_base,
-                                   us_precond_base,
-                                   overlap_base,
-                                   inverse_overlap_base,
-                                   smearing,
-                                   temp,
-                                   maxiter,
-                                   tol,
-                                   kappa,
-                                   tau,
-                                   restart);
+#if defined(__NLCGLIB__CUDA) || defined(__NLCGLIB__ROCM)
+  return nlcg_us(execution_backend::device,
+                 energy_base,
+                 us_precond_base,
+                 overlap_base,
+                 inverse_overlap_base,
+                 smearing,
+                 temp,
+                 maxiter,
+                 tol,
+                 kappa,
+                 tau,
+                 restart);
 #else
   throw std::runtime_error("recompile nlcglib with CUDA or ROCM.");
 #endif

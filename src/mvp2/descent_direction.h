@@ -1,8 +1,10 @@
 #pragma once
 
 #include <tuple>
+#include "execution_backend.h"
 #include "interface.hpp"
 #include "la/types.h"
+#include "slope.h"
 
 namespace nlcglib {
 
@@ -10,17 +12,11 @@ class FreeEnergy;
 class Overlap;
 class USPreconditioner;
 
-struct slope_t
-{
-  double x, eta;
-};
-
-/// Search directions share one implementation per execution memory space.
-template <class MemorySpace>
+/// Host-side search-direction control with backend-specific numerical kernels.
 class descent_direction
 {
 public:
-  descent_direction(double T, double kappa, smearing_type smear);
+  descent_direction(execution_backend backend, double T, double kappa, smearing_type smear);
 
   std::tuple<slope_t, slope_t, mvector<host_matrix_t>, mvector<host_matrix_t>> conjugated(
       slope_t fr_old,
@@ -61,16 +57,10 @@ public:
       FreeEnergy& free_energy);
 
 private:
+  execution_backend backend;
   double T;
   double kappa;
   smearing_type smear;
 };
-
-extern template class descent_direction<Kokkos::HostSpace>;
-#ifdef __NLCGLIB__CUDA
-extern template class descent_direction<Kokkos::CudaSpace>;
-#elif defined(__NLCGLIB__ROCM)
-extern template class descent_direction<Kokkos::HIPSpace>;
-#endif
 
 }  // namespace nlcglib

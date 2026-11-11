@@ -251,8 +251,8 @@ std::tuple<double, double>
 compute_slope(
     const gx_t& gx, const zx_t& zx, const ge_t& geta, ze_t& zeta, const Communicator& commk)
 {
-  double slope_x = sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk).real();
-  double slope_eta = sum(eval_threaded(tapply(local::slope_eta(), geta, zeta)), commk).real();
+  double slope_x = sum(tapply_eager(local::slope_x(), gx, zx), commk).real();
+  double slope_eta = sum(tapply_eager(local::slope_eta(), geta, zeta), commk).real();
   return std::make_tuple(slope_x, slope_eta);
 }
 
@@ -261,8 +261,8 @@ double
 compute_slope_single(
     const gx_t& gx, const zx_t& zx, const ge_t& geta, ze_t& zeta, const Communicator& commk)
 {
-  double slope_x = sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk).real();
-  double slope_eta = sum(eval_threaded(tapply(local::slope_eta(), geta, zeta)), commk).real();
+  double slope_x = sum(tapply_eager(local::slope_x(), gx, zx), commk).real();
+  double slope_eta = sum(tapply_eager(local::slope_eta(), geta, zeta), commk).real();
   return slope_x + slope_eta;
 }
 
@@ -270,14 +270,14 @@ template <class ge_t, class ze_t>
 double
 slope_eta(const ge_t& geta, ze_t& zeta, const Communicator& commk)
 {
-  return sum(eval_threaded(tapply(local::slope_eta(), geta, zeta)), commk).real();
+  return sum(tapply_eager(local::slope_eta(), geta, zeta), commk).real();
 }
 
 template <class gx_t, class zx_t>
 double
 slope_x(const gx_t& gx, zx_t& zx, const Communicator& commk)
 {
-  return sum(eval_threaded(tapply(local::slope_x(), gx, zx)), commk).real();
+  return sum(tapply_eager(local::slope_x(), gx, zx), commk).real();
 }
 
 /// apply lagrange multipliers for Z^{(i-1)}

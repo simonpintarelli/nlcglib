@@ -1,4 +1,5 @@
 #include "step_logger.h"
+#include <fmt/format.h>
 #include <Kokkos_Complex.hpp>
 #include <fstream>
 #include <iostream>
@@ -6,6 +7,8 @@
 #include <string>
 #include <type_traits>
 #include "la/mvector.hpp"
+#include "utils/iteration_logger.h"
+#include "utils/logger.hpp"
 
 namespace Kokkos {
 
@@ -19,6 +22,61 @@ to_json(nlohmann::json& j, const Kokkos::complex<T>& p)
 
 
 namespace nlcglib {
+
+nlcg_info
+print_info(
+    double free_energy, double ks_energy, double entropy, slope_t slope, double efermi, int step)
+{
+  double slope_tot = slope.x + slope.eta;
+  auto& logger = Logger::GetInstance();
+  //                       fmt::arg("slope_tot", slope_tot));
+  logger << TO_STDOUT
+         << fmt::format(fmt::runtime("{iter:<6d}"
+                                     R"(Etot     : {F:20.10f} [Ha]
+      Residual : {slope_tot:>20.5e}
+      kT * S   : {entropy:>20.8f} [Ha]
+      Efermi   : {efermi:>20.8f} [Ha]
+      KS energy: {ks_energy:>20.8f} [Ha]
+      slope x  : {slope_x:>20.5e}
+      slope eta: {slope_eta:>20.5e}
+)"),
+                        fmt::arg("iter", step),
+                        fmt::arg("F", free_energy),
+                        fmt::arg("slope_tot", slope_tot),
+                        fmt::arg("entropy", entropy),
+                        fmt::arg("efermi", efermi),
+                        fmt::arg("ks_energy", ks_energy),
+                        fmt::arg("slope_x", slope.x),
+                        fmt::arg("slope_eta", slope.eta));
+
+  nlcg_info info;
+  info.F = free_energy;
+  info.S = entropy;
+  info.tolerance = slope.x + slope.eta;
+  info.iter = step;
+
+  return info;
+}
+
+void
+log_restart_warning(int iteration, slope_t slope)
+{
+  Logger::GetInstance() << fmt::format(
+      fmt::runtime("WARNING: iter={:d} slope={:.5e} ({:.5e},{:.5e}) > 0 detected -> restart\n"),
+      iteration,
+      slope.x + slope.eta,
+      slope.x,
+      slope.eta);
+}
+
+void
+log_restart(int iteration, int interval)
+{
+  Logger::GetInstance() << fmt::format(
+      fmt::runtime("i={:d} cg_restart({:d})\n"), iteration, interval);
+}
+
+
 namespace {
 
 /// Store CG information in json.
@@ -145,19 +203,15 @@ cg_write_step_json(double free_energy,
 
   if (step % freq == 0) {
     auto ek_host =
-        eval_threaded(tapply(
-                          [](auto&& x) {
-                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
-                          },
-                          ek))
+        tapply_eager(
+            [](auto&& x) { return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x); },
+            ek)
             .allgather(commk);
 
     auto fn_host =
-        eval_threaded(tapply(
-                          [](auto&& x) {
-                            return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x);
-                          },
-                          fn))
+        tapply_eager(
+            [](auto&& x) { return Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), x); },
+            fn)
             .allgather(commk);
 
     logger.log("eta", ek_host);
