@@ -57,8 +57,8 @@ struct kernel_functions
   using sum_type = double (*)(const host_vector_t&, double, double, double);
   sum_type fn;
   sum_type entropy;
-  sum_type delta;
-  sum_type dxdelta;
+  std::optional<sum_type> delta;
+  std::optional<sum_type> dxdelta;
   void (*fill)(const host_vector_t&, const host_vector_t&, double, double, double);
 };
 
@@ -131,6 +131,11 @@ chemical_potential(const electron_count& count,
   auto missing_electrons = [&](double mu) { return Ne - count.sum(kernels.fn, mu); };
   if (!use_newton) return find_chemical_potential(missing_electrons, 0, tol);
 
+  if (use_newton && (!kernels.delta || !kernels.dxdelta)) {
+    throw std::runtime_error(
+        "Chemical potential: requested use_newton=true, but delta or dxdelta has not been defined");
+  }
+
   double mu0 = find_chemical_potential(
       [&](double mu) {
         return Ne - count.sum(&sum_bands<gauss_smearing_kernel, quantity::fn>, mu);
@@ -138,10 +143,11 @@ chemical_potential(const electron_count& count,
       0,
       tol);
   try {
+    // check that delta, dxdelta has been defined
     return newton_minimization_chemical_potential(
         [&](double mu) { return count.sum(kernels.fn, mu); },
-        [&](double mu) { return count.sum(kernels.delta, mu, 1); },
-        [&](double mu) { return count.sum(kernels.dxdelta, mu, 2); },
+        [&](double mu) { return count.sum(*kernels.delta, mu, 1); },
+        [&](double mu) { return count.sum(*kernels.dxdelta, mu, 2); },
         mu0,
         Ne,
         tol);
