@@ -232,24 +232,24 @@ tapply(FUNCTOR&& fun, const ARG& arg0, const ARGS&... args)
 }
 
 
-/// tapply for packed operators
-template <class OP, class ARG0, class... ARGS>
-auto
-tapply_op(OP&& op, const ARG0& arg0, const ARGS&... args)
-{
-  // TODO: would need op for a single key here ...
-  // using R = decltype(op(eval(std::declval<ARG0>()), eval(std::declval<ARGS>())...));
-  using R = decltype(empty_like()(eval(std::declval<typename ARG0::value_type>())));
+// /// tapply for packed operators
+// template <class OP, class ARG0, class... ARGS>
+// auto
+// tapply_op(OP&& op, const ARG0& arg0, const ARGS&... args)
+// {
+//   // TODO: would need op for a single key here ...
+//   // using R = decltype(op(eval(std::declval<ARG0>()), eval(std::declval<ARGS>())...));
+//   using R = decltype(empty_like()(eval(std::declval<typename ARG0::value_type>())));
 
-  mvector<std::function<R()>> result(arg0.commk());
-  for (auto& elem : arg0) {
-    auto key = elem.first;
-    auto get_key = [key](const auto& container) { return container.at(key); };
-    auto fun = op.at(key);
-    result[key] = [=]() { return fun(eval(get_key(arg0)), eval(get_key(args))...); };
-  }
-  return result;
-}
+//   mvector<std::function<R()>> result(arg0.commk());
+//   for (auto& elem : arg0) {
+//     auto key = elem.first;
+//     auto get_key = [key](const auto& container) { return container.at(key); };
+//     auto fun = op.at(key);
+//     result[key] = [=]() { return fun(eval(get_key(arg0)), eval(get_key(args))...); };
+//   }
+//   return result;
+// }
 
 /// Cached deferred apply over mvector; does not launch worker threads.
 template <class FUNCTOR, class ARG, class... ARGS>

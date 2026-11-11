@@ -140,49 +140,7 @@ diagonal_matrix(const mvector<host_vector_t>& ek)
 {
   return tapply_eager(make_diag(), ek);
 }
-
 }  // namespace
-
-void
-nlcheck_overlap(EnergyBase& e, OverlapBase& Sb, OverlapBase& Sib)
-{
-  FreeEnergy Energy(100, e, smearing_type::FERMI_DIRAC);
-
-  auto X = copy(Energy.get_X());
-  Overlap S(Sb);
-  Overlap Sinv(Sib);
-
-  std::cout << "l2norm(X) = " << l2norm(X) << "\n";
-
-  auto SX = tapply_op(S, X);
-  auto SinvX = tapply_op(Sinv, X);
-  std::cout << "l2norm(SX): " << l2norm(SX) << "\n";
-  std::cout << "l2norm(SinvX): " << l2norm(SinvX) << "\n";
-
-  auto tr = innerh_reduce(X, SX);
-  std::cout << "tr(XSX): " << tr << "\n";
-  auto Xref = tapply(
-      [](auto x, auto s, auto si) {
-        auto sx = s(x);
-        auto x2 = si(sx);
-        return x2;
-      },
-      X,
-      S,
-      Sinv);
-
-  auto error = tapply(
-      [](auto x, auto y) {
-        auto z = copy(x);
-        add(z, y, -1, 1);
-        return z;
-      },
-      X,
-      Xref);
-
-  double diff = l2norm(error);
-  std::cout << "** check: S(S_inv(x)), error: " << diff << "\n";
-}
 
 struct solver_state::Impl
 {

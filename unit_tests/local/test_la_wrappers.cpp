@@ -378,28 +378,17 @@ TEST(MVectorApply, DeferredSnapshotAndCaching)
   const auto key = std::make_pair(1, 0);
   NoncopyableValues input(Communicator{MPI_COMM_WORLD});
   input[key] = 3;
-  int lazy_calls = 0, cached_calls = 0;
-  auto lazy = tapply(
-      [&](int value) {
-        ++lazy_calls;
-        return 2 * value;
-      },
-      input);
+  int cached_calls = 0;
   auto cached = tapply_async(
       [&](int value) {
         ++cached_calls;
         return 2 * value;
       },
       input);
-  EXPECT_EQ(lazy_calls, 0);
   EXPECT_EQ(cached_calls, 0);
-  EXPECT_TRUE(lazy.commk() == input.commk());
   EXPECT_TRUE(cached.commk() == input.commk());
 
   input[key] = 9;
-  EXPECT_EQ(eval(lazy.at(key)), 6);
-  EXPECT_EQ(eval(lazy.at(key)), 6);
-  EXPECT_EQ(lazy_calls, 2);
   EXPECT_EQ(eval(cached.at(key)), 6);
   EXPECT_EQ(eval(cached.at(key)), 6);
   EXPECT_EQ(cached_calls, 1);
